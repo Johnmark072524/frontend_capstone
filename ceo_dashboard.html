@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RoadWise | City Engineering</title>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="img/logo.png" alt="RoadWise Logo" class="brand-logo">
+    </div>
+
+    <nav class="nav-menu">
+      <span class="menu-label">ENGINEERING MENU</span>
+      <ul>
+        <li class="active" data-target="view-dashboard"><a href="#"><span class="icon">⊞</span> Dashboard</a></li>
+        <li data-target="view-repair"><a href="#"><span class="icon">🚧</span> Repair Projects</a></li>
+        <li data-target="view-settings"><a href="#"><span class="icon">⚙️</span> Settings</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+
+    <header class="top-header">
+      <div>
+        <h1>Engineering Overview</h1>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Municipality of Norzagaray</p>
+      </div>
+
+      <button class="header-profile-btn">
+        <span class="icon">👤</span> City Engineering Office
+      </button>
+    </header>
+
+    <main class="content-area">
+
+      <div id="view-profile" class="content-section hidden">
+
+        <div class="section-header-flex" style="margin-bottom: 20px;">
+          <h2>Engineering Office Settings</h2>
+        </div>
+
+        <div class="profile-split-container">
+
+          <div class="profile-sidebar">
+            <div class="profile-header-mini">
+              <div class="profile-avatar-mini" style="background: linear-gradient(135deg, #e67e22, #d35400);">👷</div>
+              <h4 style="margin: 0; color: #d35400;">Engr. Roberto Santos</h4>
+              <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-muted);">City Engineer</p>
+            </div>
+
+            <ul class="profile-nav" id="profile-nav-menu">
+              <li class="active" data-target="tab-identity">Official Details</li>
+              <li data-target="tab-security">Security & Password</li>
+              <li class="logout-btn" style="margin-top: auto; color: #dc3545; border-bottom: none;">Log Out ➔</li>
+            </ul>
+          </div>
+
+          <div class="profile-content">
+
+            <div id="tab-identity" class="profile-tab active">
+              <h3 style="margin-bottom: 25px; color: #d35400; border-bottom: 2px solid #eee; padding-bottom: 10px;">Engineering Profile</h3>
+              <div class="profile-detail-row"><strong>Department:</strong> <span>City Engineering Office (CEO)</span></div>
+              <div class="profile-detail-row"><strong>Role:</strong> <span>Lead City Engineer</span></div>
+              <div class="profile-detail-row"><strong>Official Email:</strong> <span>engineer@sjdm.gov.ph</span></div>
+              <div class="profile-detail-row"><strong>License Number:</strong> <span>CE-7489210</span></div>
+              <div class="profile-detail-row" style="border-bottom: none;"><strong>Account Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></div>
+            </div>
+
+            <div id="tab-security" class="profile-tab hidden">
+              <h3 style="margin-bottom: 25px; color: #d35400; border-bottom: 2px solid #eee; padding-bottom: 10px;">Change Password</h3>
+              <form>
+                <div class="form-group-vertical" style="margin-bottom: 15px;">
+                  <label>Current Password</label>
+                  <input type="password" required>
+                </div>
+                <div class="form-group-vertical" style="margin-bottom: 15px;">
+                  <label>New Password</label>
+                  <input type="password" required>
+                </div>
+                <div class="form-group-vertical" style="margin-bottom: 25px;">
+                  <label>Confirm New Password</label>
+                  <input type="password" required>
+                </div>
+                <button type="submit" class="btn-submit" style="background-color: #d35400; border: none; padding: 10px 20px;">Update Password</button>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div id="view-dashboard" class="content-section">
+        <p>City-wide road damage severity, budget tracking, and maintenance schedules will go here.</p>
+      </div>
+
+      <div id="view-repair" class="content-section hidden">
+
+        <div class="section-header-flex">
+          <h2>Active Repair Queue</h2>
+
+          <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="search-bar">
+              <select style="padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; outline: none; margin-right: 10px;">
+                <option>Filter: All Priorities</option>
+                <option>High Priority Only</option>
+              </select>
+              <input type="text" placeholder="Search Project ID or Location...">
+              <button class="btn-action">Search</button>
+            </div>
+
+            <div style="position: relative;">
+              <button class="btn-secondary" id="btn-generate-menu" style="background-color: white;">
+                <span class="icon">🖨️</span> Generate Report ▼
+              </button>
+
+              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; width: 210px; z-index: 100; overflow: hidden;">
+
+                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: var(--text-main);">
+                  📑 All Projects
+                </button>
+
+                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 600;">
+                  🚨 Priority List
+                </button>
+
+                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 600;">
+                  ✅ Repaired City Roads
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th>Project ID</th>
+              <th>Location (Barangay)</th>
+              <th>Road Name</th>
+              <th>Priority Level</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr style="background-color: #fffafb; border-left: 4px solid #dc3545;">
+              <td>#PRJ-0842</td>
+              <td>Minuyan Proper</td>
+              <td>Minuyan Proper Rd.</td>
+              <td><span class="badge high">CRITICAL</span></td>
+              <td><span class="status-badge pending">Pending Dispatch</span></td>
+              <td><button class="btn-small manage-btn">Manage</button></td>
+            </tr>
+
+            <tr style="border-left: 4px solid #ffc107;">
+              <td>#PRJ-0843</td>
+              <td>San Mateo</td>
+              <td>Access Road B</td>
+              <td><span class="badge medium">MEDIUM</span></td>
+              <td><span class="status-badge pending">Pending Dispatch</span></td>
+              <td><button class="btn-small manage-btn">Manage</button></td>
+            </tr>
+
+            <tr style="border-left: 4px solid var(--accent-blue);">
+              <td>#PRJ-0839</td>
+              <td>Poblacion</td>
+              <td>Plaza Ring Road</td>
+              <td><span class="badge low">LOW</span></td>
+              <td><span class="status-badge" style="background-color: #cce5ff; color: #004085;">In Progress</span></td>
+              <td><button class="btn-small manage-btn">Manage</button></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div id="view-settings" class="content-section hidden">
+        <h2>Engineering Settings</h2>
+        <p>Office preferences go here.</p>
+      </div>
+
+      <div id="view-barangay" class="content-section hidden">
+
+        <div class="section-header-flex">
+          <h2>Barangay Infrastructure Management</h2>
+          <div class="search-bar">
+            <input type="text" placeholder="Search SJDM Barangay...">
+            <button class="btn-action">Search</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th>Barangay Name</th>
+              <th>Current Point of Contact</th>
+              <th>Registered Roads</th>
+              <th>Active Reports</th>
+              <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <tr>
+              <td><strong>Muzon</strong></td>
+              <td>Kap. Marciano Gatchalian</td>
+              <td>12 Roads</td>
+              <td><span class="badge high">3 Active</span></td>
+              <td><button class="btn-small manage-brgy-btn">Manage Barangay</button></td>
+            </tr>
+
+            <tr>
+              <td><strong>Tungkong Mangga</strong></td>
+              <td>Kap. Alexander Medina</td>
+              <td>8 Roads</td>
+              <td><span class="badge low">1 Active</span></td>
+              <td><button class="btn-small manage-brgy-btn">Manage Barangay</button></td>
+            </tr>
+
+            <tr>
+              <td><strong>Graceville</strong></td>
+              <td>Kap. Lenard Reyes</td>
+              <td>5 Roads</td>
+              <td><span class="badge medium" style="background-color: #e9ecef; color: #666;">0 Active</span></td>
+              <td><button class="btn-small manage-brgy-btn">Manage Barangay</button></td>
+            </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    <div id="barangay-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="width: 700px;">
+
+        <div class="modal-header">
+          <h2>Manage Barangay: <span class="highlight">Muzon</span></h2>
+          <button class="close-brgy-btn close-modal-btn">✕</button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="report-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Barangay Details</h3>
+              <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">Edit Details</button>
+            </div>
+            <div class="report-detail-grid">
+              <div><strong>Current Kapitan:</strong> Marciano Gatchalian</div>
+              <div><strong>Official Contact:</strong> (044) 123-4567</div>
+              <div><strong>Barangay Hall Location:</strong> Muzon Central, SJDM</div>
+              <div><strong>District:</strong> District 1</div>
+            </div>
+          </div>
+
+          <div class="report-section" style="border-bottom: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Registered City Roads</h3>
+              <button class="btn-submit" style="padding: 8px 15px; font-size: 12px;"><span class="icon">➕</span> Add City Road</button>
+            </div>
+
+            <table class="data-table" style="width: 100%; border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden;">
+              <thead style="background-color: #f8f9fa;">
+              <tr>
+                <th style="padding: 10px; font-size: 11px;">Road ID</th>
+                <th style="padding: 10px; font-size: 11px;">Road Name</th>
+                <th style="padding: 10px; font-size: 11px;">Material Type</th>
+                <th style="padding: 10px; font-size: 11px;">Length</th>
+                <th style="padding: 10px; font-size: 11px; text-align: right;">Action</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <td style="padding: 10px; font-size: 12px;">CR-101</td>
+                <td style="padding: 10px; font-size: 12px;">Muzon Main Road</td>
+                <td style="padding: 10px; font-size: 12px;">Asphalt</td>
+                <td style="padding: 10px; font-size: 12px;">1200m</td>
+                <td style="padding: 10px; text-align: right;"><button style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 12px;">Edit</button></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; font-size: 12px;">CR-102</td>
+                <td style="padding: 10px; font-size: 12px;">Harmony Hills Blvd</td>
+                <td style="padding: 10px; font-size: 12px;">Concrete</td>
+                <td style="padding: 10px; font-size: 12px;">850m</td>
+                <td style="padding: 10px; text-align: right;"><button style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 12px;">Edit</button></td>
+              </tr>
+              </tbody>
+            </table>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    </main>
+
+  </div>
+
+  <div id="manage-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h2>Manage Project <span class="highlight">#PRJ-0842</span></h2>
+        <button class="close-manage-btn close-modal-btn">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="report-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 class="section-title" style="margin-bottom: 0;">Original Damage Report</h3>
+            <button class="btn-action" id="btn-locate-map" style="background-color: #4a4a4a;">
+              <span class="icon">🗺️</span> Locate on Map
+            </button>
+          </div>
+
+          <div class="report-detail-grid">
+            <div><strong>Barangay:</strong> Minuyan Proper</div>
+            <div><strong>City Road Name:</strong> Minuyan Proper Rd.</div>
+            <div><strong>City Road ID:</strong> CR-1042</div>
+            <div><strong>Road Importance:</strong> Primary</div>
+            <div><strong>Terrain Type:</strong> Flat</div>
+            <div><strong>Road Type:</strong> Concrete</div>
+            <div><strong>Length (m):</strong> 1500</div>
+            <div><strong>Width (m):</strong> 6.5</div>
+            <div><strong>Length of Culverts:</strong> 12m</div>
+            <div><strong>Number of Bridges:</strong> 0</div>
+            <div><strong>Priority Level:</strong> <span class="badge high">CRITICAL</span></div>
+            <div><strong>GPS Coordinates:</strong> 14.8080° N, 121.0456° E</div>
+
+            <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 5px;">
+              <strong>Originally Submitted By:</strong>
+              <span id="modal-submitter-name" style="color: var(--primary-blue); font-weight: bold;">Kap. Marciano Gatchalian (Barangay Muzon)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <h3 class="section-title">Damage Evidence</h3>
+          <div class="report-image-placeholder">
+            <span class="icon">📷</span>
+            <p>Original Damage Photo Provided by Barangay</p>
+          </div>
+
+          <div class="report-description" style="margin-top: 15px;">
+            <strong>Damage Description:</strong>
+            <p>Deep potholes covering a 5-meter stretch. Causing severe traffic buildup and potential hazard to tricycles.</p>
+          </div>
+        </div>
+
+        <div class="report-section" style="background-color: #f4f6f8; padding: 15px; border-radius: 8px;">
+          <h3 class="section-title" style="margin-bottom: 10px;">Dispatch Crew</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Notify the system that engineers are currently on-site working on this repair.</p>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="status-badge pending" id="modal-current-status">Pending Dispatch</span>
+            <span style="color: #888;">➔</span>
+            <button class="btn-small" id="btn-start-repair" style="background-color: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer;">
+              <span class="icon">👷</span> Mark as "In Progress"
+            </button>
+          </div>
+        </div>
+
+        <div class="report-section" style="border-bottom: none; background-color: #f8fcf8; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb;">
+          <h3 class="section-title" style="color: #28a745; margin-bottom: 10px;">Project Resolution</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Please upload photographic proof of the completed road repair to officially close this project ticket.</p>
+
+          <strong style="display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Upload Repair Image:</strong>
+          <div class="upload-dropzone">
+            <span class="icon" style="font-size: 24px; color: var(--accent-blue);">📸</span>
+            <p>Click to upload or drag photo here</p>
+            <span style="font-size: 11px; color: #888;">JPG or PNG (Max 5MB)</span>
+          </div>
+
+          <div class="form-actions" style="margin-top: 20px; gap: 15px;">
+            <button class="btn-secondary" id="btn-cancel-repair">Cancel</button>
+            <button class="btn-submit" id="btn-complete-repair" style="background-color: #28a745;"><span class="icon">🏁</span> Mark as Completed</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

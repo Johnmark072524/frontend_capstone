@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City Road Inspection and Monitoring System | Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+
+<div class="login-form-side">
+  <div class="login-container">
+
+    <div style="display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 40px;">
+      <img src="img/logo.png" alt="RoadWise System Logo" style="height: 120px;">
+      <div style="width: 2px; height: 90px; background-color: #e0e0e0; border-radius: 2px;"></div>
+      <img src="img/cpdologo.png" alt="CPDO Logo" style="height: 130px;">
+    </div>
+
+    <form id="form-login" onsubmit="handleLogin(event)">
+
+      <div class="form-group input-icon-wrapper">
+        <span class="input-icon">👤</span>
+        <input type="text" id="username" name="employee_id" placeholder="Official ID / Email" required>
+      </div>
+
+      <div class="form-group input-icon-wrapper">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
+        <span class="input-icon-right" style="cursor: pointer;">👁️</span>
+      </div>
+
+      <div class="form-options">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; color: var(--text-muted); cursor: pointer;">
+          <input type="checkbox" name="remember"> Remember me
+        </label>
+        <a href="#">FORGOT PASSWORD?</a>
+      </div>
+
+      <button type="submit" class="btn-login">Log in ➔</button>
+
+    </form>
+
+  </div>
+</div>
+
+<div class="login-info-side">
+  <div class="login-info-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; gap: 20px;">
+      <div>
+        <h3 style="font-weight: normal; margin-bottom: 5px; font-size: 24px;">Welcome to</h3>
+        <h1 style="font-size: 46px; margin-bottom: 0; line-height: 1.1;">City Planning and<br>Development Office</h1>
+      </div>
+    </div>
+    <div class="vision-mission-grid">
+      <div>
+        <h4>Vision</h4>
+        <p>A result oriented office of pro-active and competent staff and determined to serve as an agent of change, for effective governance towards the development of San Joseños.</p>
+      </div>
+      <div>
+        <h4>Mission</h4>
+        <p>Provide relevant studies, researches and trainings in relation to the preparation, formulation, coordination, facilitation, as well as, monitoring and evaluation of the different plans, programs, projects, and activities of the city government.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function handleLogin(event) {
+    event.preventDefault(); // Stops the page from refreshing
+
+    // 1. Grab the text the user typed into the boxes
+    const usernameInput = document.getElementById('username').value;
+    const passwordInput = document.getElementById('password').value;
+
+    // 2. Send it to the Spring Boot backend
+    fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: usernameInput,
+        password: passwordInput
+      })
+    })
+      .then(response => {
+        if (!response.ok) {
+          alert("Wrong username or password! Please try again.");
+          throw new Error("Login failed");
+        }
+        return response.json(); // Read the VIP Ticket
+      })
+      .then(userData => {
+        // 3. Save the user's info in the browser's memory
+        sessionStorage.setItem('userId', userData.userId);
+        sessionStorage.setItem('username', userData.username);
+        sessionStorage.setItem('role', userData.role);
+        sessionStorage.setItem('barangayId', userData.barangayId);
+        sessionStorage.setItem('barangayName', userData.barangayName);
+
+        // 4. Direct them to your specific files based on their role
+        if (userData.role === 'ADMIN') {
+          window.location.href = 'admin_dashboard.html';
+
+        } else if (userData.role === 'ENGINEER') {
+          window.location.href = 'ceo_dashboard.html';
+
+        } else if (userData.role === 'BARANGAY') {
+          window.location.href = 'barangay_dashboard.html';
+        }
+      })
+      .catch(error => console.error('System Error:', error));
+  }
+</script>
+
+</body>
+</html>

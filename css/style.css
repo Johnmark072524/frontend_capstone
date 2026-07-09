@@ -1,0 +1,966 @@
+/* 1. GLOBAL RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 2. COLOR THEME (RoadWise Blue) */
+:root {
+  --bg-color: #f4f6f8;
+  --sidebar-bg: #ffffff;
+  --text-main: #1a1a1a;
+  --text-muted: #8b95a5;
+  --accent-blue: #1c10a3;
+  --accent-light: #eaebf7;
+}
+
+/* --- UTILITY CLASSES --- */
+.hidden {
+  display: none !important;
+}
+
+/* 3. APP LAYOUT */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+}
+
+/* 4. SIDEBAR STYLING */
+.sidebar {
+  width: 260px;
+  background-color: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 15px rgba(0,0,0,0.03);
+  z-index: 10;
+}
+
+/* Logo Area Styling */
+/* ========================================== */
+/* SIDEBAR BRANDING & LOGO                    */
+/* ========================================== */
+
+.brand {
+  text-align: center;
+  padding: 25px 15px 15px 15px; /* Adds nice breathing room around the logo */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05); /* Optional: adds a faint line under the logo */
+  margin-bottom: 15px;
+}
+
+.brand-logo {
+  width: 100%;       /* Makes it responsive to the sidebar width */
+  max-width: 150px;  /* This is the magic number! Stops it from getting too huge */
+  height: auto;      /* Keeps the image proportions perfectly scaled */
+  display: block;
+  margin: 0 auto;    /* Centers the logo perfectly */
+}
+
+.brand-subtitle {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 5. NAVIGATION MENU STYLING */
+.nav-menu {
+  flex-grow: 1;
+}
+
+.menu-label {
+  padding: 0 25px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.nav-menu ul {
+  list-style: none;
+}
+
+.nav-menu li {
+  margin: 5px 15px;
+}
+
+.nav-menu a {
+  text-decoration: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.nav-menu a .icon {
+  margin-right: 12px;
+  font-size: 18px;
+}
+
+.nav-menu li:hover a {
+  color: var(--accent-blue);
+  background-color: #f8f9fa;
+}
+
+.nav-menu li.active a {
+  background-color: var(--accent-light);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+/* 7. MAIN CONTENT AREA */
+.main-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 8. TOP HEADER STYLING */
+.top-header {
+  background-color: transparent;
+  padding: 30px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-header h1 {
+  color: var(--text-main);
+  font-size: 28px;
+}
+
+.header-profile-btn {
+  background-color: transparent;
+  border: 1px solid #eaeaea;
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: var(--text-main);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-profile-btn:hover {
+  background-color: var(--accent-light);
+  color: var(--accent-blue);
+  border-color: var(--accent-light);
+}
+
+.content-area {
+  padding: 0 40px 40px 40px;
+}
+
+/* --- 9. FORM STYLES (Add New Report) --- */
+.report-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  overflow: hidden;
+  border: 1px solid #eaeaea;
+}
+
+.report-header {
+  background: linear-gradient(90deg, #4541B8, #2A2688);
+  color: white;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.report-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.header-icons {
+  position: absolute;
+  right: 20px;
+  display: flex;
+  gap: 15px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.report-body {
+  padding: 30px;
+}
+
+.form-section {
+  margin-bottom: 30px;
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 25px;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 10px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+}
+
+.form-group label {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.form-group input,
+.form-group select {
+  flex: 1.5;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+textarea:focus {
+  border-color: var(--accent-blue);
+}
+
+.form-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.form-group-vertical label {
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-group-inline {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.form-group-inline label {
+  font-size: 13px;
+  color: var(--text-main);
+  min-width: 120px;
+}
+
+.btn-action {
+  background-color: #534ED9;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+}
+
+.btn-action:hover {
+  opacity: 0.9;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn-submit {
+  background-color: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-submit:hover {
+  opacity: 0.9;
+}
+
+/* --- 11. DATA TABLES (Admin Validation Queue) --- */
+.section-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+}
+
+.search-bar input {
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 250px;
+  outline: none;
+}
+
+.search-bar input:focus {
+  border-color: var(--accent-blue);
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border: 1px solid #eaeaea;
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th,
+.data-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eaeaea;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.data-table tbody tr:hover {
+  background-color: #fcfcfc;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+}
+.badge.high { background-color: #dc3545; }
+.badge.medium { background-color: #ffc107; color: #333; }
+.badge.low { background-color: #28a745; }
+
+.status-badge {
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.validated {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.btn-small {
+  background-color: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.btn-small:hover {
+  opacity: 0.9;
+}
+
+/* --- 12. POP-UP MODALS --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Creates the dark transparent background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Forces the pop-up to sit on top of everything else */
+}
+
+.modal-content {
+  background-color: white;
+  width: 650px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh; /* Prevents it from being taller than the screen */
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 20px 30px;
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  justify-content: space-between; /* This pushes the X button to the far right */
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.modal-header .highlight {
+  color: var(--accent-blue);
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 30px;
+  overflow-y: auto; /* Adds the scrollbar if the data is too long */
+}
+
+/* Styles for the data groupings */
+.report-section {
+  margin-bottom: 20px;
+  border-bottom: 1px dashed #eaeaea;
+  padding-bottom: 15px;
+}
+
+.report-section .section-title {
+  font-size: 13px;
+  color: var(--accent-blue);
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.report-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  font-size: 13px;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.report-image-placeholder {
+  height: 200px;
+  background-color: #e9ecef;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+.report-description {
+  font-size: 13px;
+  color: var(--text-main);
+  margin-bottom: 30px;
+}
+
+.report-description p {
+  margin-top: 5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+}
+
+.btn-reject {
+  background-color: #fff;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* ========================================== */
+/* LOGIN PAGE STYLES (BulSU Split Style)      */
+/* ========================================== */
+
+body.login-page {
+  display: flex;
+  height: 100vh;
+  margin: 0;
+  background-color: #ffffff;
+  font-family: Arial, sans-serif;
+}
+
+/* Left Side: White Background, Form */
+.login-form-side {
+  width: 40%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 40px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* Right Side: Blue Background, Giant Watermark */
+.login-info-side {
+  width: 60%;
+  background-color: #1e5ba3; /* The exact BulSU blue color */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* This creates the giant faded logo in the background */
+.login-info-side::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 130%;
+  height: 130%;
+  background-image: url('../img/cpdologo.png'); /* Uses your logo */
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.15; /* Makes it a faint watermark */
+  z-index: 1;
+}
+
+/* Keeps text above the watermark */
+.login-info-content {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+}
+
+/* Vision & Mission Layout */
+.vision-mission-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.vision-mission-grid h4 {
+  font-size: 22px;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.vision-mission-grid p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Form Styling Updates */
+.login-container .form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.input-icon-wrapper input {
+  width: 100%;
+  padding: 14px 15px 14px 45px; /* Room for the left icon */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #eef2f7; /* Slight blue-gray tint like the photo */
+  box-sizing: border-box;
+  outline: none;
+}
+
+.input-icon-wrapper input:focus {
+  border-color: #1e5ba3;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 16px;
+}
+
+.input-icon-right {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.login-container .form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  font-size: 13px;
+}
+
+.login-container .form-options a {
+  color: #1e5ba3;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.login-container .btn-login {
+  width: 100%;
+  padding: 14px;
+  background-color: #0b3d7a; /* Darker blue button */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-container .btn-login:hover {
+  background-color: #082d5a;
+}
+
+/* ========================================== */
+/* ADMIN PROFILE STYLES                       */
+/* ========================================== */
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr; /* Left card is fixed width, right card takes the rest */
+  gap: 30px;
+}
+
+.profile-card {
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid #eaeaea;
+}
+
+.profile-avatar-large {
+  width: 110px;
+  height: 110px;
+  background: linear-gradient(135deg, #eef2f7, #dbe4f0);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+  margin: 0 auto;
+  color: var(--primary-blue);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border: 4px solid white;
+}
+
+.profile-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  text-align: left;
+}
+
+.profile-detail-row strong {
+  color: var(--text-main);
+}
+
+.profile-detail-row span {
+  color: var(--text-muted);
+}
+/* ========================================== */
+/* SPLIT PROFILE STYLES                       */
+/* ========================================== */
+
+.profile-split-container {
+  display: flex;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
+  min-height: 450px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+/* Left Sidebar */
+.profile-sidebar {
+  width: 260px;
+  background: #f8f9fa;
+  border-right: 1px solid #eaeaea;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-header-mini {
+  padding: 30px 20px;
+  text-align: center;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.profile-avatar-mini {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #1a0ca3, #4361ee);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.profile-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.profile-nav li {
+  padding: 16px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #eaeaea;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  border-left: 4px solid transparent; /* Hidden by default */
+}
+
+.profile-nav li:hover {
+  background: white;
+}
+
+.profile-nav li.active {
+  background: white;
+  color: var(--primary-blue);
+  border-left: 4px solid var(--primary-blue); /* Blue highlight on active tab */
+}
+
+.profile-nav li.logout-btn:hover {
+  background: #fff5f5; /* Slight red tint on hover */
+}
+
+/* Right Content */
+.profile-content {
+  flex: 1;
+  padding: 40px;
+}
+
+.profile-tab {
+  display: block;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.profile-tab.hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================== */
+/* OFFICIAL DOCUMENT & PRINT STYLES           */
+/* ========================================== */
+
+.official-document {
+  background: white;
+  max-width: 850px; /* Standard A4 Width */
+  margin: 0 auto;
+  padding: 50px 60px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border: 1px solid #ccc;
+  color: #000;
+  font-family: Arial, sans-serif;
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.doc-logo-left, .doc-logo-right {
+  height: 90px;
+  width: auto;
+}
+
+.doc-header-text {
+  text-align: center;
+  line-height: 1.3;
+}
+
+.doc-header-text p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.document-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 50px;
+}
+
+.document-table th, .document-table td {
+  border: 1px solid #000;
+  padding: 12px 10px;
+  font-size: 13px;
+  color: #000;
+}
+
+.document-table th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.document-signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 80px;
+}
+
+.sig-box {
+  width: 35%;
+  text-align: center;
+}
+
+.sig-line {
+  border-bottom: 1px solid #000;
+  height: 40px;
+  margin-bottom: 5px;
+}
+
+.sig-box p {
+  font-size: 13px;
+  margin: 0;
+  color: #333;
+}
+
+/* --- THE PRINT MAGIC --- */
+@media print {
+  /* 1. Hide everything that isn't the paper */
+  .sidebar, .top-header, .no-print, .btn-secondary, .btn-submit, .modal-overlay {
+    display: none !important;
+  }
+
+  /* 2. Remove layout restrictions so the paper fills the printer bounds */
+  .app-layout {
+    display: block;
+  }
+
+  .main-content {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+  }
+
+  /* 3. Strip the shadow and borders for a clean print */
+  .official-document {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    max-width: 100%;
+  }
+}

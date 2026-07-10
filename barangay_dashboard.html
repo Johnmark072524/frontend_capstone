@@ -36,6 +36,7 @@
         <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Barangay Muzon</p>
       </div>
 
+      <button class="btn-profile">
         <span class="icon" style="background: #eef2f7; padding: 8px; border-radius: 50%;">👤</span>
         Brgy. Official
       </button>
@@ -80,16 +81,16 @@
               <h3 style="margin-bottom: 25px; color: #28a745; border-bottom: 2px solid #eee; padding-bottom: 10px;">Change Password</h3>
               <form>
                 <div class="form-group-vertical" style="margin-bottom: 15px;">
-                  <label>Current Password</label>
-                  <input type="password" required>
+                  <label for="currentPassword">Current Password</label>
+                  <input type="password" id="currentPassword" name="currentPassword" required>
                 </div>
                 <div class="form-group-vertical" style="margin-bottom: 15px;">
-                  <label>New Password</label>
-                  <input type="password" required>
+                  <label for="newPassword">New Password</label>
+                  <input type="password" id="newPassword" name="newPassword" required>
                 </div>
                 <div class="form-group-vertical" style="margin-bottom: 25px;">
-                  <label>Confirm New Password</label>
-                  <input type="password" required>
+                  <label for="confirmNewPassword">Confirm New Password</label>
+                  <input type="password" id="confirmNewPassword" name="confirmNewPassword" required>
                 </div>
                 <button type="submit" class="btn-submit" style="background-color: #28a745; border: none; padding: 10px 20px;">Update Password</button>
               </form>
@@ -122,43 +123,43 @@
               <div class="form-grid">
                 <div class="form-column">
                   <div class="form-group">
-                    <label>City Road Name</label>
-                    <select id="cityRoadName"><option>Select road name</option></select>
+                    <label for="cityRoadName">City Road Name</label>
+                    <select id="cityRoadName"><option value="" disabled selected>Select road name</option></select>
                   </div>
                   <div class="form-group">
-                    <label>Road Importance</label>
-                    <select id="roadImportance"><option>Select importance</option></select>
+                    <label for="roadImportance">Road Importance</label>
+                    <select id="roadImportance" name="roadImportance" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
                   </div>
                   <div class="form-group">
-                    <label>Road Type</label>
-                    <select id="roadType"><option>Select road type</option></select>
+                    <label for="roadType">Road Type</label>
+                    <select id="roadType" name="roadType" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
                   </div>
                   <div class="form-group">
-                    <label>Width (m)</label>
-                    <input type="text" id="width" placeholder="Enter width">
+                    <label for="width">Width (m)</label>
+                    <input type="text" id="width" name="width" placeholder="Enter width">
                   </div>
                   <div class="form-group">
-                    <label>Number of Bridges</label>
-                    <input type="text" id="numberOfBridges" placeholder="Enter number of bridges">
+                    <label for="numberOfBridges">Number of Bridges</label>
+                    <input type="text" id="numberOfBridges" name="numberOfBridges" placeholder="Enter number of bridges">
                   </div>
                 </div>
 
                 <div class="form-column">
                   <div class="form-group">
-                    <label>City Road ID</label>
-                    <input type="text" id="cityRoadId" placeholder="Road ID">
+                    <label for="cityRoadId">City Road ID</label>
+                    <input type="text" id="cityRoadId" name="cityRoadId" readonly style="background-color: #f0f0f0; color: #555;" placeholder="Auto-filled">
                   </div>
                   <div class="form-group">
-                    <label>Terrain Type</label>
-                    <select id="terrainType"><option>Select terrain type</option></select>
+                    <label for="terrainType">Terrain Type</label>
+                    <select id="terrainType" name="terrainType" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
                   </div>
                   <div class="form-group">
-                    <label>Length of Culverts...</label>
-                    <input type="text" id="lengthOfCulverts" placeholder="Enter length of culverts">
+                    <label for="lengthOfCulverts">Length of Culverts</label>
+                    <input type="text" id="lengthOfCulverts" name="lengthOfCulverts" placeholder="Enter length of culverts">
                   </div>
                   <div class="form-group">
-                    <label>Length (m)</label>
-                    <input type="text" id="length" placeholder="Enter length in meters">
+                    <label for="length">Length (m)</label>
+                    <input type="text" id="length" name="length" placeholder="Enter length in meters">
                   </div>
                 </div>
               </div>
@@ -176,19 +177,22 @@
               </div>
 
               <div class="form-group-vertical">
-                <label>Damage Description</label>
-                <textarea id="damageDescription" placeholder="Enter description"></textarea>
+                <label for="damageDescription">Damage Description</label>
+                <textarea id="damageDescription" name="damageDescription" placeholder="Enter description"></textarea>
+              </div>
+
+              <div class="form-group-vertical" style="min-height: 120px;">
+                <span style="display: block; font-weight: 600; margin-bottom: 5px;">Damage Image</span>
+                <div style="flex-grow: 1;"></div>
+                <div>
+                  <button type="button" class="btn-action"><span class="icon">📤</span> Upload</button>
+                </div>
               </div>
 
               <div class="form-group-inline">
-                <label>GPS Coordinates</label>
+                <span style="display: block; font-weight: 600; margin-right: 10px;">GPS Coordinates</span>
                 <button type="button" class="btn-action"><span class="icon">📍</span> Define on Map</button>
               </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn-submit" onclick="submitRoadReport()">Submit Report</button>
-            </div>
           </div>
         </div>
 

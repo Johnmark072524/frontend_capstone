@@ -1,6 +1,62 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   // ==========================================
+  // 0. FETCH ROADS FOR DROPDOWN
+  // ==========================================
+  loadRoadsToDropdown();
+
+  function loadRoadsToDropdown() {
+    const roadDropdown = document.getElementById("cityRoadName");
+    if (!roadDropdown) return;
+
+    fetch("http://localhost:8080/api/roads")
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to fetch roads");
+        return response.json();
+      })
+      .then(roads => {
+        roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
+
+        // 1. Grab the exact ID saved by your login.html page!
+        const currentBarangayId = parseInt(sessionStorage.getItem("barangayId")) || 24;
+
+        roads.forEach(road => {
+
+          // 2. Filter the database roads to only show the ones belonging to the logged-in user
+          if (road.barangay && road.barangay.id === currentBarangayId) {
+
+            const option = document.createElement("option");
+            option.value = road.roadName;
+            option.textContent = road.roadName;
+
+            option.dataset.roadId = road.roadId;
+            option.dataset.importance = road.roadImportance;
+            option.dataset.type = road.roadType;
+            option.dataset.terrain = road.terrainType;
+
+            roadDropdown.appendChild(option);
+          }
+        });
+      })
+      .catch(error => console.error("Error loading roads:", error));
+
+    // THE AUTO-FILL LISTENER
+    roadDropdown.addEventListener("change", function() {
+      const selectedOption = this.options[this.selectedIndex];
+
+      const idBox = document.getElementById("cityRoadId");
+      const importanceBox = document.getElementById("roadImportance");
+      const typeBox = document.getElementById("roadType");
+      const terrainBox = document.getElementById("terrainType");
+
+      if (idBox) idBox.value = selectedOption.dataset.roadId || "";
+      if (importanceBox) importanceBox.innerHTML = `<option value="${selectedOption.dataset.importance}">${selectedOption.dataset.importance}</option>`;
+      if (typeBox) typeBox.innerHTML = `<option value="${selectedOption.dataset.type}">${selectedOption.dataset.type}</option>`;
+      if (terrainBox) terrainBox.innerHTML = `<option value="${selectedOption.dataset.terrain}">${selectedOption.dataset.terrain}</option>`;
+    });
+  }
+
+  // ==========================================
   // 1. SIDEBAR NAVIGATION LOGIC
   // ==========================================
   const navLinks = document.querySelectorAll('.nav-menu li[data-target]');
@@ -29,14 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('review-modal');
   const closeBtn = document.querySelector('.close-modal-btn');
 
-  // Elements inside the modal
   const rejectBtn = document.getElementById('btn-show-reject');
   const primaryActions = document.getElementById('primary-actions');
   const feedbackForm = document.getElementById('reject-feedback-form');
   const confirmRejectBtn = document.getElementById('btn-confirm-reject');
   const cancelRejectBtn = document.getElementById('btn-cancel-reject');
 
-  // Open Modal when "Review" is clicked
   reviewButtons.forEach(button => {
     button.addEventListener('click', () => {
       if(!button.hasAttribute('disabled')) {
@@ -47,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Admin Locate on Map Button
   const adminLocateMapBtn = document.getElementById('btn-admin-locate-map');
   if (adminLocateMapBtn) {
     adminLocateMapBtn.addEventListener('click', () => {
@@ -55,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Close Modal when 'X' is clicked (with safety check)
   if (closeBtn && modal) {
     closeBtn.addEventListener('click', () => {
       modal.classList.add('hidden');
@@ -63,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 3. REJECTION FEEDBACK LOGIC (With Safety Checks!)
+  // 3. REJECTION FEEDBACK LOGIC
   // ==========================================
 
   if (rejectBtn && primaryActions && feedbackForm) {
@@ -270,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 11. BACKEND API CONNECTION LOGIC (RoadWise)
 // ==========================================
-// This is now properly outside the block above, so your HTML can find it!
+// This is properly outside the block above, so your HTML can find it!
 
 function submitRoadReport() {
   const reportData = {

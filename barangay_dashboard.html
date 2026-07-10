@@ -4,20 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RoadWise | Barangay Dashboard</title>
+
+  <link rel="stylesheet" href="css/style.css">
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <div class="app-layout">
 
   <aside class="sidebar">
-
     <div class="brand">
       <img src="img/logo.png" alt="RoadWise Logo" class="brand-logo">
     </div>
-
     <nav class="nav-menu">
       <span class="menu-label">LOCAL MENU</span>
       <ul>
@@ -26,80 +26,21 @@
         <li data-target="view-settings"><a href="#"><span class="icon">⚙️</span> Settings</a></li>
       </ul>
     </nav>
-
   </aside>
 
   <div class="main-content">
-
     <header class="top-header">
       <div>
         <h1>Barangay Dashboard</h1>
         <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Barangay Muzon</p>
       </div>
-
       <button class="btn-profile">
         <span class="icon" style="background: #eef2f7; padding: 8px; border-radius: 50%;">👤</span>
         Brgy. Official
       </button>
-
     </header>
+
     <main class="content-area">
-
-      <div id="view-profile" class="content-section hidden">
-
-        <div class="section-header-flex" style="margin-bottom: 20px;">
-          <h2>Barangay Official Settings</h2>
-        </div>
-
-        <div class="profile-split-container">
-
-          <div class="profile-sidebar">
-            <div class="profile-header-mini">
-              <div class="profile-avatar-mini" style="background: linear-gradient(135deg, #28a745, #20c997);">🏛️</div>
-              <h4 style="margin: 0; color: #28a745;">Marciano Gatchalian</h4>
-              <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-muted);">Barangay Chairman</p>
-            </div>
-
-            <ul class="profile-nav" id="profile-nav-menu">
-              <li class="active" data-target="tab-identity">Official Details</li>
-              <li data-target="tab-security">Security & Password</li>
-              <li class="logout-btn" style="margin-top: auto; color: #dc3545; border-bottom: none;">Log Out ➔</li>
-            </ul>
-          </div>
-
-          <div class="profile-content">
-
-            <div id="tab-identity" class="profile-tab active">
-              <h3 style="margin-bottom: 25px; color: #28a745; border-bottom: 2px solid #eee; padding-bottom: 10px;">Barangay Profile</h3>
-              <div class="profile-detail-row"><strong>Assigned Barangay:</strong> <span>Muzon</span></div>
-              <div class="profile-detail-row"><strong>District:</strong> <span>District 1</span></div>
-              <div class="profile-detail-row"><strong>Official Email:</strong> <span>admin@muzonsjdm.gov.ph</span></div>
-              <div class="profile-detail-row"><strong>Contact Number:</strong> <span>(044) 123-4567</span></div>
-              <div class="profile-detail-row" style="border-bottom: none;"><strong>Account Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></div>
-            </div>
-
-            <div id="tab-security" class="profile-tab hidden">
-              <h3 style="margin-bottom: 25px; color: #28a745; border-bottom: 2px solid #eee; padding-bottom: 10px;">Change Password</h3>
-              <form>
-                <div class="form-group-vertical" style="margin-bottom: 15px;">
-                  <label for="currentPassword">Current Password</label>
-                  <input type="password" id="currentPassword" name="currentPassword" required>
-                </div>
-                <div class="form-group-vertical" style="margin-bottom: 15px;">
-                  <label for="newPassword">New Password</label>
-                  <input type="password" id="newPassword" name="newPassword" required>
-                </div>
-                <div class="form-group-vertical" style="margin-bottom: 25px;">
-                  <label for="confirmNewPassword">Confirm New Password</label>
-                  <input type="password" id="confirmNewPassword" name="confirmNewPassword" required>
-                </div>
-                <button type="submit" class="btn-submit" style="background-color: #28a745; border: none; padding: 10px 20px;">Update Password</button>
-              </form>
-            </div>
-
-          </div>
-        </div>
-      </div>
 
       <div id="view-dashboard" class="content-section">
         <h2>Barangay Dashboard Overview</h2>
@@ -107,7 +48,6 @@
       </div>
 
       <div id="view-reports" class="content-section hidden">
-
         <div class="report-card">
           <div class="report-header">
             <h2>Add New Report</h2>
@@ -120,12 +60,11 @@
           <div class="report-body">
             <div class="form-section">
               <h3 class="section-title">Road Details</h3>
-
               <div class="form-grid">
                 <div class="form-column">
                   <div class="form-group">
-                    <label for="cityRoadName">City Road Name</label>
-                    <select id="cityRoadName"><option value="" disabled selected>Select road name</option></select>
+                    <label for="cityRoadName">City Road Name <span style="color: red;">*</span></label>
+                    <select id="cityRoadName" name="cityRoadName"><option value="" disabled selected>Select road name</option></select>
                   </div>
                   <div class="form-group">
                     <label for="roadImportance">Road Importance</label>
@@ -136,12 +75,12 @@
                     <select id="roadType" name="roadType" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
                   </div>
                   <div class="form-group">
-                    <label for="width">Width (m)</label>
-                    <input type="text" id="width" name="width" placeholder="Enter width">
+                    <label for="cityRoadName">Width <span style="color: red;">*</span></label>
+                    <input type="number" id="width" name="width" placeholder="Enter width" min="0" step="0.01">
                   </div>
                   <div class="form-group">
                     <label for="numberOfBridges">Number of Bridges</label>
-                    <input type="text" id="numberOfBridges" name="numberOfBridges" placeholder="Enter number of bridges">
+                    <input type="number" id="numberOfBridges" name="numberOfBridges" placeholder="Enter number of bridges" min="0" step="1">
                   </div>
                 </div>
 
@@ -156,11 +95,11 @@
                   </div>
                   <div class="form-group">
                     <label for="lengthOfCulverts">Length of Culverts</label>
-                    <input type="text" id="lengthOfCulverts" name="lengthOfCulverts" placeholder="Enter length of culverts">
+                    <input type="number" id="lengthOfCulverts" name="lengthOfCulverts" placeholder="Enter length of culverts" min="0" step="0.01">
                   </div>
                   <div class="form-group">
-                    <label for="length">Length (m)</label>
-                    <input type="text" id="length" name="length" placeholder="Enter length in meters">
+                    <label for="cityRoadName">Length <span style="color: red;">*</span></label>
+                    <input type="number" id="length" name="length" placeholder="Enter length in meters" min="0" step="0.01">
                   </div>
                 </div>
               </div>
@@ -169,14 +108,6 @@
             <div class="form-section">
               <h3 class="section-title">Damage Information</h3>
 
-              <div class="form-group-vertical" style="min-height: 120px;">
-                <label>Damage Image</label>
-                <div style="flex-grow: 1;"></div>
-                <div>
-                  <button type="button" class="btn-action"><span class="icon">📤</span> Upload</button>
-                </div>
-              </div>
-
               <div class="form-group-vertical">
                 <label for="damageDescription">Damage Description</label>
                 <textarea id="damageDescription" name="damageDescription" placeholder="Enter description"></textarea>
@@ -184,19 +115,16 @@
 
               <div class="form-group-vertical" style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa;">
                 <span style="display: block; font-weight: 600; margin-bottom: 10px; color: #333;">Damage Image</span>
-
                 <img id="imagePreview" src="" alt="Damage Preview" style="max-width: 100%; max-height: 150px; display: none; margin: 0 auto 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-
                 <input type="file" id="damageImageFile" accept="image/*" style="display: none;">
-
                 <div>
                   <button type="button" class="btn-action" onclick="document.getElementById('damageImageFile').click()" style="background-color: #eef2f7; color: #333; border: 1px solid #cdd4dc;">
                     <span class="icon">📤</span> Select Photo
                   </button>
                 </div>
-
                 <p id="fileNameDisplay" style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;"></p>
               </div>
+
               <div class="form-group-inline" style="align-items: center;">
                 <span style="display: block; font-weight: 600; margin-right: 10px;">GPS Coordinates</span>
                 <button type="button" class="btn-action" id="btn-define-map"><span class="icon">📍</span> Define on Map</button>
@@ -205,22 +133,19 @@
                 <input type="hidden" id="latitude" name="latitude">
                 <input type="hidden" id="longitude" name="longitude">
               </div>
-          </div>
-        </div>
+            </div>
 
-      </div>
+            <div class="form-actions" style="margin-top: 20px;">
+              <button type="button" id="submit-report-btn" class="btn-submit" onclick="submitRoadReport()">Submit Report</button>
+            </div>
 
-      <div id="view-settings" class="content-section hidden">
-        <h2>Account Settings</h2>
-        <p>Preferences and account details will go here.</p>
-      </div>
+          </div> </div> </div> <div id="view-settings" class="content-section hidden">
+      <h2>Account Settings</h2>
+      <p>Preferences and account details will go here.</p>
+    </div>
 
     </main>
-
-  </div>
-
-</div>
-<div id="map-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+  </div> </div> <div id="map-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center;">
   <div style="background: white; padding: 25px; border-radius: 12px; width: 80%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
       <h2 style="margin: 0; color: #333;">Pinpoint Damage Location</h2>
@@ -232,6 +157,23 @@
 
     <div style="text-align: right;">
       <button type="button" id="btn-save-coords" class="btn-submit" style="padding: 10px 20px;">Save Coordinates</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container">
+  <span id="toast-icon" style="font-size: 20px;"></span>
+  <span id="toast-message"></span>
+</div>
+
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-icon">⚠️</div>
+    <h3>Double-Check Report</h3>
+    <p>Are you sure you want to submit this road report? Please ensure all measurements and details are correct before saving.</p>
+    <div class="modal-buttons">
+      <button type="button" onclick="closeConfirmModal()" class="btn-cancel">Cancel</button>
+      <button type="button" onclick="executeFinalSubmission()" class="btn-submit">Yes, Submit</button>
     </div>
   </div>
 </div>

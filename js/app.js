@@ -9,22 +9,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (imageInput) {
     imageInput.addEventListener('change', function() {
-      // 1. Grab the file the user just selected
       const file = this.files[0];
 
       if (file) {
-        // 2. Show the name of the file on the screen
+        // --- NEW: FILE SIZE SECURITY CHECK ---
+        const maxSizeInMB = 5;
+        const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+
+        if (file.size > maxSizeInBytes) {
+          // Reject the file and warn the user
+          showToast(`File is too large! Please choose an image smaller than ${maxSizeInMB}MB.`, "error");
+
+          // Reset the hidden input and preview
+          this.value = "";
+          imagePreview.style.display = 'none';
+          imagePreview.src = "";
+          fileNameDisplay.textContent = "";
+          return; // Stop running the rest of the code
+        }
+        // -------------------------------------
+
         fileNameDisplay.textContent = file.name;
 
-        // 3. Use FileReader to instantly preview the image!
         const reader = new FileReader();
         reader.onload = function(e) {
           imagePreview.src = e.target.result;
-          imagePreview.style.display = 'block'; // Make it visible
+          imagePreview.style.display = 'block';
         }
         reader.readAsDataURL(file);
       } else {
-        // If they cancel, hide the preview again
         imagePreview.style.display = 'none';
         imagePreview.src = "";
         fileNameDisplay.textContent = "";
@@ -352,72 +365,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==========================================
-// 11. BACKEND API CONNECTION LOGIC (RoadWise)
+// TOAST NOTIFICATION LOGIC
 // ==========================================
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast-container');
+  const toastIcon = document.getElementById('toast-icon');
+  const toastMessage = document.getElementById('toast-message');
 
-function submitRoadReport() {
-  // 1. Create a FormData object (The standard way the internet sends heavy files)
-  const formData = new FormData();
+  if (!toast) return;
 
-  // 2. Append all the text boxes (Spring Boot will automatically map these to your RoadReport model!)
-  formData.append("cityRoadName", document.getElementById("cityRoadName")?.value || "");
-  formData.append("cityRoadId", document.getElementById("cityRoadId")?.value || "");
-  formData.append("roadImportance", document.getElementById("roadImportance")?.value || "");
-  formData.append("roadType", document.getElementById("roadType")?.value || "");
-  formData.append("terrainType", document.getElementById("terrainType")?.value || "");
+  // 1. Set the text
+  toastMessage.textContent = message;
 
-  formData.append("width", parseFloat(document.getElementById("width")?.value) || 0.0);
-  formData.append("length", parseFloat(document.getElementById("length")?.value) || 0.0);
-  formData.append("numberOfBridges", parseInt(document.getElementById("numberOfBridges")?.value) || 0);
-  formData.append("lengthOfCulverts", parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0.0);
-  formData.append("damageDescription", document.getElementById("damageDescription")?.value || "");
-
-  // Default values required by your backend
-  formData.append("latitude", parseFloat(document.getElementById("latitude")?.value) || 0.0);
-  formData.append("longitude", parseFloat(document.getElementById("longitude")?.value) || 0.0);
-  formData.append("inventoryYear", new Date().getFullYear());
-  formData.append("cvDamageClassification", "Pending CV Analysis");
-  formData.append("cvConfidenceScore", 0.0);
-
-  // 3. Grab the physical image file and put it in the box!
-  const imageInput = document.getElementById("damageImageFile");
-  if (imageInput && imageInput.files.length > 0) {
-    formData.append("imageFile", imageInput.files[0]);
+  // 2. Set the color and icon based on success or error
+  if (type === 'success') {
+    toast.className = 'toast-success toast-visible';
+    toastIcon.textContent = '✅';
+  } else {
+    toast.className = 'toast-error toast-visible';
+    toastIcon.textContent = '❌';
   }
 
-  // 4. Send it to Spring Boot!
-  // (Notice we REMOVED the 'Content-Type' header. The browser is smart and automatically
-  // sets it to 'multipart/form-data' when we pass it a FormData object).
-  fetch("http://localhost:8080/api/reports", {
-    method: "POST",
-    body: formData
-  })
-    .then(response => {
-      if (response.ok) return response.json();
-      throw new Error('Network response was not ok.');
-    })
-    .then(data => {
-      alert("Success! Road report and Image have been securely saved to the server.");
-      console.log("Database Response:", data);
-
-      // Clear the form after a success
-      document.getElementById("damageDescription").value = "";
-      document.getElementById("width").value = "";
-
-      // Clear the Image Preview
-      const preview = document.getElementById("imagePreview");
-      if(preview) {
-        preview.style.display = 'none';
-        preview.src = "";
-      }
-      const fileNameDisplay = document.getElementById("fileNameDisplay");
-      if(fileNameDisplay) fileNameDisplay.textContent = "";
-    })
-    .catch(error => {
-      console.error("Error submitting report:", error);
-      alert("Failed to upload report. Please ensure the backend is running.");
-    });
+  // 3. Automatically hide it after 3.5 seconds
+  setTimeout(() => {
+    toast.classList.remove('toast-visible');
+  }, 3500);
 }
+
 
 // ==========================================
 // LEAFLET SATELLITE MAP LOGIC
@@ -486,4 +460,145 @@ if (btnDefineMap && mapModal) {
     // Close map
     mapModal.classList.add('hidden');
   });
+}
+
+// ==========================================
+// BACKEND API CONNECTION LOGIC (RoadWise)
+// ==========================================
+
+// STEP 1: Validate and show the custom popup
+function submitRoadReport() {
+  const roadName = document.getElementById("cityRoadName")?.value;
+  const widthVal = document.getElementById("width")?.value;
+  const lengthVal = document.getElementById("length")?.value;
+
+  if (!roadName || !widthVal || !lengthVal) {
+    showToast("Please fill in all required fields (Road Name, Width, and Length).", "error");
+    return;
+  }
+
+  const width = parseFloat(widthVal);
+  const length = parseFloat(lengthVal);
+  const bridges = parseInt(document.getElementById("numberOfBridges")?.value) || 0;
+  const culverts = parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0;
+
+  if (width < 0 || length < 0 || bridges < 0 || culverts < 0) {
+    showToast("Measurements cannot be negative numbers! Please correct them.", "error");
+    return;
+  }
+
+  // Show our sleek new modern modal instead of window.confirm!
+  document.getElementById('confirm-modal').classList.remove('hidden');
+}
+
+// STEP 2: Close the popup if they click Cancel
+function closeConfirmModal() {
+  document.getElementById('confirm-modal').classList.add('hidden');
+}
+
+// STEP 3: The actual server submission if they click "Yes, Submit"
+function executeFinalSubmission() {
+  // Hide the modal
+  closeConfirmModal();
+
+  // The Loading State
+  const submitBtn = document.getElementById("submit-report-btn");
+  if (submitBtn) {
+    submitBtn.innerHTML = "⏳ Submitting...";
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = "0.7";
+    submitBtn.style.cursor = "not-allowed";
+  }
+
+  // Package the Form Data
+  const formData = new FormData();
+  formData.append("cityRoadName", document.getElementById("cityRoadName")?.value || "");
+  formData.append("cityRoadId", document.getElementById("cityRoadId")?.value || "");
+  formData.append("roadImportance", document.getElementById("roadImportance")?.value || "");
+  formData.append("roadType", document.getElementById("roadType")?.value || "");
+  formData.append("terrainType", document.getElementById("terrainType")?.value || "");
+
+  formData.append("width", parseFloat(document.getElementById("width")?.value) || 0.0);
+  formData.append("length", parseFloat(document.getElementById("length")?.value) || 0.0);
+  formData.append("numberOfBridges", parseInt(document.getElementById("numberOfBridges")?.value) || 0);
+  formData.append("lengthOfCulverts", parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0.0);
+  formData.append("damageDescription", document.getElementById("damageDescription")?.value || "");
+
+  formData.append("latitude", parseFloat(document.getElementById("latitude")?.value) || 0.0);
+  formData.append("longitude", parseFloat(document.getElementById("longitude")?.value) || 0.0);
+  formData.append("inventoryYear", new Date().getFullYear());
+  formData.append("cvDamageClassification", "Pending CV Analysis");
+  formData.append("cvConfidenceScore", 0.0);
+
+  const imageInput = document.getElementById("damageImageFile");
+  if (imageInput && imageInput.files.length > 0) {
+    formData.append("imageFile", imageInput.files[0]);
+  }
+
+  // Send to Spring Boot
+  fetch("http://localhost:8080/api/reports", {
+    method: "POST",
+    body: formData
+  })
+    .then(response => {
+      if (response.ok) return response.json();
+      throw new Error('Network response was not ok.');
+    })
+    .then(data => {
+      showToast("Report securely saved to the database!", "success");
+      resetAddReportForm();
+
+      if (submitBtn) {
+        submitBtn.innerHTML = "Submit Report";
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = "1";
+        submitBtn.style.cursor = "pointer";
+      }
+    })
+    .catch(error => {
+      console.error("Error submitting report:", error);
+      showToast("Failed to upload report. Is the server running?", "error");
+
+      if (submitBtn) {
+        submitBtn.innerHTML = "Submit Report";
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = "1";
+        submitBtn.style.cursor = "pointer";
+      }
+    });
+}
+
+// ==========================================
+// FORM UTILITY LOGIC
+// ==========================================
+function resetAddReportForm() {
+  // 1. Clear all manual text and number inputs
+  document.getElementById("width").value = "";
+  document.getElementById("length").value = "";
+  document.getElementById("numberOfBridges").value = "";
+  document.getElementById("lengthOfCulverts").value = "";
+  document.getElementById("damageDescription").value = "";
+
+  // 2. Clear all dropdowns and auto-filled backend fields
+  document.getElementById("cityRoadName").value = "";
+  document.getElementById("cityRoadId").value = "";
+  document.getElementById("roadImportance").value = "";
+  document.getElementById("roadType").value = "";
+  document.getElementById("terrainType").value = "";
+
+  // 3. Wipe the hidden map math and reset the display text
+  document.getElementById("latitude").value = "";
+  document.getElementById("longitude").value = "";
+  const coordsDisplay = document.getElementById("coords-display");
+  if (coordsDisplay) coordsDisplay.textContent = "Not Selected";
+
+  // 4. Completely wipe the image file and hide the preview
+  document.getElementById("damageImageFile").value = "";
+  const preview = document.getElementById("imagePreview");
+  if (preview) {
+    preview.style.display = 'none';
+    preview.src = "";
+  }
+  const fileNameDisplay = document.getElementById("fileNameDisplay");
+  if (fileNameDisplay) fileNameDisplay.textContent = "";
 }

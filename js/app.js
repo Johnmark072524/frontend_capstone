@@ -1,6 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   // ==========================================
+  // IMAGE UPLOAD & PREVIEW LOGIC
+  // ==========================================
+  const imageInput = document.getElementById('damageImageFile');
+  const imagePreview = document.getElementById('imagePreview');
+  const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+  if (imageInput) {
+    imageInput.addEventListener('change', function() {
+      // 1. Grab the file the user just selected
+      const file = this.files[0];
+
+      if (file) {
+        // 2. Show the name of the file on the screen
+        fileNameDisplay.textContent = file.name;
+
+        // 3. Use FileReader to instantly preview the image!
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          imagePreview.src = e.target.result;
+          imagePreview.style.display = 'block'; // Make it visible
+        }
+        reader.readAsDataURL(file);
+      } else {
+        // If they cancel, hide the preview again
+        imagePreview.style.display = 'none';
+        imagePreview.src = "";
+        fileNameDisplay.textContent = "";
+      }
+    });
+  }
+
+  // ==========================================
   // 0. FETCH ROADS FOR DROPDOWN
   // ==========================================
   loadRoadsToDropdown();
@@ -322,54 +354,67 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 11. BACKEND API CONNECTION LOGIC (RoadWise)
 // ==========================================
-// This is properly outside the block above, so your HTML can find it!
 
 function submitRoadReport() {
-  const reportData = {
-    cityRoadName: document.getElementById("cityRoadName")?.value || "",
-    cityRoadId: document.getElementById("cityRoadId")?.value || "",
-    roadImportance: document.getElementById("roadImportance")?.value || "",
-    roadType: document.getElementById("roadType")?.value || "",
-    terrainType: document.getElementById("terrainType")?.value || "",
-    width: parseFloat(document.getElementById("width")?.value) || 0.0,
-    length: parseFloat(document.getElementById("length")?.value) || 0.0,
-    numberOfBridges: parseInt(document.getElementById("numberOfBridges")?.value) || 0,
-    lengthOfCulverts: parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0.0,
-    damageDescription: document.getElementById("damageDescription")?.value || "",
+  // 1. Create a FormData object (The standard way the internet sends heavy files)
+  const formData = new FormData();
 
-    damageImage: "pending_upload.jpg",
-    latitude: 14.9,
-    longitude: 121.0,
-    inventoryYear: new Date().getFullYear(),
+  // 2. Append all the text boxes (Spring Boot will automatically map these to your RoadReport model!)
+  formData.append("cityRoadName", document.getElementById("cityRoadName")?.value || "");
+  formData.append("cityRoadId", document.getElementById("cityRoadId")?.value || "");
+  formData.append("roadImportance", document.getElementById("roadImportance")?.value || "");
+  formData.append("roadType", document.getElementById("roadType")?.value || "");
+  formData.append("terrainType", document.getElementById("terrainType")?.value || "");
 
-    cvDamageClassification: "Pending CV Analysis",
-    cvConfidenceScore: 0.0,
+  formData.append("width", parseFloat(document.getElementById("width")?.value) || 0.0);
+  formData.append("length", parseFloat(document.getElementById("length")?.value) || 0.0);
+  formData.append("numberOfBridges", parseInt(document.getElementById("numberOfBridges")?.value) || 0);
+  formData.append("lengthOfCulverts", parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0.0);
+  formData.append("damageDescription", document.getElementById("damageDescription")?.value || "");
 
-    status: "Pending"
-  };
+  // Default values required by your backend
+  formData.append("latitude", 14.9);
+  formData.append("longitude", 121.0);
+  formData.append("inventoryYear", new Date().getFullYear());
+  formData.append("cvDamageClassification", "Pending CV Analysis");
+  formData.append("cvConfidenceScore", 0.0);
 
+  // 3. Grab the physical image file and put it in the box!
+  const imageInput = document.getElementById("damageImageFile");
+  if (imageInput && imageInput.files.length > 0) {
+    formData.append("imageFile", imageInput.files[0]);
+  }
+
+  // 4. Send it to Spring Boot!
+  // (Notice we REMOVED the 'Content-Type' header. The browser is smart and automatically
+  // sets it to 'multipart/form-data' when we pass it a FormData object).
   fetch("http://localhost:8080/api/reports", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(reportData)
+    body: formData
   })
     .then(response => {
-      if (response.ok) {
-        return response.json();
-      }
+      if (response.ok) return response.json();
       throw new Error('Network response was not ok.');
     })
     .then(data => {
-      alert("Success! Road report has been securely saved to the database.");
+      alert("Success! Road report and Image have been securely saved to the server.");
       console.log("Database Response:", data);
 
+      // Clear the form after a success
       document.getElementById("damageDescription").value = "";
       document.getElementById("width").value = "";
+
+      // Clear the Image Preview
+      const preview = document.getElementById("imagePreview");
+      if(preview) {
+        preview.style.display = 'none';
+        preview.src = "";
+      }
+      const fileNameDisplay = document.getElementById("fileNameDisplay");
+      if(fileNameDisplay) fileNameDisplay.textContent = "";
     })
     .catch(error => {
       console.error("Error submitting report:", error);
-      alert("Failed to connect to the server. Please ensure the backend is running.");
+      alert("Failed to upload report. Please ensure the backend is running.");
     });
 }

@@ -602,3 +602,54 @@ function resetAddReportForm() {
   const fileNameDisplay = document.getElementById("fileNameDisplay");
   if (fileNameDisplay) fileNameDisplay.textContent = "";
 }
+
+// ==========================================
+// LOGIN LOGIC
+// ==========================================
+function handleLogin() {
+  // 1. Grab the HTML elements
+  const usernameInput = document.getElementById("username");
+  const passwordInput = document.getElementById("password");
+
+  if (!usernameInput || !passwordInput) {
+    console.error("Could not find the username or password inputs.");
+    return;
+  }
+
+  const username = usernameInput.value;
+  const password = passwordInput.value;
+
+  // 2. Security Check: Are the fields empty?
+  if (!username || !password) {
+    showToast("Please enter both your Official ID and password.", "error");
+    return;
+  }
+
+  // 3. Button Loading State
+  const loginBtn = document.getElementById("login-btn");
+  if (loginBtn) {
+    loginBtn.innerHTML = "Authenticating... ⏳";
+    loginBtn.disabled = true;
+    loginBtn.style.opacity = "0.7";
+  }
+
+  // 4. THE AUTHENTICATION (Simulated for testing)
+  // Note: Once your Spring Boot AuthController is completely finished,
+  // we will replace this setTimeout with a fetch() call to the database!
+  setTimeout(() => {
+    // Save the logged-in user to the browser's memory
+    sessionStorage.setItem("userId", username);
+
+    showToast("Login Successful!", "success");
+
+    // Redirect the user to their dashboard
+    window.location.href = "barangay_dashboard.html";
+
+    // Reset button just in case they click 'back'
+    if (loginBtn) {
+      loginBtn.innerHTML = "Log in ➔";
+      loginBtn.disabled = false;
+      loginBtn.style.opacity = "1";
+    }
+  }, 1000); // 1 second delay to simulate server checking
+}

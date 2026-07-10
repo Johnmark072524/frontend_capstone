@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RoadWise | Barangay Dashboard</title>
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -181,17 +182,28 @@
                 <textarea id="damageDescription" name="damageDescription" placeholder="Enter description"></textarea>
               </div>
 
-              <div class="form-group-vertical" style="min-height: 120px;">
-                <span style="display: block; font-weight: 600; margin-bottom: 5px;">Damage Image</span>
-                <div style="flex-grow: 1;"></div>
-                <div>
-                  <button type="button" class="btn-action"><span class="icon">📤</span> Upload</button>
-                </div>
-              </div>
+              <div class="form-group-vertical" style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa;">
+                <span style="display: block; font-weight: 600; margin-bottom: 10px; color: #333;">Damage Image</span>
 
-              <div class="form-group-inline">
+                <img id="imagePreview" src="" alt="Damage Preview" style="max-width: 100%; max-height: 150px; display: none; margin: 0 auto 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+
+                <input type="file" id="damageImageFile" accept="image/*" style="display: none;">
+
+                <div>
+                  <button type="button" class="btn-action" onclick="document.getElementById('damageImageFile').click()" style="background-color: #eef2f7; color: #333; border: 1px solid #cdd4dc;">
+                    <span class="icon">📤</span> Select Photo
+                  </button>
+                </div>
+
+                <p id="fileNameDisplay" style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;"></p>
+              </div>
+              <div class="form-group-inline" style="align-items: center;">
                 <span style="display: block; font-weight: 600; margin-right: 10px;">GPS Coordinates</span>
-                <button type="button" class="btn-action"><span class="icon">📍</span> Define on Map</button>
+                <button type="button" class="btn-action" id="btn-define-map"><span class="icon">📍</span> Define on Map</button>
+                <span id="coords-display" style="margin-left: 15px; font-size: 13px; color: #28a745; font-weight: bold;">Not Selected</span>
+
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
               </div>
           </div>
         </div>
@@ -208,7 +220,21 @@
   </div>
 
 </div>
+<div id="map-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+  <div style="background: white; padding: 25px; border-radius: 12px; width: 80%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h2 style="margin: 0; color: #333;">Pinpoint Damage Location</h2>
+      <button type="button" id="close-map-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #888;">&times;</button>
+    </div>
+    <p style="margin-top: 0; color: #666; font-size: 14px;">Click anywhere on the map to drop a pin. This will record the exact satellite coordinates.</p>
 
+    <div id="roadwiseMap" style="height: 400px; width: 100%; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 20px;"></div>
+
+    <div style="text-align: right;">
+      <button type="button" id="btn-save-coords" class="btn-submit" style="padding: 10px 20px;">Save Coordinates</button>
+    </div>
+  </div>
+</div>
 <script src="js/app.js"></script>
 </body>
 </html>

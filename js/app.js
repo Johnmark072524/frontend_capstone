@@ -373,8 +373,8 @@ function submitRoadReport() {
   formData.append("damageDescription", document.getElementById("damageDescription")?.value || "");
 
   // Default values required by your backend
-  formData.append("latitude", 14.9);
-  formData.append("longitude", 121.0);
+  formData.append("latitude", parseFloat(document.getElementById("latitude")?.value) || 0.0);
+  formData.append("longitude", parseFloat(document.getElementById("longitude")?.value) || 0.0);
   formData.append("inventoryYear", new Date().getFullYear());
   formData.append("cvDamageClassification", "Pending CV Analysis");
   formData.append("cvConfidenceScore", 0.0);
@@ -417,4 +417,73 @@ function submitRoadReport() {
       console.error("Error submitting report:", error);
       alert("Failed to upload report. Please ensure the backend is running.");
     });
+}
+
+// ==========================================
+// LEAFLET SATELLITE MAP LOGIC
+// ==========================================
+let map;
+let mapMarker;
+let selectedLat = 14.8139; // Default center of San Jose del Monte
+let selectedLng = 121.0453; // Default center of San Jose del Monte
+
+const btnDefineMap = document.getElementById('btn-define-map');
+const mapModal = document.getElementById('map-modal');
+const btnCloseMap = document.getElementById('close-map-btn');
+const btnSaveCoords = document.getElementById('btn-save-coords');
+
+if (btnDefineMap && mapModal) {
+  btnDefineMap.addEventListener('click', () => {
+    // 1. Open the modal
+    mapModal.classList.remove('hidden');
+
+    // 2. Load the map if it hasn't been loaded yet
+    if (!map) {
+      // Center exactly on San Jose del Monte with zoom level 14
+      map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
+
+      // Add Esri Satellite Imagery
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      }).addTo(map);
+
+      // Add Street Names overlay on top of the satellite image (Hybrid view!)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Labels &copy; Esri'
+      }).addTo(map);
+
+      // 3. Listen for clicks to drop the pin!
+      map.on('click', function(e) {
+        selectedLat = e.latlng.lat;
+        selectedLng = e.latlng.lng;
+
+        // Remove old marker if it exists, add new one
+        if (mapMarker) {
+          map.removeLayer(mapMarker);
+        }
+        mapMarker = L.marker([selectedLat, selectedLng]).addTo(map);
+      });
+    }
+
+    // Fix for Leaflet maps loading inside hidden divs
+    setTimeout(() => { map.invalidateSize(); }, 200);
+  });
+
+  // Close buttons logic
+  btnCloseMap.addEventListener('click', () => mapModal.classList.add('hidden'));
+
+  // Save button logic
+  btnSaveCoords.addEventListener('click', () => {
+    if(!mapMarker) {
+      alert("Please click on the map to drop a pin first!");
+      return;
+    }
+    // Paste values into hidden boxes
+    document.getElementById('latitude').value = selectedLat;
+    document.getElementById('longitude').value = selectedLng;
+    // Show success text to user
+    document.getElementById('coords-display').textContent = `Locked: ${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+    // Close map
+    mapModal.classList.add('hidden');
+  });
 }

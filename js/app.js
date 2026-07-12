@@ -46,47 +46,45 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 0. FETCH ROADS FOR DROPDOWN
-  // ==========================================
+// 0. FETCH ROADS FOR DROPDOWN
+// ==========================================
   loadRoadsToDropdown();
+
   function loadRoadsToDropdown() {
     const roadDropdown = document.getElementById("cityRoadName");
     if (!roadDropdown) return;
 
-    fetch("http://localhost:8080/api/roads")
+    // 1. Grab the ID from the browser's memory FIRST!
+    const loggedInBarangayId = sessionStorage.getItem("barangayId");
+
+    // 2. Safety check: If they aren't logged in, stop the code.
+    if (!loggedInBarangayId) {
+      console.error("No Barangay ID found. Cannot load roads.");
+      roadDropdown.innerHTML = '<option value="" disabled selected>Please log in first...</option>';
+      return;
+    }
+
+    // 3. NOW fetch the roads using the ID and our dynamic config variable!
+    fetch(`${API_BASE_URL}/api/roads/barangay/${loggedInBarangayId}`)
       .then(response => {
         if (!response.ok) throw new Error("Failed to fetch roads");
         return response.json();
       })
       .then(roads => {
-        // 1. Grab the REAL ID saved by your login page (No more Kaypian fallback!)
-        const savedId = sessionStorage.getItem("barangayId");
-
-        // If no ID is found in memory, warn the developer and stop loading!
-        if (!savedId) {
-          console.error("No user is logged in! Cannot load roads.");
-          roadDropdown.innerHTML = '<option value="" disabled selected>Please log in first...</option>';
-          return;
-        }
-
         roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
-        const currentBarangayId = parseInt(savedId);
 
+        // 4. Loop directly through the roads (Spring Boot already filtered them for us!)
         roads.forEach(road => {
-          // 2. Filter the database roads to only show the logged-in user's roads
-          if (road.barangay && road.barangay.id === currentBarangayId) {
-            const option = document.createElement("option");
-            option.value = road.roadName;
-            option.textContent = road.roadName;
+          const option = document.createElement("option");
+          option.value = road.roadName;
+          option.textContent = road.roadName;
 
-            // Note: Added a fallback (road.roadId || road.id) just in case your database names it differently!
-            option.dataset.roadId = road.roadId || road.id;
-            option.dataset.importance = road.roadImportance;
-            option.dataset.type = road.roadType;
-            option.dataset.terrain = road.terrainType;
+          option.dataset.roadId = road.roadId || road.id;
+          option.dataset.importance = road.roadImportance;
+          option.dataset.type = road.roadType;
+          option.dataset.terrain = road.terrainType;
 
-            roadDropdown.appendChild(option);
-          }
+          roadDropdown.appendChild(option);
         });
       })
       .catch(error => console.error("Error loading roads:", error));
@@ -640,7 +638,7 @@ function handleLogin() {
   }
 
   // 4. REAL AUTHENTICATION via Spring Boot
-  fetch('http://localhost:8080/api/auth/login', {
+  fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

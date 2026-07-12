@@ -384,15 +384,14 @@
       <div class="modal-content">
 
         <div class="modal-header">
-          <h2>Review Report <span class="highlight">#RPT-0842</span></h2>
+          <h2>Review Report <span class="highlight" id="modal-header-id">#RPT-0000</span></h2>
           <div style="display: flex; gap: 15px; align-items: center;">
             <button class="btn-secondary" id="btn-print-single" style="padding: 4px 10px; font-size: 12px;"><span class="icon">🖨️</span> Print</button>
-            <button class="close-modal-btn">✕</button>
+            <button class="close-modal-btn" onclick="closeReviewModal()">✕</button>
           </div>
         </div>
 
         <div class="modal-body">
-
           <div class="report-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
               <h3 class="section-title" style="margin-bottom: 0;">Assessment Overview</h3>
@@ -402,12 +401,12 @@
             </div>
 
             <div class="report-detail-grid">
-              <div><strong>Report ID:</strong> #RPT-0842</div>
-              <div><strong>Severity Level:</strong> <span class="badge high">High</span></div>
-              <div><strong>Date Submitted:</strong> 2025-11-12</div>
-              <div><strong>GPS Coordinates:</strong> 14.8080° N, 121.0456° E</div>
+              <div><strong>Report ID:</strong> <span id="modal-report-id"></span></div>
+              <div><strong>Severity Level:</strong> <span id="modal-severity" class="badge"></span></div>
+              <div><strong>Date Submitted:</strong> <span id="modal-date"></span></div>
+              <div><strong>GPS Coordinates:</strong> <span id="modal-gps"></span></div>
               <div style="grid-column: 1 / -1;">
-                <strong>Submitted By:</strong> Kap. Marciano Gatchalian (Barangay Muzon)
+                <strong>Submitted By:</strong> Barangay Official
               </div>
             </div>
           </div>
@@ -415,45 +414,33 @@
           <div class="report-section">
             <h3 class="section-title">Road Details</h3>
             <div class="report-detail-grid">
-              <div><strong>Barangay:</strong> Minuyan Proper</div>
-              <div><strong>City Road Name:</strong> Minuyan Proper Rd.</div>
-              <div><strong>City Road ID:</strong> CR-1042</div>
-              <div><strong>Road Importance:</strong> Primary</div>
-              <div><strong>Terrain Type:</strong> Flat</div>
-              <div><strong>Road Type:</strong> Concrete</div>
-              <div><strong>Length (m):</strong> 1500</div>
-              <div><strong>Width (m):</strong> 6.5</div>
-              <div><strong>Length of Culverts:</strong> 12m</div>
-              <div><strong>Number of Bridges:</strong> 0</div>
+              <div><strong>Barangay:</strong> <span id="modal-barangay"></span></div>
+              <div><strong>City Road Name:</strong> <span id="modal-road-name"></span></div>
+              <div><strong>City Road ID:</strong> <span id="modal-road-id"></span></div>
+              <div><strong>Road Importance:</strong> <span id="modal-importance"></span></div>
+              <div><strong>Terrain Type:</strong> <span id="modal-terrain"></span></div>
+              <div><strong>Road Type:</strong> <span id="modal-road-type"></span></div>
+              <div><strong>Length (m):</strong> <span id="modal-length"></span></div>
+              <div><strong>Width (m):</strong> <span id="modal-width"></span></div>
+              <div><strong>Length of Culverts:</strong> <span id="modal-culverts"></span>m</div>
+              <div><strong>Number of Bridges:</strong> <span id="modal-bridges"></span></div>
             </div>
           </div>
 
           <div class="report-section" style="border-bottom: none;">
             <h3 class="section-title">Damage Evidence</h3>
-            <div class="report-image-placeholder">
-              <span class="icon">📷</span>
-              <p>Damage Photo Provided by Barangay</p>
-            </div>
+
+            <img id="modal-damage-image" src="" alt="Damage Photo" style="max-width: 100%; border-radius: 8px; margin-bottom: 15px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
 
             <div class="report-description">
               <strong>Damage Description:</strong>
-              <p>Deep potholes covering a 5-meter stretch. Causing severe traffic buildup and potential hazard to tricycles.</p>
+              <p id="modal-description"></p>
             </div>
           </div>
 
           <div class="modal-actions" id="primary-actions">
             <button class="btn-reject" id="btn-show-reject"><span class="icon">❌</span> Reject</button>
             <button class="btn-submit"><span class="icon">✅</span> Accept & Validate</button>
-          </div>
-
-          <div id="reject-feedback-form" class="hidden" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-            <h3 style="font-size: 14px; margin-bottom: 10px; color: #dc3545;">Reason for Rejection</h3>
-            <textarea placeholder="Explain why this report is being rejected... (This will be sent to the Barangay Official)"></textarea>
-
-            <div class="form-actions" style="gap: 15px;">
-              <button class="btn-secondary" id="btn-cancel-reject">Back</button>
-              <button class="btn-reject" id="btn-confirm-reject">Submit Rejection</button>
-            </div>
           </div>
 
         </div>

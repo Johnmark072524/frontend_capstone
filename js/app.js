@@ -771,3 +771,69 @@ function loadAdminReports() {
 
 // Ensure it runs when the script loads
 loadAdminReports();
+// ==========================================
+// ADMIN DASHBOARD: OPEN REVIEW MODAL
+// ==========================================
+function reviewReport(reportId) {
+  // 1. Fetch the exact report from the backend database
+  fetch(`${API_BASE_URL}/api/reports/${reportId}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch report details");
+      return response.json();
+    })
+    .then(report => {
+      // 2. Format basic data
+      const formattedId = `#RPT-${String(report.id).padStart(4, '0')}`;
+      const severity = report.severity || 'Unassessed';
+      const severityClass = severity.toLowerCase() === 'high' ? 'high' :
+        severity.toLowerCase() === 'medium' ? 'medium' :
+          severity.toLowerCase() === 'low' ? 'low' : 'secondary';
+
+      // 3. Inject text into the HTML IDs we just created
+      document.getElementById('modal-header-id').textContent = formattedId;
+      document.getElementById('modal-report-id').textContent = formattedId;
+
+      const severityBadge = document.getElementById('modal-severity');
+      severityBadge.textContent = severity;
+      severityBadge.className = `badge ${severityClass}`;
+
+      document.getElementById('modal-date').textContent = report.dateSubmitted || 'N/A';
+      document.getElementById('modal-gps').textContent = `${report.latitude || 0}° N, ${report.longitude || 0}° E`;
+      document.getElementById('modal-barangay').textContent = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
+
+      document.getElementById('modal-road-name').textContent = report.cityRoadName || 'N/A';
+      document.getElementById('modal-road-id').textContent = report.cityRoadId || 'N/A';
+      document.getElementById('modal-importance').textContent = report.roadImportance || 'N/A';
+      document.getElementById('modal-terrain').textContent = report.terrainType || 'N/A';
+      document.getElementById('modal-road-type').textContent = report.roadType || 'N/A';
+
+      document.getElementById('modal-length').textContent = report.length || 0;
+      document.getElementById('modal-width').textContent = report.width || 0;
+      document.getElementById('modal-culverts').textContent = report.lengthOfCulverts || 0;
+      document.getElementById('modal-bridges').textContent = report.numberOfBridges || 0;
+
+      document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
+
+      // 4. Handle the Image Upload Display
+      const imageEl = document.getElementById('modal-damage-image');
+      if (report.damageImage && report.damageImage !== 'no_image.jpg') {
+        // Point it to your Spring Boot uploads folder
+        imageEl.src = `${API_BASE_URL}/uploads/${report.damageImage}`;
+        imageEl.style.display = 'block';
+      } else {
+        imageEl.style.display = 'none'; // Hide if no image
+      }
+
+      // 5. Open the modal!
+      document.getElementById('review-modal').classList.remove('hidden');
+    })
+    .catch(error => {
+      console.error("Error:", error);
+      alert("Error loading report data.");
+    });
+}
+
+// Function to cleanly close the modal
+function closeReviewModal() {
+  document.getElementById('review-modal').classList.add('hidden');
+}

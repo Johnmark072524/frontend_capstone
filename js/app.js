@@ -49,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 0. FETCH ROADS FOR DROPDOWN
   // ==========================================
   loadRoadsToDropdown();
-
   function loadRoadsToDropdown() {
     const roadDropdown = document.getElementById("cityRoadName");
     if (!roadDropdown) return;
@@ -60,21 +59,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return response.json();
       })
       .then(roads => {
-        roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
+        // 1. Grab the REAL ID saved by your login page (No more Kaypian fallback!)
+        const savedId = sessionStorage.getItem("barangayId");
 
-        // 1. Grab the exact ID saved by your login.html page!
-        const currentBarangayId = parseInt(sessionStorage.getItem("barangayId")) || 24;
+        // If no ID is found in memory, warn the developer and stop loading!
+        if (!savedId) {
+          console.error("No user is logged in! Cannot load roads.");
+          roadDropdown.innerHTML = '<option value="" disabled selected>Please log in first...</option>';
+          return;
+        }
+
+        roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
+        const currentBarangayId = parseInt(savedId);
 
         roads.forEach(road => {
-
-          // 2. Filter the database roads to only show the ones belonging to the logged-in user
+          // 2. Filter the database roads to only show the logged-in user's roads
           if (road.barangay && road.barangay.id === currentBarangayId) {
-
             const option = document.createElement("option");
             option.value = road.roadName;
             option.textContent = road.roadName;
 
-            option.dataset.roadId = road.roadId;
+            // Note: Added a fallback (road.roadId || road.id) just in case your database names it differently!
+            option.dataset.roadId = road.roadId || road.id;
             option.dataset.importance = road.roadImportance;
             option.dataset.type = road.roadType;
             option.dataset.terrain = road.terrainType;
@@ -604,7 +610,7 @@ function resetAddReportForm() {
 }
 
 // ==========================================
-// LOGIN LOGIC
+// LOGIN LOGIC (Connected to Spring Boot)
 // ==========================================
 function handleLogin() {
   // 1. Grab the HTML elements
@@ -633,23 +639,47 @@ function handleLogin() {
     loginBtn.style.opacity = "0.7";
   }
 
-  // 4. THE AUTHENTICATION (Simulated for testing)
-  // Note: Once your Spring Boot AuthController is completely finished,
-  // we will replace this setTimeout with a fetch() call to the database!
-  setTimeout(() => {
-    // Save the logged-in user to the browser's memory
-    sessionStorage.setItem("userId", username);
+  // 4. REAL AUTHENTICATION via Spring Boot
+  fetch('http://localhost:8080/api/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      username: username,
+      password: password
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Invalid credentials');
+      }
+      return response.json();
+    })
+    .then(data => {
+      // SUCCESS! Save the REAL user data based on your custom Java response
+      sessionStorage.setItem("userId", data.userId);
 
-    showToast("Login Successful!", "success");
+      // *** THIS IS THE CRUCIAL LINE THAT MAKES YOUR DROPDOWN WORK! ***
+      if (data.barangayId) {
+        sessionStorage.setItem("barangayId", data.barangayId);
+      }
 
-    // Redirect the user to their dashboard
-    window.location.href = "barangay_dashboard.html";
+      showToast("Login Successful!", "success");
 
-    // Reset button just in case they click 'back'
-    if (loginBtn) {
-      loginBtn.innerHTML = "Log in ➔";
-      loginBtn.disabled = false;
-      loginBtn.style.opacity = "1";
-    }
-  }, 1000); // 1 second delay to simulate server checking
+      // Wait 1 second so they can see the success toast, then redirect
+      setTimeout(() => {
+        window.location.href = "barangay_dashboard.html";
+      }, 1000);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast("Invalid username or password.", "error");
+
+      if (loginBtn) {
+        loginBtn.innerHTML = "Log in ➔";
+        loginBtn.disabled = false;
+        loginBtn.style.opacity = "1";
+      }
+    });
 }

@@ -501,6 +501,7 @@ function closeConfirmModal() {
 }
 
 // STEP 3: The actual server submission if they click "Yes, Submit"
+// STEP 3: The actual server submission if they click "Yes, Submit"
 function executeFinalSubmission() {
   // Hide the modal
   closeConfirmModal();
@@ -516,6 +517,18 @@ function executeFinalSubmission() {
 
   // Package the Form Data
   const formData = new FormData();
+
+  // Grab the Barangay ID from the user's login session!
+  const loggedInBarangayId = sessionStorage.getItem("barangayId");
+  if (loggedInBarangayId) {
+    // It MUST be exactly "barangayId" to match Java!
+    formData.append("barangayId", loggedInBarangayId);
+  }
+
+  // --- NEW: Grab the manual Severity dropdown value ---
+  formData.append("severity", document.getElementById("severity")?.value || "Low");
+
+  // Your existing fields
   formData.append("cityRoadName", document.getElementById("cityRoadName")?.value || "");
   formData.append("cityRoadId", document.getElementById("cityRoadId")?.value || "");
   formData.append("roadImportance", document.getElementById("roadImportance")?.value || "");
@@ -531,6 +544,8 @@ function executeFinalSubmission() {
   formData.append("latitude", parseFloat(document.getElementById("latitude")?.value) || 0.0);
   formData.append("longitude", parseFloat(document.getElementById("longitude")?.value) || 0.0);
   formData.append("inventoryYear", new Date().getFullYear());
+
+  // Notice we leave CV Analysis alone since the AI hasn't processed it yet!
   formData.append("cvDamageClassification", "Pending CV Analysis");
   formData.append("cvConfidenceScore", 0.0);
 
@@ -539,8 +554,8 @@ function executeFinalSubmission() {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  // Send to Spring Boot
-  fetch("http://localhost:8080/api/reports", {
+  // --- NEW: Use the dynamic API_BASE_URL from config.js! ---
+  fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
   })
@@ -550,7 +565,9 @@ function executeFinalSubmission() {
     })
     .then(data => {
       showToast("Report securely saved to the database!", "success");
-      resetAddReportForm();
+
+      // I assume you have this function defined elsewhere to clear the form
+      if (typeof resetAddReportForm === 'function') resetAddReportForm();
 
       if (submitBtn) {
         submitBtn.innerHTML = "Submit Report";
@@ -681,3 +698,76 @@ function handleLogin() {
       }
     });
 }
+// ==========================================
+// ADMIN DASHBOARD: LOAD ALL REPORTS
+// ==========================================
+function loadAdminReports() {
+  // Note: We are targeting your specific '.data-table tbody' now!
+  const reportsTableBody = document.querySelector('.data-table tbody');
+
+  if (!reportsTableBody) return;
+
+  fetch(`${API_BASE_URL}/api/reports`)
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch reports");
+      return response.json();
+    })
+    .then(reports => {
+      // Clear out any hardcoded HTML rows or loading text
+      reportsTableBody.innerHTML = '';
+
+      if (reports.length === 0) {
+        reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No road reports have been submitted yet.</td></tr>';
+        return;
+      }
+
+      // Loop through every report in the database
+      reports.forEach(report => {
+        const formattedId = `#RPT-${String(report.id || 0).padStart(4, '0')}`;
+
+        // Now it perfectly matches your Java model fields!
+        const roadId = report.cityRoadId || 'N/A';
+        const roadName = report.cityRoadName || 'Unknown Road';
+        const severity = report.severity || 'Unassessed';
+        const dateSubmitted = report.dateSubmitted || 'N/A';
+
+        // Safely fetch the exact variable name your backend uses!
+        const barangayDisplay = (report.barangay && report.barangay.barangayName)
+          ? report.barangay.barangayName
+          : 'Unknown Barangay';
+
+        const severityClass = severity.toLowerCase() === 'high' ? 'high' :
+          severity.toLowerCase() === 'medium' ? 'medium' :
+            severity.toLowerCase() === 'low' ? 'low' : 'secondary';
+
+        const status = report.status || 'Pending';
+        let statusHtml = status === 'Pending'
+          ? `<span class="status-badge pending">Pending Validation</span>`
+          : `<span class="status-badge validated">${status}</span>`;
+
+        let buttonHtml = status === 'Pending'
+          ? `<button class="btn-small validate-btn" onclick="reviewReport(${report.id})">Review</button>`
+          : `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Done</button>`;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+                    <td>${formattedId}</td>
+                    <td>${barangayDisplay}</td>
+                    <td><b>${roadId}</b></td>
+                    <td>${roadName}</td>
+                    <td><span class="badge ${severityClass}">${severity}</span></td>
+                    <td>${dateSubmitted}</td>
+                    <td>${statusHtml}</td>
+                    <td>${buttonHtml}</td>
+                `;
+        reportsTableBody.appendChild(row);
+      });
+    })
+    .catch(error => {
+      console.error("Error loading admin reports:", error);
+      reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red; padding: 20px;">Error loading reports from database.</td></tr>';
+    });
+}
+
+// Ensure it runs when the script loads
+loadAdminReports();

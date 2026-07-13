@@ -46,6 +46,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
+// GLOBAL TOAST NOTIFICATION SYSTEM
+// ==========================================
+  function showToast(message, isError = false) {
+    const toast = document.getElementById('toast-notification');
+    const toastMsg = document.getElementById('toast-message');
+
+    if (!toast || !toastMsg) return;
+
+    // Set the text and color (Green for success, Red for error)
+    toastMsg.textContent = message;
+    toast.style.backgroundColor = isError ? "#dc3545" : "#28a745";
+
+    // Slide it in!
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+
+    // Hide it after 3 seconds
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(20px)";
+    }, 3000);
+  }
+
+  // ==========================================
 // 0. FETCH ROADS FOR DROPDOWN
 // ==========================================
   loadRoadsToDropdown();
@@ -177,11 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
       })
         .then(response => {
           if (!response.ok) throw new Error("Failed to validate report");
-          return response.text(); // ⬇️ WE EXPECT TEXT NOW, NOT JSON! ⬇️
+          return response.text();
         })
         .then(text => {
-          // It worked!
-          alert("Report successfully validated!");
+          // ✅ Trigger the Toast instead of the alert!
+          showToast("✅ Report successfully validated!");
+
           acceptConfirmModal.classList.add('hidden');
           document.getElementById('review-modal').classList.add('hidden');
 
@@ -190,7 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
           console.error("Error validating report:", error);
-          alert("Failed to connect. Press F12 to see details in the Console.");
+          // ❌ Trigger the Error Toast!
+          showToast("❌ Failed to connect. Press F12 for details.", true);
         })
         .finally(() => {
           btnConfirmAccept.innerHTML = "Yes, Validate It";
@@ -199,59 +225,84 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-// Keep your existing Rejection logic below here!
   // ==========================================
-  // 2. MODAL LOGIC (Review Reports)
-  // ==========================================
-  const reviewButtons = document.querySelectorAll('.validate-btn');
-  const modal = document.getElementById('review-modal');
-  const closeBtn = document.querySelector('.close-modal-btn');
-
-  const rejectBtn = document.getElementById('btn-show-reject');
-  const primaryActions = document.getElementById('primary-actions');
+// 3. REJECTION FEEDBACK LOGIC
+// ==========================================
+  const btnShowReject = document.getElementById('btn-show-reject');
   const feedbackForm = document.getElementById('reject-feedback-form');
-  const confirmRejectBtn = document.getElementById('btn-confirm-reject');
-  const cancelRejectBtn = document.getElementById('btn-cancel-reject');
+  const adminRemarksInput = document.getElementById('admin-remarks-input');
+  const btnConfirmReject = document.getElementById('btn-confirm-reject');
+  const btnCancelReject = document.getElementById('btn-cancel-reject');
 
-  reviewButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      if(!button.hasAttribute('disabled')) {
-        if (modal) modal.classList.remove('hidden');
-        if (primaryActions) primaryActions.classList.remove('hidden');
-        if (feedbackForm) feedbackForm.classList.add('hidden');
-      }
-    });
-  });
+  const primaryActions = document.getElementById('primary-actions');
 
-
-  if (closeBtn && modal) {
-    closeBtn.addEventListener('click', () => {
-      modal.classList.add('hidden');
+// A. Show the text box when "Reject" is clicked
+  if (btnShowReject && primaryActions && feedbackForm) {
+    btnShowReject.addEventListener('click', () => {
+      primaryActions.classList.add('hidden'); // Hide the Accept/Reject buttons
+      feedbackForm.classList.remove('hidden'); // Show the Text Area
+      adminRemarksInput.value = ''; // Clear out any old text
     });
   }
 
-  // ==========================================
-  // 3. REJECTION FEEDBACK LOGIC
-  // ==========================================
-
-  if (rejectBtn && primaryActions && feedbackForm) {
-    rejectBtn.addEventListener('click', () => {
-      primaryActions.classList.add('hidden');
-      feedbackForm.classList.remove('hidden');
-    });
-  }
-
-  if (cancelRejectBtn && primaryActions && feedbackForm) {
-    cancelRejectBtn.addEventListener('click', () => {
+// B. Hide the text box if they click "Cancel"
+  if (btnCancelReject && primaryActions && feedbackForm) {
+    btnCancelReject.addEventListener('click', () => {
       feedbackForm.classList.add('hidden');
       primaryActions.classList.remove('hidden');
     });
   }
 
-  if (confirmRejectBtn && modal) {
-    confirmRejectBtn.addEventListener('click', () => {
-      alert("Rejection feedback has been sent to the Barangay Official.");
-      modal.classList.add('hidden');
+// C. SEND TO DATABASE: Submit the Rejection
+  if (btnConfirmReject) {
+    btnConfirmReject.addEventListener('click', (e) => {
+      e.preventDefault(); // STOP THE BROWSER FROM REFRESHING!
+
+      const remarks = adminRemarksInput.value.trim();
+      if (!remarks) {
+        alert("Please type a reason so the Barangay Official knows what to fix!");
+        return;
+      }
+
+      if (!currentReviewReportId) return;
+
+      btnConfirmReject.innerHTML = "⏳ Rejecting...";
+      btnConfirmReject.disabled = true;
+
+      // Send the Status AND the Remarks to Spring Boot
+      fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: "Rejected",
+          adminRemarks: remarks
+        })
+      })
+        .then(response => {
+          if (!response.ok) throw new Error("Failed to reject report");
+          return response.text();
+        })
+        .then(text => {
+          // ✅ Trigger the Toast instead of the alert!
+          showToast("✅ Report Rejected! Feedback saved.");
+
+          // Hide modals and reset the UI
+          document.getElementById('review-modal').classList.add('hidden');
+          feedbackForm.classList.add('hidden');
+          primaryActions.classList.remove('hidden');
+
+          // Reload the table
+          if (typeof loadAdminReports === 'function') loadAdminReports();
+        })
+        .catch(error => {
+          console.error("Error rejecting report:", error);
+          // ❌ Trigger the Error Toast!
+          showToast("❌ Failed to connect. Check F12 console.", true);
+        })
+        .finally(() => {
+          btnConfirmReject.innerHTML = "Submit Rejection";
+          btnConfirmReject.disabled = false;
+        });
     });
   }
 

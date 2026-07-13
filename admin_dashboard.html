@@ -450,6 +450,16 @@
             <button type="button" class="btn-submit" id="btn-accept-validate"><span class="icon">✅</span> Accept & Validate</button>
           </div>
 
+          <div id="reject-feedback-form" class="hidden" style="margin-top: 15px;">
+            <label for="admin-remarks-input" style="font-weight: bold; color: #d9534f;">Reason for Rejection:</label>
+            <textarea id="admin-remarks-input" rows="3" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Tell the Barangay Official what needs to be fixed..."></textarea>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button type="button" class="btn-secondary" id="btn-cancel-reject">Cancel</button>
+              <button type="button" class="btn-reject" id="btn-confirm-reject">Submit Rejection</button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -732,6 +742,9 @@
       <button type="button" class="btn-submit" id="btn-confirm-accept">Yes, Validate It</button>
     </div>
   </div>
+</div>
+<div id="toast-notification" style="position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 99999; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; pointer-events: none;">
+  <span id="toast-message" style="font-weight: bold; font-size: 16px;">Success!</span>
 </div>
 
 </body>

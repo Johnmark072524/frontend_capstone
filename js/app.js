@@ -127,6 +127,79 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+// ==========================================
+// ADMIN DASHBOARD: ACCEPT & VALIDATE LOGIC
+// ==========================================
+  const btnAcceptValidate = document.getElementById('btn-accept-validate');
+  const acceptConfirmModal = document.getElementById('accept-confirm-modal');
+  const btnCancelAccept = document.getElementById('btn-cancel-accept');
+  const btnConfirmAccept = document.getElementById('btn-confirm-accept');
+
+  if (btnAcceptValidate) {
+    btnAcceptValidate.addEventListener('click', () => {
+      acceptConfirmModal.classList.remove('hidden');
+
+      // Force the modal to the very front using JavaScript
+      acceptConfirmModal.style.position = 'fixed';
+      acceptConfirmModal.style.top = '0';
+      acceptConfirmModal.style.left = '0';
+      acceptConfirmModal.style.width = '100vw';
+      acceptConfirmModal.style.height = '100vh';
+      acceptConfirmModal.style.zIndex = '2147483647';
+      acceptConfirmModal.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    });
+  }
+
+  if (btnCancelAccept) {
+    btnCancelAccept.addEventListener('click', () => {
+      acceptConfirmModal.classList.add('hidden');
+    });
+  }
+
+// 3. SEND TO DATABASE
+  if (btnConfirmAccept) {
+    // ⬇️ WE CATCH THE EVENT 'e' HERE ⬇️
+    btnConfirmAccept.addEventListener('click', (e) => {
+      e.preventDefault(); // THIS STOPS THE BROWSER FROM HANGING UP!
+
+      if (!currentReviewReportId) {
+        console.error("No report ID found to update!");
+        return;
+      }
+
+      btnConfirmAccept.innerHTML = "⏳ Validating...";
+      btnConfirmAccept.disabled = true;
+
+      fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: "Validated" })
+      })
+        .then(response => {
+          if (!response.ok) throw new Error("Failed to validate report");
+          return response.text(); // ⬇️ WE EXPECT TEXT NOW, NOT JSON! ⬇️
+        })
+        .then(text => {
+          // It worked!
+          alert("Report successfully validated!");
+          acceptConfirmModal.classList.add('hidden');
+          document.getElementById('review-modal').classList.add('hidden');
+
+          // Reload the table
+          if (typeof loadAdminReports === 'function') loadAdminReports();
+        })
+        .catch(error => {
+          console.error("Error validating report:", error);
+          alert("Failed to connect. Press F12 to see details in the Console.");
+        })
+        .finally(() => {
+          btnConfirmAccept.innerHTML = "Yes, Validate It";
+          btnConfirmAccept.disabled = false;
+        });
+    });
+  }
+
+// Keep your existing Rejection logic below here!
   // ==========================================
   // 2. MODAL LOGIC (Review Reports)
   // ==========================================
@@ -150,12 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const adminLocateMapBtn = document.getElementById('btn-admin-locate-map');
-  if (adminLocateMapBtn) {
-    adminLocateMapBtn.addEventListener('click', () => {
-      // Ready for backend integration
-    });
-  }
 
   if (closeBtn && modal) {
     closeBtn.addEventListener('click', () => {
@@ -405,6 +472,16 @@ let mapMarker;
 let selectedLat = 14.8139; // Default center of San Jose del Monte
 let selectedLng = 121.0453; // Default center of San Jose del Monte
 
+// ⬇️ 1. DEFINE THE RED ICON HERE ⬇️
+const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 const btnDefineMap = document.getElementById('btn-define-map');
 const mapModal = document.getElementById('map-modal');
 const btnCloseMap = document.getElementById('close-map-btn');
@@ -439,7 +516,9 @@ if (btnDefineMap && mapModal) {
         if (mapMarker) {
           map.removeLayer(mapMarker);
         }
-        mapMarker = L.marker([selectedLat, selectedLng]).addTo(map);
+
+        // ⬇️ 2. ADD THE RED ICON TO THE MARKER HERE ⬇️
+        mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
       });
     }
 
@@ -773,12 +852,24 @@ function loadAdminReports() {
     });
 }
 
+// ==========================================
+// ADMIN MODAL MAP VARIABLES
+// ==========================================
+let currentReviewLat = null;
+let currentReviewLng = null;
+let adminReviewMap = null;
+let adminReviewMarker = null;
+// Variable to store the ID of the report currently open in the Review Modal
+let currentReviewReportId = null;
+
 // Ensure it runs when the script loads
 loadAdminReports();
 // ==========================================
 // ADMIN DASHBOARD: OPEN REVIEW MODAL
 // ==========================================
 function reviewReport(reportId) {
+
+  currentReviewReportId = reportId;
   // 1. Fetch the exact report from the backend database
   fetch(`${API_BASE_URL}/api/reports/${reportId}`)
     .then(response => {
@@ -792,6 +883,13 @@ function reviewReport(reportId) {
       const severityClass = severity.toLowerCase() === 'high' ? 'high' :
         severity.toLowerCase() === 'medium' ? 'medium' :
           severity.toLowerCase() === 'low' ? 'low' : 'secondary';
+
+      // ⬇️ NEW: SAVE THE COORDINATES FOR THE MAP BUTTON ⬇️
+      currentReviewLat = report.latitude;
+      currentReviewLng = report.longitude;
+
+      // ⬇️ NEW: FORCE THE MAP CONTAINER CLOSED WHEN OPENING A NEW REPORT ⬇️
+      document.getElementById('admin-review-map-container').style.display = 'none';
 
       // 3. Inject text into the HTML IDs we just created
       document.getElementById('modal-header-id').textContent = formattedId;
@@ -841,3 +939,63 @@ function reviewReport(reportId) {
 function closeReviewModal() {
   document.getElementById('review-modal').classList.add('hidden');
 }
+
+// ==========================================
+// ADMIN DASHBOARD: LOCATE ON MAP BUTTON
+// ==========================================
+const btnLocateMap = document.getElementById('btn-admin-locate-map');
+if (btnLocateMap) {
+  btnLocateMap.addEventListener('click', function() {
+    const mapContainer = document.getElementById('admin-review-map-container');
+
+    // Safety check: Did the Barangay Official actually provide GPS coordinates?
+    if (!currentReviewLat || !currentReviewLng || (currentReviewLat === 0 && currentReviewLng === 0)) {
+      alert("No GPS coordinates were provided for this report.");
+      return;
+    }
+
+    // Toggle the map open/closed
+    if (mapContainer.style.display === 'none') {
+      mapContainer.style.display = 'block';
+
+
+      // Define a custom Red Icon for damages
+      const redIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      // If the map hasn't been built yet, build it!
+      if (!adminReviewMap) {
+        adminReviewMap = L.map('admin-review-map').setView([currentReviewLat, currentReviewLng], 17);
+        // Switch to Esri World Imagery (Satellite View)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        }).addTo(adminReviewMap);
+
+        // Drop the RED pin!
+        adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], {icon: redIcon}).addTo(adminReviewMap);
+      } else {
+        // If the map is already built, move the camera, update the pin location, AND ensure it stays red
+        adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
+        adminReviewMarker.setLatLng([currentReviewLat, currentReviewLng]);
+        adminReviewMarker.setIcon(redIcon);
+      }
+
+      // CRUCIAL LEAFLET TRICK: Leaflet breaks if loaded inside a hidden div.
+      // We must tell it to recalculate its size a fraction of a second after we unhide it.
+      setTimeout(() => {
+        adminReviewMap.invalidateSize();
+      }, 200);
+
+    } else {
+      // Close the map if they click the button again
+      mapContainer.style.display = 'none';
+    }
+  });
+}
+

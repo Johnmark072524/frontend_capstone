@@ -525,8 +525,9 @@ function executeFinalSubmission() {
     formData.append("barangayId", loggedInBarangayId);
   }
 
-  // --- NEW: Grab the manual Severity dropdown value ---
-  formData.append("severity", document.getElementById("severity")?.value || "Low");
+  // --- AI INTEGRATION PREP ---
+  // We force this to "Unassessed" so the Admin Dashboard knows the AI hasn't graded it yet!
+  formData.append("severity", "Unassessed");
 
   // Your existing fields
   formData.append("cityRoadName", document.getElementById("cityRoadName")?.value || "");
@@ -740,12 +741,15 @@ function loadAdminReports() {
           severity.toLowerCase() === 'medium' ? 'medium' :
             severity.toLowerCase() === 'low' ? 'low' : 'secondary';
 
+        // Safely grab the status
         const status = report.status || 'Pending';
-        let statusHtml = status === 'Pending'
+
+        // FIX: Make sure it checks for BOTH "Pending" and "Pending Validation"
+        let statusHtml = (status === 'Pending' || status === 'Pending Validation')
           ? `<span class="status-badge pending">Pending Validation</span>`
           : `<span class="status-badge validated">${status}</span>`;
 
-        let buttonHtml = status === 'Pending'
+        let buttonHtml = (status === 'Pending' || status === 'Pending Validation')
           ? `<button class="btn-small validate-btn" onclick="reviewReport(${report.id})">Review</button>`
           : `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Done</button>`;
 

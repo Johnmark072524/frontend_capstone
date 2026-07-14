@@ -1,4 +1,133 @@
+// ==========================================
+// GLOBAL MAP VARIABLES
+// ==========================================
+let map;
+let mapMarker;
+let selectedLat = 14.8139;
+let selectedLng = 121.0453;
+let redIcon;
+
 document.addEventListener('DOMContentLoaded', () => {
+
+  // ==========================================
+  // 🛡️ THE LEAFLET SAFETY CHECK 🛡️
+  // ==========================================
+  if (typeof L !== 'undefined') {
+
+    redIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const btnDefineMap = document.getElementById('btn-define-map');
+    const mapModal = document.getElementById('map-modal');
+    const btnCloseMap = document.getElementById('close-map-btn');
+    const btnSaveCoords = document.getElementById('btn-save-coords');
+
+    // ------------------------------------------
+    // A. "DEFINE ON MAP" FOR ADD REPORT FORM
+    // ------------------------------------------
+    if (btnDefineMap && mapModal) {
+      btnDefineMap.addEventListener('click', () => {
+        mapModal.classList.remove('hidden');
+
+        if (!map) {
+          map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
+
+          map.on('click', function(e) {
+            selectedLat = e.latlng.lat;
+            selectedLng = e.latlng.lng;
+            if (mapMarker) map.removeLayer(mapMarker);
+            mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
+          });
+        }
+
+        setTimeout(() => { map.invalidateSize(); }, 200);
+      });
+
+      if (btnCloseMap) {
+        btnCloseMap.addEventListener('click', () => mapModal.classList.add('hidden'));
+      }
+
+      if (btnSaveCoords) {
+        btnSaveCoords.addEventListener('click', () => {
+          if(!mapMarker) {
+            alert("Please click on the map to drop a pin first!");
+            return;
+          }
+          document.getElementById('latitude').value = selectedLat;
+          document.getElementById('longitude').value = selectedLng;
+          document.getElementById('coords-display').textContent = `Locked: ${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+          mapModal.classList.add('hidden');
+        });
+      }
+    }
+
+    // ------------------------------------------
+    // B. "UPDATE LOCATION" FOR EDIT MODAL
+    // ------------------------------------------
+    const btnEditDefineMap = document.getElementById('btn-edit-define-map');
+
+    if (btnEditDefineMap && mapModal) {
+      btnEditDefineMap.addEventListener('click', () => {
+
+        const currentLat = parseFloat(document.getElementById('edit-latitude').value);
+        const currentLng = parseFloat(document.getElementById('edit-longitude').value);
+
+        mapModal.classList.remove('hidden');
+
+        if (!map) {
+          map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
+
+          map.on('click', function(e) {
+            selectedLat = e.latlng.lat;
+            selectedLng = e.latlng.lng;
+            if (mapMarker) map.removeLayer(mapMarker);
+            mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
+          });
+        }
+
+        if (!isNaN(currentLat) && !isNaN(currentLng)) {
+          selectedLat = currentLat;
+          selectedLng = currentLng;
+          map.setView([selectedLat, selectedLng], 18);
+          if (mapMarker) map.removeLayer(mapMarker);
+          mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
+        }
+
+        const btnSaveCoords = document.getElementById('btn-save-coords');
+        const newSaveBtn = btnSaveCoords.cloneNode(true);
+        btnSaveCoords.parentNode.replaceChild(newSaveBtn, btnSaveCoords);
+
+        newSaveBtn.addEventListener('click', () => {
+          if(!mapMarker) {
+            alert("Please click on the map to drop a pin first!");
+            return;
+          }
+          document.getElementById('edit-latitude').value = selectedLat;
+          document.getElementById('edit-longitude').value = selectedLng;
+          document.getElementById('edit-modal-gps').textContent = `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+          mapModal.classList.add('hidden');
+          showToast("Location updated successfully!", "success");
+        });
+
+        setTimeout(() => { map.invalidateSize(); }, 200);
+      });
+    }
+
+  } // <--- NOTICE THIS BRACE? I MOVED IT DOWN HERE! Everything related to maps is safely inside it now.
+
+  // ==========================================
+  // IMAGE UPLOAD & PREVIEW LOGIC
+  // ==========================================
 
   // ==========================================
   // IMAGE UPLOAD & PREVIEW LOGIC
@@ -42,90 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview.src = "";
         fileNameDisplay.textContent = "";
       }
-    });
-  }
-
-  // ==========================================
-// GLOBAL TOAST NOTIFICATION SYSTEM
-// ==========================================
-  function showToast(message, isError = false) {
-    const toast = document.getElementById('toast-notification');
-    const toastMsg = document.getElementById('toast-message');
-
-    if (!toast || !toastMsg) return;
-
-    // Set the text and color (Green for success, Red for error)
-    toastMsg.textContent = message;
-    toast.style.backgroundColor = isError ? "#dc3545" : "#28a745";
-
-    // Slide it in!
-    toast.style.opacity = "1";
-    toast.style.transform = "translateY(0)";
-
-    // Hide it after 3 seconds
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(20px)";
-    }, 3000);
-  }
-
-  // ==========================================
-// 0. FETCH ROADS FOR DROPDOWN
-// ==========================================
-  loadRoadsToDropdown();
-
-  function loadRoadsToDropdown() {
-    const roadDropdown = document.getElementById("cityRoadName");
-    if (!roadDropdown) return;
-
-    // 1. Grab the ID from the browser's memory FIRST!
-    const loggedInBarangayId = sessionStorage.getItem("barangayId");
-
-    // 2. Safety check: If they aren't logged in, stop the code.
-    if (!loggedInBarangayId) {
-      console.error("No Barangay ID found. Cannot load roads.");
-      roadDropdown.innerHTML = '<option value="" disabled selected>Please log in first...</option>';
-      return;
-    }
-
-    // 3. NOW fetch the roads using the ID and our dynamic config variable!
-    fetch(`${API_BASE_URL}/api/roads/barangay/${loggedInBarangayId}`)
-      .then(response => {
-        if (!response.ok) throw new Error("Failed to fetch roads");
-        return response.json();
-      })
-      .then(roads => {
-        roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
-
-        // 4. Loop directly through the roads (Spring Boot already filtered them for us!)
-        roads.forEach(road => {
-          const option = document.createElement("option");
-          option.value = road.roadName;
-          option.textContent = road.roadName;
-
-          option.dataset.roadId = road.roadId || road.id;
-          option.dataset.importance = road.roadImportance;
-          option.dataset.type = road.roadType;
-          option.dataset.terrain = road.terrainType;
-
-          roadDropdown.appendChild(option);
-        });
-      })
-      .catch(error => console.error("Error loading roads:", error));
-
-    // THE AUTO-FILL LISTENER
-    roadDropdown.addEventListener("change", function() {
-      const selectedOption = this.options[this.selectedIndex];
-
-      const idBox = document.getElementById("cityRoadId");
-      const importanceBox = document.getElementById("roadImportance");
-      const typeBox = document.getElementById("roadType");
-      const terrainBox = document.getElementById("terrainType");
-
-      if (idBox) idBox.value = selectedOption.dataset.roadId || "";
-      if (importanceBox) importanceBox.innerHTML = `<option value="${selectedOption.dataset.importance}">${selectedOption.dataset.importance}</option>`;
-      if (typeBox) typeBox.innerHTML = `<option value="${selectedOption.dataset.type}">${selectedOption.dataset.type}</option>`;
-      if (terrainBox) terrainBox.innerHTML = `<option value="${selectedOption.dataset.terrain}">${selectedOption.dataset.terrain}</option>`;
     });
   }
 
@@ -205,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(text => {
           // ✅ Trigger the Toast instead of the alert!
-          showToast("✅ Report successfully validated!");
+          showToast("Report successfully validated!");
 
           acceptConfirmModal.classList.add('hidden');
           document.getElementById('review-modal').classList.add('hidden');
@@ -260,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const remarks = adminRemarksInput.value.trim();
       if (!remarks) {
-        alert("Please type a reason so the Barangay Official knows what to fix!");
+        showToast("Please type a reason so the Barangay Official knows what to fix!", "error");
         return;
       }
 
@@ -284,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(text => {
           // ✅ Trigger the Toast instead of the alert!
-          showToast("✅ Report Rejected! Feedback saved.");
+          showToast("Report Rejected! Feedback saved.");
 
           // Hide modals and reset the UI
           document.getElementById('review-modal').classList.add('hidden');
@@ -483,118 +528,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
-
-// ==========================================
-// TOAST NOTIFICATION LOGIC
-// ==========================================
-function showToast(message, type = 'success') {
-  const toast = document.getElementById('toast-container');
-  const toastIcon = document.getElementById('toast-icon');
-  const toastMessage = document.getElementById('toast-message');
-
-  if (!toast) return;
-
-  // 1. Set the text
-  toastMessage.textContent = message;
-
-  // 2. Set the color and icon based on success or error
-  if (type === 'success') {
-    toast.className = 'toast-success toast-visible';
-    toastIcon.textContent = '✅';
-  } else {
-    toast.className = 'toast-error toast-visible';
-    toastIcon.textContent = '❌';
-  }
-
-  // 3. Automatically hide it after 3.5 seconds
-  setTimeout(() => {
-    toast.classList.remove('toast-visible');
-  }, 3500);
-}
-
-
-// ==========================================
-// LEAFLET SATELLITE MAP LOGIC
-// ==========================================
-let map;
-let mapMarker;
-let selectedLat = 14.8139; // Default center of San Jose del Monte
-let selectedLng = 121.0453; // Default center of San Jose del Monte
-
-// ⬇️ 1. DEFINE THE RED ICON HERE ⬇️
-const redIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-const btnDefineMap = document.getElementById('btn-define-map');
-const mapModal = document.getElementById('map-modal');
-const btnCloseMap = document.getElementById('close-map-btn');
-const btnSaveCoords = document.getElementById('btn-save-coords');
-
-if (btnDefineMap && mapModal) {
-  btnDefineMap.addEventListener('click', () => {
-    // 1. Open the modal
-    mapModal.classList.remove('hidden');
-
-    // 2. Load the map if it hasn't been loaded yet
-    if (!map) {
-      // Center exactly on San Jose del Monte with zoom level 14
-      map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
-
-      // Add Esri Satellite Imagery
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-      }).addTo(map);
-
-      // Add Street Names overlay on top of the satellite image (Hybrid view!)
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Labels &copy; Esri'
-      }).addTo(map);
-
-      // 3. Listen for clicks to drop the pin!
-      map.on('click', function(e) {
-        selectedLat = e.latlng.lat;
-        selectedLng = e.latlng.lng;
-
-        // Remove old marker if it exists, add new one
-        if (mapMarker) {
-          map.removeLayer(mapMarker);
-        }
-
-        // ⬇️ 2. ADD THE RED ICON TO THE MARKER HERE ⬇️
-        mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
-      });
-    }
-
-    // Fix for Leaflet maps loading inside hidden divs
-    setTimeout(() => { map.invalidateSize(); }, 200);
-  });
-
-  // Close buttons logic
-  btnCloseMap.addEventListener('click', () => mapModal.classList.add('hidden'));
-
-  // Save button logic
-  btnSaveCoords.addEventListener('click', () => {
-    if(!mapMarker) {
-      alert("Please click on the map to drop a pin first!");
-      return;
-    }
-    // Paste values into hidden boxes
-    document.getElementById('latitude').value = selectedLat;
-    document.getElementById('longitude').value = selectedLng;
-    // Show success text to user
-    document.getElementById('coords-display').textContent = `Locked: ${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
-    // Close map
-    mapModal.classList.add('hidden');
-  });
-}
 
 // ==========================================
 // BACKEND API CONNECTION LOGIC (RoadWise)
@@ -1050,3 +986,448 @@ if (btnLocateMap) {
   });
 }
 
+// ==========================================
+// BARANGAY DASHBOARD: FETCH REAL DATA (SAFE UI)
+// ==========================================
+let severityChartInstance = null;
+
+function loadBarangayReports(barangayId) {
+  const listContainer = document.getElementById('barangay-report-list');
+  if (!listContainer) return;
+
+  listContainer.innerHTML = "<p style='text-align:center; padding: 20px;'>Loading your reports...</p>";
+
+  fetch(`${API_BASE_URL}/api/reports/barangay/${barangayId}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch reports");
+      return response.json();
+    })
+    .then(reports => {
+      listContainer.innerHTML = "";
+      if (reports.length === 0) {
+        listContainer.innerHTML = "<p style='text-align:center; padding: 20px;'>No reports found for your area.</p>";
+        return;
+      }
+
+      let pending = 0, validated = 0, rejected = 0;
+      let highSev = 0, medSev = 0, lowSev = 0;
+
+      reports.forEach(report => {
+        if (report.status === "Pending") pending++;
+        else if (report.status === "Validated") validated++;
+        else if (report.status === "Rejected") rejected++;
+
+        if (report.severity === "High") highSev++;
+        else if (report.severity === "Medium") medSev++;
+        else if (report.severity === "Low") lowSev++;
+
+        let badgeClass = "bd-badge-pending";
+        if (report.status === "Validated") badgeClass = "bd-badge-validated";
+        if (report.status === "Rejected") badgeClass = "bd-badge-rejected";
+
+        let dateStr = new Date(report.dateSubmitted).toLocaleDateString();
+
+        let imgSrc = "https://placehold.co/300x200/png?text=No+Image";
+        if (report.damageImage && report.damageImage !== "no_image.jpg") {
+          imgSrc = report.damageImage.startsWith("http") ? report.damageImage : `${API_BASE_URL}/uploads/${report.damageImage}`;
+        }
+
+        let rowHtml = `
+                <div class="bd-list-item">
+                  <div class="bd-item-image"><img src="${imgSrc}" alt="Report Image"></div>
+                  <div class="bd-item-details">
+                    <div>
+                      <div class="bd-item-title">${report.cityRoadName || 'Unknown Road'} Damage</div>
+                      <div class="bd-item-meta">
+                        <span>📍 Brgy. ID: ${report.barangay ? report.barangay.id : 'N/A'}</span>
+                        <span>📅 ${dateStr}</span>
+                      </div>
+                    </div>
+                    ${report.status === 'Rejected' && report.adminRemarks ? `
+                    <div class="bd-feedback-box"><strong style="color: #dc3545;">Admin Note:</strong> ${report.adminRemarks}</div>
+                    ` : `<p style="font-size: 13px; color: #666; margin-top: 5px;">${report.damageDescription || 'No description provided.'}</p>`}
+                  </div>
+                 <div class="bd-item-actions">
+  <div class="bd-status-badge ${badgeClass}">${report.status}</div>
+
+  ${report.status === 'Rejected' ? `
+    <button class="bd-btn-action" onclick="openEditModal(${report.id})">Edit & Resubmit</button>
+  ` : `
+    <button class="bd-btn-action" style="background-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>
+  `}
+</div>
+                </div>`;
+        listContainer.innerHTML += rowHtml;
+      });
+
+      // Update Metrics
+      document.getElementById('metric-total').innerText = reports.length;
+      document.getElementById('metric-pending').innerText = pending;
+      document.getElementById('metric-validated').innerText = validated;
+      document.getElementById('metric-rejected').innerText = rejected;
+
+      // Update Chart
+      updateSeverityChart([highSev, medSev, lowSev]);
+    })
+    .catch(error => {
+      console.error(error);
+      listContainer.innerHTML = "<p style='color:red;'>Failed to load reports.</p>";
+    });
+}
+
+function updateSeverityChart(dataArray) {
+  const canvasId = 'severityChart';
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  let existingChart = Chart.getChart(canvasId);
+  if (existingChart) existingChart.destroy();
+
+  // ⬇️ NEW: Check if all severities are 0
+  const totalSeverity = dataArray.reduce((a, b) => a + b, 0);
+  const isEmpty = totalSeverity === 0;
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      // If empty, show "Pending", otherwise show "High/Medium/Low"
+      labels: isEmpty ? ['Pending AI Assessment'] : ['High', 'Medium', 'Low'],
+      datasets: [{
+        // If empty, give it a placeholder value of 1 so it draws a full circle
+        data: isEmpty ? [1] : dataArray,
+        // If empty, color it grey. Otherwise use Red/Orange/Green
+        backgroundColor: isEmpty ? ['#e9ecef'] : ['#dc3545', '#f0ad4e', '#28a745'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        // Disable the hover popup if there's no data
+        tooltip: { enabled: !isEmpty }
+      },
+      cutout: '70%'
+    }
+  });
+}
+
+// ==========================================
+// SMART DASHBOARD LOADER (Matches your Login)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Check if we are on the Barangay Dashboard page
+  if (document.getElementById('barangay-report-list')) {
+
+    // 1. Check the session memory for the exact variable your login saved
+    const storedBarangayId = sessionStorage.getItem("barangayId");
+
+    // 2. If it's missing, kick them back to login!
+    if (!storedBarangayId) {
+      alert("Security Check: You must log in first!");
+      window.location.href = "login.html";
+      return;
+    }
+
+    // 3. If found, load their exact reports!
+    console.log("Welcome! Loading reports for Barangay ID: " + storedBarangayId);
+    loadBarangayReports(storedBarangayId);
+  }
+});
+
+// ==========================================
+// MODAL CONTROLS (View & Edit)
+// ==========================================
+// ==========================================
+// BULLETPROOF CLOSE FUNCTION
+// ==========================================
+function closeBdModals() {
+  const viewModal = document.getElementById('bd-view-modal');
+  const editModal = document.getElementById('bd-edit-modal');
+
+  if (viewModal !== null) {
+    viewModal.classList.remove('active');
+  }
+  if (editModal !== null) {
+    editModal.classList.remove('active');
+  }
+}
+
+// 1. OPEN VIEW MODAL (DETAILED GRID)
+function openViewModal(reportId) {
+  fetch(`${API_BASE_URL}/api/reports/${reportId}`)
+    .then(res => res.json())
+    .then(report => {
+      // Header
+      document.getElementById('view-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
+
+      // Status Badge
+      const statusBadge = document.getElementById('view-modal-status');
+      statusBadge.innerText = report.status;
+      statusBadge.className = "bd-status-badge " +
+        (report.status === 'Validated' ? 'bd-badge-validated' :
+          (report.status === 'Rejected' ? 'bd-badge-rejected' : 'bd-badge-pending'));
+
+      // Overview Section
+      document.getElementById('view-modal-severity').innerText = report.severity || "🤖 Pending AI";
+      document.getElementById('view-modal-severity').style.color =
+        report.severity === 'High' ? '#dc3545' : (report.severity === 'Medium' ? '#f0ad4e' : '#6c757d');
+      document.getElementById('view-modal-date').innerText = new Date(report.dateSubmitted).toLocaleDateString();
+      document.getElementById('view-modal-gps').innerText =
+        (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not provided";
+
+      // Road Details Section
+      document.getElementById('view-modal-road-name').innerText = report.cityRoadName || "N/A";
+      document.getElementById('view-modal-road-id').innerText = report.cityRoadId || "N/A";
+      document.getElementById('view-modal-importance').innerText = report.roadImportance || "N/A";
+      document.getElementById('view-modal-terrain').innerText = report.terrainType || "N/A";
+      document.getElementById('view-modal-road-type').innerText = report.roadType || "N/A";
+      document.getElementById('view-modal-length').innerText = report.length || "0";
+      document.getElementById('view-modal-width').innerText = report.width || "0";
+      document.getElementById('view-modal-culverts').innerText = report.lengthOfCulverts || "0";
+      document.getElementById('view-modal-bridges').innerText = report.numberOfBridges || "0";
+
+      // Damage Evidence Section
+      document.getElementById('view-modal-desc').innerText = report.damageDescription || "No description provided.";
+
+      let imgSrc = "https://placehold.co/500x300/png?text=No+Image+Provided";
+      if (report.damageImage && report.damageImage !== "no_image.jpg") {
+        imgSrc = report.damageImage.startsWith("http") ? report.damageImage : `${API_BASE_URL}/uploads/${report.damageImage}`;
+      }
+      document.getElementById('view-modal-img').src = imgSrc;
+
+      // Feedback Section
+      const feedbackBox = document.getElementById('view-modal-feedback');
+      if (report.adminRemarks) {
+        feedbackBox.style.display = "block";
+        document.getElementById('view-modal-remarks').innerText = report.adminRemarks;
+      } else {
+        feedbackBox.style.display = "none";
+      }
+
+      // Finally, show the modal!
+      document.getElementById('bd-view-modal').classList.add('active');
+    })
+    .catch(err => {
+      console.error(err);
+      showToast("Error loading details.", "error");
+    });
+}
+
+// ==========================================
+// 2. OPEN EDIT MODAL (Full Form Replica)
+// ==========================================
+function openEditModal(reportId) {
+  fetch(`${API_BASE_URL}/api/reports/${reportId}`)
+    .then(res => res.json())
+    .then(report => {
+      document.getElementById('edit-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
+      document.getElementById('edit-report-id').value = report.id;
+      document.getElementById('edit-modal-remarks').innerText = report.adminRemarks || "Please review and fix the details below.";
+
+      // 🔒 LOCKED INPUTS (Using .value because they are now <input disabled>)
+      document.getElementById('edit-modal-road-name').value = report.cityRoadName || "N/A";
+      document.getElementById('edit-modal-road-id').value = report.cityRoadId || "N/A";
+      document.getElementById('edit-modal-importance').value = report.roadImportance || "N/A";
+      document.getElementById('edit-modal-road-type').value = report.roadType || "N/A";
+      document.getElementById('edit-modal-terrain').value = report.terrainType || "N/A";
+      document.getElementById('edit-modal-severity').value = report.severity || "🤖 Pending AI Assessment";
+
+      // 📍 GPS Text
+      document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not Selected";
+
+      document.getElementById('edit-latitude').value = report.latitude || "";
+      document.getElementById('edit-longitude').value = report.longitude || "";
+      // ✏️ EDITABLE NUMBER INPUTS
+      document.getElementById('edit-modal-length').value = report.length || "";
+      document.getElementById('edit-modal-width').value = report.width || "";
+      document.getElementById('edit-modal-culverts').value = report.lengthOfCulverts || "";
+      document.getElementById('edit-modal-bridges').value = report.numberOfBridges || "";
+
+      // ✏️ EDITABLE DESCRIPTION & IMAGE
+      document.getElementById('edit-modal-desc').value = report.damageDescription || "";
+      let imgSrc = "https://placehold.co/300x200/png?text=No+Image";
+      if (report.damageImage && report.damageImage !== "no_image.jpg") {
+        imgSrc = report.damageImage.startsWith("http") ? report.damageImage : `${API_BASE_URL}/uploads/${report.damageImage}`;
+      }
+      document.getElementById('edit-modal-current-img').src = imgSrc;
+
+      // Clear old file inputs
+      document.getElementById('edit-modal-img').value = "";
+      document.getElementById('edit-modal-filename').innerText = "";
+
+      document.getElementById('bd-edit-modal').classList.add('active');
+    })
+    .catch(err => showToast("Error loading report.", "error"));
+}
+
+// ==========================================
+// 3. SUBMIT THE FULLY EDITED REPORT
+// ==========================================
+function submitEditedReport() {
+  const reportId = document.getElementById('edit-report-id').value;
+  const fileInput = document.getElementById('edit-modal-img');
+
+  if (fileInput.files.length > 0 && fileInput.files[0].size > 5 * 1024 * 1024) {
+    showToast("File is too large! Must be under 5MB.", "error");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("damageDescription", document.getElementById('edit-modal-desc').value);
+
+  // ⬇️ Attach all the new editable numbers!
+  formData.append("length", document.getElementById('edit-modal-length').value);
+  formData.append("width", document.getElementById('edit-modal-width').value);
+  formData.append("lengthOfCulverts", document.getElementById('edit-modal-culverts').value);
+  formData.append("numberOfBridges", document.getElementById('edit-modal-bridges').value);
+  formData.append("latitude", document.getElementById('edit-latitude').value);
+  formData.append("longitude", document.getElementById('edit-longitude').value);
+  if (fileInput.files.length > 0) {
+    formData.append("imageFile", fileInput.files[0]);
+  }
+
+  fetch(`${API_BASE_URL}/api/reports/update/${reportId}`, {
+    method: 'PUT',
+    body: formData
+  })
+    .then(response => {
+      if (!response.ok) throw new Error("Update failed");
+      showToast("Report successfully updated and resubmitted!", "success");
+      closeBdModals();
+
+      const storedBarangayId = sessionStorage.getItem("barangayId");
+      if (storedBarangayId) loadBarangayReports(storedBarangayId);
+    })
+    .catch(error => showToast("Error updating report.", "error"));
+}
+
+// ==========================================
+// EDIT MODAL: IMAGE PREVIEW LOGIC
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const editImageInput = document.getElementById('edit-modal-img');
+  const editImagePreview = document.getElementById('edit-modal-current-img');
+  const editFileNameDisplay = document.getElementById('edit-modal-filename');
+
+  if (editImageInput) {
+    editImageInput.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) {
+        // Security Check
+        const maxSizeInMB = 5;
+        if (file.size > maxSizeInMB * 1024 * 1024) {
+          showToast(`File is too large! Please choose an image smaller than ${maxSizeInMB}MB.`, "error");
+          this.value = "";
+          editFileNameDisplay.textContent = "";
+          return;
+        }
+
+        // Show the file name
+        editFileNameDisplay.textContent = "New Selection: " + file.name;
+
+        // Instantly swap the image preview!
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          editImagePreview.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+});
+
+// ==========================================
+// UNIFIED TOAST NOTIFICATION SYSTEM
+// ==========================================
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast-notification');
+  const toastMsg = document.getElementById('toast-message');
+  const toastIcon = document.getElementById('toast-icon');
+
+  if (!toast || !toastMsg || !toastIcon) {
+    console.warn("Warning: Could not find toast HTML elements.");
+    return;
+  }
+
+  // 1. Set the text and icon
+  toastMsg.textContent = message;
+  toastIcon.textContent = (type === 'success') ? '✅' : '⚠️';
+
+  // 2. Set the background color
+  toast.style.backgroundColor = (type === 'success') ? "#28a745" : "#dc3545";
+
+  // 3. Force it to display and slide in
+  toast.style.display = "flex";
+  setTimeout(() => {
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+  }, 10);
+
+  // 4. Hide it smoothly after 4 seconds
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(-20px)";
+  }, 4000);
+}
+// ==========================================
+// 0. FETCH ROADS FOR DROPDOWN
+// ==========================================
+loadRoadsToDropdown();
+
+function loadRoadsToDropdown() {
+  const roadDropdown = document.getElementById("cityRoadName");
+  if (!roadDropdown) return;
+
+  // 1. Grab the ID from the browser's memory FIRST!
+  const loggedInBarangayId = sessionStorage.getItem("barangayId");
+
+  // 2. Safety check: If they aren't logged in, stop the code.
+  if (!loggedInBarangayId) {
+    console.error("No Barangay ID found. Cannot load roads.");
+    roadDropdown.innerHTML = '<option value="" disabled selected>Please log in first...</option>';
+    return;
+  }
+
+  // 3. NOW fetch the roads using the ID and our dynamic config variable!
+  fetch(`${API_BASE_URL}/api/roads/barangay/${loggedInBarangayId}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to fetch roads");
+      return response.json();
+    })
+    .then(roads => {
+      roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
+
+      // 4. Loop directly through the roads (Spring Boot already filtered them for us!)
+      roads.forEach(road => {
+        const option = document.createElement("option");
+        option.value = road.roadName;
+        option.textContent = road.roadName;
+
+        option.dataset.roadId = road.roadId || road.id;
+        option.dataset.importance = road.roadImportance;
+        option.dataset.type = road.roadType;
+        option.dataset.terrain = road.terrainType;
+
+        roadDropdown.appendChild(option);
+      });
+    })
+    .catch(error => console.error("Error loading roads:", error));
+
+  // THE AUTO-FILL LISTENER
+  roadDropdown.addEventListener("change", function() {
+    const selectedOption = this.options[this.selectedIndex];
+
+    const idBox = document.getElementById("cityRoadId");
+    const importanceBox = document.getElementById("roadImportance");
+    const typeBox = document.getElementById("roadType");
+    const terrainBox = document.getElementById("terrainType");
+
+    if (idBox) idBox.value = selectedOption.dataset.roadId || "";
+    if (importanceBox) importanceBox.innerHTML = `<option value="${selectedOption.dataset.importance}">${selectedOption.dataset.importance}</option>`;
+    if (typeBox) typeBox.innerHTML = `<option value="${selectedOption.dataset.type}">${selectedOption.dataset.type}</option>`;
+    if (terrainBox) terrainBox.innerHTML = `<option value="${selectedOption.dataset.terrain}">${selectedOption.dataset.terrain}</option>`;
+  });
+}

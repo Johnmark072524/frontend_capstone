@@ -1074,3 +1074,70 @@ body.login-page {
 .btn-cancel:hover {
   background-color: #e2e8f0;
 }
+
+/* =========================================
+   BARANGAY DASHBOARD (ISOLATED CSS)
+========================================= */
+.bd-top-section { display: flex; gap: 20px; margin-bottom: 25px; align-items: stretch; }
+.bd-metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; flex: 1.5; }
+.bd-metric-card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; display: flex; flex-direction: column; justify-content: center; }
+.bd-metric-card h3 { margin: 0; font-size: 14px; color: #666; font-weight: 600; text-transform: uppercase; }
+.bd-metric-card .bd-value { font-size: 32px; font-weight: bold; color: #333; margin-top: 10px; }
+.bd-chart-container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; flex: 1; display: flex; flex-direction: column; }
+.bd-canvas-wrapper { position: relative; flex-grow: 1; width: 100%; height: 200px; display: flex; justify-content: center; align-items: center; }
+.bd-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
+.bd-search-bar { padding: 10px; width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+.bd-report-list { display: flex; flex-direction: column; gap: 15px; }
+.bd-list-item { display: flex; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); padding: 15px; border: 1px solid #e0e0e0; transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.bd-list-item:hover { box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12); transform: translateY(-2px); }
+.bd-item-image { width: 160px; height: 120px; flex-shrink: 0; border-radius: 6px; overflow: hidden; margin-right: 20px; }
+.bd-item-image img { width: 100%; height: 100%; object-fit: cover; }
+.bd-item-details { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.bd-item-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 5px; }
+.bd-item-meta { font-size: 13px; color: #777; margin-bottom: 10px; }
+.bd-item-meta span { margin-right: 15px; }
+.bd-feedback-box { background-color: #fdf3f4; border-left: 4px solid #dc3545; padding: 8px 12px; font-size: 13px; color: #555; border-radius: 0 4px 4px 0; margin-top: 5px; }
+.bd-item-actions { width: 160px; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; border-left: 1px solid #eee; padding-left: 15px; margin-left: 15px; }
+.bd-status-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; text-align: center; }
+.bd-badge-pending { background-color: #f0ad4e; }
+.bd-badge-validated { background-color: #28a745; }
+.bd-badge-rejected { background-color: #dc3545; }
+.bd-btn-action { background-color: #2c3e50; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: background 0.3s ease; }
+.bd-btn-action:hover { background-color: #1a252f; }
+
+/* =========================================
+   BARANGAY DASHBOARD MODALS
+========================================= */
+.bd-modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6); z-index: 1000;
+  display: flex; justify-content: center; align-items: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.bd-modal-overlay.active {
+  opacity: 1; pointer-events: auto;
+}
+.bd-modal-box {
+  background: #fff; padding: 25px; border-radius: 10px;
+  width: 90%; max-width: 550px; position: relative;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  transform: translateY(-20px); transition: transform 0.3s ease;
+}
+.bd-modal-overlay.active .bd-modal-box {
+  transform: translateY(0);
+}
+.bd-close-btn {
+  position: absolute; top: 15px; right: 20px;
+  font-size: 24px; cursor: pointer; color: #999;
+}
+.bd-close-btn:hover { color: #333; }
+.bd-modal-img {
+  width: 100%; height: 250px; object-fit: cover;
+  border-radius: 8px; margin: 15px 0; background: #f0f0f0;
+}
+
+.bd-report-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+.bd-report-section:last-child { border-bottom: none; }
+.bd-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; color: #444; }
+.bd-detail-grid div strong { color: #222; }

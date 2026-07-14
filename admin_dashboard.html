@@ -730,6 +730,11 @@
   </div>
 
 </div>
+<div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 999999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
+  <span id="toast-icon" style="font-size: 20px;"></span>
+  <span id="toast-message" style="font-weight: bold;"></span>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/app.js"></script>
 
@@ -742,9 +747,6 @@
       <button type="button" class="btn-submit" id="btn-confirm-accept">Yes, Validate It</button>
     </div>
   </div>
-</div>
-<div id="toast-notification" style="position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white; padding: 15px 25px; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 99999; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; pointer-events: none;">
-  <span id="toast-message" style="font-weight: bold; font-size: 16px;">Success!</span>
 </div>
 
 </body>

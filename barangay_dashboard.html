@@ -148,9 +148,40 @@
             <div class="form-section">
               <h3 class="section-title">Damage Information</h3>
 
+              <div class="form-grid" style="margin-bottom: 15px;">
+                <div class="form-column">
+                  <div class="form-group">
+                    <label for="damageType">Damage Type</label>
+                    <select id="damageType" name="damageType" onchange="toggleOtherDamageType()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                      <option value="" disabled selected>Select Damage Type</option>
+                      <option value="Pothole">Pothole</option>
+                      <option value="Surface Cracking">Surface Cracking (Alligator/Longitudinal)</option>
+                      <option value="Edge Deformation">Edge Deformation / Rutting</option>
+                      <option value="Washout/Sinkhole">Washout / Sinkhole</option>
+                      <option value="Other">Other (Please specify)</option>
+                    </select>
+                  </div>
+                  <div class="form-group hidden" id="otherDamageTypeGroup" style="margin-top: 10px;">
+                    <input type="text" id="otherDamageType" placeholder="Specify damage type..." style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%;">
+                  </div>
+                </div>
+                <div class="form-column">
+                  <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                      <label for="damageLength">Damage Length (m)</label>
+                      <input type="number" id="damageLength" name="damageLength" placeholder="Length" min="0" step="0.01" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                      <label for="damageWidth">Damage Width (m)</label>
+                      <input type="number" id="damageWidth" name="damageWidth" placeholder="Width" min="0" step="0.01" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="form-group-vertical">
-                <label for="damageDescription">Damage Description</label>
-                <textarea id="damageDescription" name="damageDescription" placeholder="Enter description"></textarea>
+                <label for="damageDescription">Damage Description / Additional Notes</label>
+                <textarea id="damageDescription" name="damageDescription" placeholder="Enter description or location notes..."></textarea>
               </div>
 
               <div class="form-group-vertical" style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa;">
@@ -235,17 +266,22 @@
     </div>
 
     <div class="bd-report-section">
-      <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Road Details</h3>
+      <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Road & Damage Details</h3>
       <div class="bd-detail-grid">
         <div><strong>City Road Name:</strong> <span id="view-modal-road-name"></span></div>
         <div><strong>City Road ID:</strong> <span id="view-modal-road-id"></span></div>
         <div><strong>Road Importance:</strong> <span id="view-modal-importance"></span></div>
         <div><strong>Terrain Type:</strong> <span id="view-modal-terrain"></span></div>
         <div><strong>Road Type:</strong> <span id="view-modal-road-type"></span></div>
-        <div><strong>Length:</strong> <span id="view-modal-length"></span> m</div>
-        <div><strong>Width:</strong> <span id="view-modal-width"></span> m</div>
+        <div><strong>Road Length:</strong> <span id="view-modal-length"></span> m</div>
+        <div><strong>Road Width:</strong> <span id="view-modal-width"></span> m</div>
         <div><strong>Culverts:</strong> <span id="view-modal-culverts"></span> m</div>
         <div><strong>Bridges:</strong> <span id="view-modal-bridges"></span></div>
+
+        <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px;"></div>
+        <div><strong>Damage Type:</strong> <span id="view-modal-damage-type" style="color: #d9534f; font-weight: bold;"></span></div>
+        <div><strong>Damage Length:</strong> <span id="view-modal-damage-length"></span> m</div>
+        <div><strong>Damage Width:</strong> <span id="view-modal-damage-width"></span> m</div>
       </div>
     </div>
 
@@ -331,6 +367,32 @@
 
       <div class="form-section" style="margin-top: 25px;">
         <h3 class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Damage Information</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+          <div style="display: flex; flex-direction: column;">
+            <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Type</label>
+            <select id="edit-modal-damage-type" onchange="toggleEditOtherDamage()" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              <option value="Pothole">Pothole</option>
+              <option value="Surface Cracking">Surface Cracking</option>
+              <option value="Edge Deformation">Edge Deformation</option>
+              <option value="Washout/Sinkhole">Washout / Sinkhole</option>
+              <option value="None">None (Standard Inventory)</option>
+              <option value="Other">Other (Please specify)</option>
+            </select>
+            <input type="text" id="edit-modal-damage-other" placeholder="Specify other damage..." class="hidden" style="margin-top: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div style="display: flex; flex-direction: column; flex: 1;">
+              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Length (m)</label>
+              <input type="number" id="edit-modal-damage-length" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div style="display: flex; flex-direction: column; flex: 1;">
+              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Width (m)</label>
+              <input type="number" id="edit-modal-damage-width" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+          </div>
+        </div>
 
         <div style="display: flex; flex-direction: column; margin-bottom: 15px;">
           <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Description</label>

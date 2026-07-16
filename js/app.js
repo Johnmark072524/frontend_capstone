@@ -1,11 +1,11 @@
 // ==========================================
-// GLOBAL MAP VARIABLES
+// GLOBAL MAP VARIABLES (Must remain empty at first!)
 // ==========================================
 let map;
 let mapMarker;
-let selectedLat = 14.8139;
-let selectedLng = 121.0453;
-let redIcon;
+let selectedLat = 14.8139; // Default center of San Jose del Monte
+let selectedLng = 121.0453; // Default center of San Jose del Monte
+let redIcon; // Just declare it, don't build it yet!
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   if (typeof L !== 'undefined') {
 
+    // ⬇️ 1. SAFE TO DEFINE THE RED ICON HERE ⬇️
     redIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -23,20 +24,36 @@ document.addEventListener('DOMContentLoaded', () => {
       shadowSize: [41, 41]
     });
 
-    const btnDefineMap = document.getElementById('btn-define-map');
     const mapModal = document.getElementById('map-modal');
     const btnCloseMap = document.getElementById('close-map-btn');
-    const btnSaveCoords = document.getElementById('btn-save-coords');
 
     // ------------------------------------------
     // A. "DEFINE ON MAP" FOR ADD REPORT FORM
     // ------------------------------------------
+    const btnDefineMap = document.getElementById('btn-define-map');
+
     if (btnDefineMap && mapModal) {
       btnDefineMap.addEventListener('click', () => {
+
+        // 🧹 1. RESET THE MAP STATE FOR NEW REPORTS 🧹
+        selectedLat = 14.8139; // Default San Jose del Monte Lat
+        selectedLng = 121.0453; // Default San Jose del Monte Lng
+
+        // If the map is already loaded, sweep off the old Edit marker and reset the camera!
+        if (map) {
+          map.setView([selectedLat, selectedLng], 14);
+          if (mapMarker) {
+            map.removeLayer(mapMarker);
+            mapMarker = null; // Completely clear the old memory
+          }
+        }
+
+        // Open the modal
         mapModal.classList.remove('hidden');
 
+        // Load the map if it hasn't been loaded yet
         if (!map) {
-          map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
+          map = L.map('roadwiseMap').setView([selectedLat, selectedLng], 14);
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
@@ -48,24 +65,33 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        setTimeout(() => { map.invalidateSize(); }, 200);
-      });
+        // 🛡️ 2. PREVENT EDIT MODAL CROSS-TALK 🛡️
+        // Grab the button freshly from the DOM every time to avoid detachment bugs
+        const liveSaveBtn = document.getElementById('btn-save-coords');
+        const newSaveBtn = liveSaveBtn.cloneNode(true);
+        liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
 
-      if (btnCloseMap) {
-        btnCloseMap.addEventListener('click', () => mapModal.classList.add('hidden'));
-      }
-
-      if (btnSaveCoords) {
-        btnSaveCoords.addEventListener('click', () => {
+        newSaveBtn.addEventListener('click', () => {
           if(!mapMarker) {
             alert("Please click on the map to drop a pin first!");
             return;
           }
+          // Save specifically to the ADD form's hidden inputs
           document.getElementById('latitude').value = selectedLat;
           document.getElementById('longitude').value = selectedLng;
+
           document.getElementById('coords-display').textContent = `Locked: ${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+
           mapModal.classList.add('hidden');
+          showToast("Location locked successfully!", "success");
         });
+
+        setTimeout(() => { map.invalidateSize(); }, 200);
+      });
+
+      // Close buttons logic
+      if (btnCloseMap) {
+        btnCloseMap.addEventListener('click', () => mapModal.classList.add('hidden'));
       }
     }
 
@@ -80,8 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentLat = parseFloat(document.getElementById('edit-latitude').value);
         const currentLng = parseFloat(document.getElementById('edit-longitude').value);
 
+        // Open the modal
         mapModal.classList.remove('hidden');
 
+        // Load the map if it hasn't been loaded yet
         if (!map) {
           map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
@@ -95,26 +123,35 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
+        // If they already have coordinates saved, put the pin there and zoom in!
         if (!isNaN(currentLat) && !isNaN(currentLng)) {
           selectedLat = currentLat;
           selectedLng = currentLng;
           map.setView([selectedLat, selectedLng], 18);
+
           if (mapMarker) map.removeLayer(mapMarker);
           mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
+        } else {
+          // Failsafe: if they are editing a report that never had a map pin
+          map.setView([14.8139, 121.0453], 14);
+          if (mapMarker) { map.removeLayer(mapMarker); mapMarker = null; }
         }
 
-        const btnSaveCoords = document.getElementById('btn-save-coords');
-        const newSaveBtn = btnSaveCoords.cloneNode(true);
-        btnSaveCoords.parentNode.replaceChild(newSaveBtn, btnSaveCoords);
+        // 🛡️ PREVENT ADD MODAL CROSS-TALK 🛡️
+        const liveSaveBtn = document.getElementById('btn-save-coords');
+        const newSaveBtn = liveSaveBtn.cloneNode(true);
+        liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
 
         newSaveBtn.addEventListener('click', () => {
           if(!mapMarker) {
             alert("Please click on the map to drop a pin first!");
             return;
           }
+          // Save specifically to the EDIT modal's hidden inputs
           document.getElementById('edit-latitude').value = selectedLat;
           document.getElementById('edit-longitude').value = selectedLng;
           document.getElementById('edit-modal-gps').textContent = `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+
           mapModal.classList.add('hidden');
           showToast("Location updated successfully!", "success");
         });
@@ -123,11 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-  } // <--- NOTICE THIS BRACE? I MOVED IT DOWN HERE! Everything related to maps is safely inside it now.
+  } // <--- END OF THE SAFETY CHECK!
 
-  // ==========================================
-  // IMAGE UPLOAD & PREVIEW LOGIC
-  // ==========================================
+// ==========================================
+// IMAGE UPLOAD & PREVIEW LOGIC
+// ==========================================
 
   // ==========================================
   // IMAGE UPLOAD & PREVIEW LOGIC
@@ -531,19 +568,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
+// Shows the text box if the user selects "Other" in the Damage Type dropdown
+function toggleOtherDamageType() {
+  const select = document.getElementById('damageType');
+  const otherGroup = document.getElementById('otherDamageTypeGroup');
+  if (select.value === 'Other') {
+    otherGroup.classList.remove('hidden');
+  } else {
+    otherGroup.classList.add('hidden');
+  }
+}
+
+function toggleEditOtherDamage() {
+  const select = document.getElementById('edit-modal-damage-type');
+  const otherInput = document.getElementById('edit-modal-damage-other');
+  if (select.value === 'Other') {
+    otherInput.classList.remove('hidden');
+  } else {
+    otherInput.classList.add('hidden');
+  }
+}
 
 // ==========================================
 // BACKEND API CONNECTION LOGIC (RoadWise)
 // ==========================================
 
 // STEP 1: Validate and show the custom popup
+// STEP 1: Validate and show the custom popup
 function submitRoadReport() {
   const roadName = document.getElementById("cityRoadName")?.value;
   const widthVal = document.getElementById("width")?.value;
   const lengthVal = document.getElementById("length")?.value;
 
+  // ⬇️ REVERTED: Only strictly require the Road Details ⬇️
   if (!roadName || !widthVal || !lengthVal) {
     showToast("Please fill in all required fields (Road Name, Width, and Length).", "error");
+    return;
+  }
+
+  // If they selected "Other" but left the text box blank, we should still warn them
+  const damageType = document.getElementById("damageType")?.value;
+  if (damageType === "Other" && !document.getElementById("otherDamageType")?.value) {
+    showToast("Please specify the 'Other' damage type.", "error");
     return;
   }
 
@@ -569,59 +635,86 @@ function closeConfirmModal() {
 // STEP 3: The actual server submission if they click "Yes, Submit"
 // STEP 3: The actual server submission if they click "Yes, Submit"
 function executeFinalSubmission() {
-  // Hide the modal
   closeConfirmModal();
 
-  // The Loading State
   const submitBtn = document.getElementById("submit-report-btn");
   if (submitBtn) {
     submitBtn.innerHTML = "⏳ Submitting...";
     submitBtn.disabled = true;
     submitBtn.style.opacity = "0.7";
-    submitBtn.style.cursor = "not-allowed";
   }
 
-  // Package the Form Data
   const formData = new FormData();
-
-  // Grab the Barangay ID from the user's login session!
   const loggedInBarangayId = sessionStorage.getItem("barangayId");
   if (loggedInBarangayId) {
-    // It MUST be exactly "barangayId" to match Java!
     formData.append("barangayId", loggedInBarangayId);
   }
 
-  // --- AI INTEGRATION PREP ---
-  // We force this to "Unassessed" so the Admin Dashboard knows the AI hasn't graded it yet!
-  formData.append("severity", "Unassessed");
+  // ==============================================================
+  // 🛡️ THE BULLETPROOF DATA EXTRACTOR 🛡️
+  // This guarantees we get data from disabled or auto-filled fields!
+  // ==============================================================
+  function getVal(id) {
+    const el = document.getElementById(id);
+    if (!el) return ""; // Failsafe if ID doesn't exist
 
-  // Your existing fields
-  formData.append("cityRoadName", document.getElementById("cityRoadName")?.value || "");
-  formData.append("cityRoadId", document.getElementById("cityRoadId")?.value || "");
-  formData.append("roadImportance", document.getElementById("roadImportance")?.value || "");
-  formData.append("roadType", document.getElementById("roadType")?.value || "");
-  formData.append("terrainType", document.getElementById("terrainType")?.value || "");
+    if (el.tagName === "SELECT") {
+      if (el.selectedIndex === -1) return "";
+      const opt = el.options[el.selectedIndex];
+      if (opt.disabled) return ""; // Skip the "Select Road" placeholder
+      // Prefer the 'value', but fallback to the raw text if 'value' is empty!
+      return (opt.value && opt.value.trim() !== "") ? opt.value : opt.text;
+    }
+    return el.value || "";
+  }
 
-  formData.append("width", parseFloat(document.getElementById("width")?.value) || 0.0);
-  formData.append("length", parseFloat(document.getElementById("length")?.value) || 0.0);
-  formData.append("numberOfBridges", parseInt(document.getElementById("numberOfBridges")?.value) || 0);
-  formData.append("lengthOfCulverts", parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0.0);
-  formData.append("damageDescription", document.getElementById("damageDescription")?.value || "");
+  // 1. Road Details (Now immune to the disabled field bug!)
+  formData.append("cityRoadName", getVal("cityRoadName"));
+  formData.append("cityRoadId", getVal("cityRoadId"));
+  formData.append("roadImportance", getVal("roadImportance"));
+  formData.append("roadType", getVal("roadType"));
+  formData.append("terrainType", getVal("terrainType"));
 
-  formData.append("latitude", parseFloat(document.getElementById("latitude")?.value) || 0.0);
-  formData.append("longitude", parseFloat(document.getElementById("longitude")?.value) || 0.0);
+  // 2. Measurements
+  formData.append("width", parseFloat(getVal("width")) || 0.0);
+  formData.append("length", parseFloat(getVal("length")) || 0.0);
+  formData.append("numberOfBridges", parseInt(getVal("numberOfBridges")) || 0);
+  formData.append("lengthOfCulverts", parseFloat(getVal("lengthOfCulverts")) || 0.0);
+  formData.append("damageDescription", getVal("damageDescription"));
+
+  // 3. ⬇️ THE NEW DAMAGE FIELDS ⬇️
+  let finalDamageType = getVal("damageType");
+  if (!finalDamageType || finalDamageType.includes("Select Damage")) {
+    finalDamageType = "None"; // Force "None" if they skip it
+  } else if (finalDamageType === "Other") {
+    finalDamageType = getVal("otherDamageType") || "Other";
+  }
+
+  formData.append("damageType", finalDamageType);
+  formData.append("damageLength", parseFloat(getVal("damageLength")) || 0.0);
+  formData.append("damageWidth", parseFloat(getVal("damageWidth")) || 0.0);
+
+  // 4. GPS & Analytics
+  formData.append("latitude", parseFloat(getVal("latitude")) || 0.0);
+  formData.append("longitude", parseFloat(getVal("longitude")) || 0.0);
   formData.append("inventoryYear", new Date().getFullYear());
-
-  // Notice we leave CV Analysis alone since the AI hasn't processed it yet!
+  formData.append("severity", "Unassessed");
   formData.append("cvDamageClassification", "Pending CV Analysis");
   formData.append("cvConfidenceScore", 0.0);
 
+  // 5. Image Processing
   const imageInput = document.getElementById("damageImageFile");
   if (imageInput && imageInput.files.length > 0) {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  // --- NEW: Use the dynamic API_BASE_URL from config.js! ---
+  // 🔍 DEV DEBUGGER: Prints exactly what is going to PostgreSQL into your browser console!
+  console.log("--- DATA LEAVING BROWSER ---");
+  for (let pair of formData.entries()) {
+    console.log(pair[0] + ": " + pair[1]);
+  }
+
+  // 6. Send to Spring Boot
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
@@ -632,26 +725,20 @@ function executeFinalSubmission() {
     })
     .then(data => {
       showToast("Report securely saved to the database!", "success");
-
-      // I assume you have this function defined elsewhere to clear the form
       if (typeof resetAddReportForm === 'function') resetAddReportForm();
-
       if (submitBtn) {
         submitBtn.innerHTML = "Submit Report";
         submitBtn.disabled = false;
         submitBtn.style.opacity = "1";
-        submitBtn.style.cursor = "pointer";
       }
     })
     .catch(error => {
       console.error("Error submitting report:", error);
-      showToast("Failed to upload report. Is the server running?", "error");
-
+      showToast("Failed to upload report. Check your internet connection.", "error");
       if (submitBtn) {
         submitBtn.innerHTML = "Submit Report";
         submitBtn.disabled = false;
         submitBtn.style.opacity = "1";
-        submitBtn.style.cursor = "pointer";
       }
     });
 }
@@ -673,6 +760,10 @@ function resetAddReportForm() {
   document.getElementById("roadImportance").value = "";
   document.getElementById("roadType").value = "";
   document.getElementById("terrainType").value = "";
+
+  document.getElementById("damageType").value = "";
+  document.getElementById("damageLength").value = "";
+  document.getElementById("damageWidth").value = "";
 
   // 3. Wipe the hidden map math and reset the display text
   document.getElementById("latitude").value = "";
@@ -900,6 +991,9 @@ function reviewReport(reportId) {
       document.getElementById('modal-width').textContent = report.width || 0;
       document.getElementById('modal-culverts').textContent = report.lengthOfCulverts || 0;
       document.getElementById('modal-bridges').textContent = report.numberOfBridges || 0;
+      document.getElementById('modal-damage-type').textContent = report.damageType || 'None';
+      document.getElementById('modal-damage-length').textContent = report.damageLength || 0;
+      document.getElementById('modal-damage-width').textContent = report.damageWidth || 0;
 
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
@@ -1189,6 +1283,9 @@ function openViewModal(reportId) {
       document.getElementById('view-modal-culverts').innerText = report.lengthOfCulverts || "0";
       document.getElementById('view-modal-bridges').innerText = report.numberOfBridges || "0";
 
+      document.getElementById('view-modal-damage-type').innerText = report.damageType || "None";
+      document.getElementById('view-modal-damage-length').innerText = report.damageLength || "0";
+      document.getElementById('view-modal-damage-width').innerText = report.damageWidth || "0";
       // Damage Evidence Section
       document.getElementById('view-modal-desc').innerText = report.damageDescription || "No description provided.";
 
@@ -1246,6 +1343,22 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-culverts').value = report.lengthOfCulverts || "";
       document.getElementById('edit-modal-bridges').value = report.numberOfBridges || "";
 
+      document.getElementById('edit-modal-damage-length').value = report.damageLength || "";
+      document.getElementById('edit-modal-damage-width').value = report.damageWidth || "";
+
+      // Check if the saved damage type is one of the standard options, otherwise put it in "Other"
+      const standardTypes = ["Pothole", "Surface Cracking", "Edge Deformation", "Washout/Sinkhole", "None"];
+      const savedType = report.damageType || "None";
+
+      if (standardTypes.includes(savedType)) {
+        document.getElementById('edit-modal-damage-type').value = savedType;
+        document.getElementById('edit-modal-damage-other').classList.add('hidden');
+      } else {
+        document.getElementById('edit-modal-damage-type').value = "Other";
+        const otherInput = document.getElementById('edit-modal-damage-other');
+        otherInput.value = savedType;
+        otherInput.classList.remove('hidden');
+      }
       // ✏️ EDITABLE DESCRIPTION & IMAGE
       document.getElementById('edit-modal-desc').value = report.damageDescription || "";
       let imgSrc = "https://placehold.co/300x200/png?text=No+Image";
@@ -1288,6 +1401,14 @@ function submitEditedReport() {
   if (fileInput.files.length > 0) {
     formData.append("imageFile", fileInput.files[0]);
   }
+  let editedDamageType = document.getElementById('edit-modal-damage-type').value;
+  if (editedDamageType === "Other") {
+    editedDamageType = document.getElementById('edit-modal-damage-other').value || "Other";
+  }
+  formData.append("damageType", editedDamageType);
+  formData.append("damageLength", document.getElementById('edit-modal-damage-length').value || 0);
+  formData.append("damageWidth", document.getElementById('edit-modal-damage-width').value || 0);
+
 
   fetch(`${API_BASE_URL}/api/reports/update/${reportId}`, {
     method: 'PUT',

@@ -23,7 +23,7 @@
     <nav class="nav-menu">
       <span class="menu-label">MENU</span>
       <ul>
-        <li class="active" data-target="view-dashboard"><a href="#"><span class="icon">⊞</span> Dashboard</a></li>
+        <li class="active" data-target="view-admin-dashboard"><a href="#"><span class="icon">⊞</span> Dashboard</a></li>
         <li data-target="view-reports"><a href="#"><span class="icon">📄</span> Reports </a></li>
         <li data-target="view-tracking"><a href="#"><span class="icon">🚧</span> Repair Tracking</a></li>
         <li data-target="view-map"><a href="#"><span class="icon">🗺️</span> Map View</a></li>
@@ -39,18 +39,77 @@
 
   <div class="main-content">
 
-    <header class="top-header">
-      <div>
-        <h1>System Administration</h1>
-        <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">City Planning and Development Office</p>
-      </div>
-
-      <button class="header-profile-btn">
-        <span class="icon">👤</span> CPDO Admin
-      </button>
-    </header>
 
     <main class="content-area">
+
+      <div id="view-admin-dashboard" class="content-section ad-dashboard-container">
+
+        <div class="ad-metrics-row">
+          <div class="ad-metric-card alert-card">
+            <div class="ad-metric-title">⚠️ Pending Validations</div>
+            <div class="ad-metric-value alert-text" id="admin-metric-pending">...</div>
+            <div style="font-size: 12px; color: #dc3545; margin-top: 5px;">Requires Immediate Review</div>
+          </div>
+          <div class="ad-metric-card">
+            <div class="ad-metric-title">📍 City-Wide Inspection Quota</div>
+            <div class="ad-metric-value" id="admin-metric-quota">...</div>
+            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Roads Inspected vs Total</div>
+          </div>
+          <div class="ad-metric-card">
+            <div class="ad-metric-title">🚨 Critical AI Hazards</div>
+            <div class="ad-metric-value" style="color: #ff8c00;" id="admin-metric-critical">...</div>
+            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Awaiting Masterlist Dispatch</div>
+          </div>
+          <div class="ad-metric-card">
+            <div class="ad-metric-title">✅ Total Validated Reports</div>
+            <div class="ad-metric-value" style="color: #28a745;" id="admin-metric-validated">...</div>
+            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Historical Archive</div>
+          </div>
+        </div>
+
+        <div class="ad-charts-row">
+          <div class="ad-chart-card ad-chart-left">
+            <h3 class="ad-section-title">Barangay Compliance Tracker</h3>
+            <div style="position: relative; height: 250px;">
+              <canvas id="adminComplianceChart"></canvas>
+            </div>
+          </div>
+          <div class="ad-chart-card ad-chart-right">
+            <h3 class="ad-section-title">City-Wide Severity Breakdown</h3>
+            <div style="position: relative; height: 250px;">
+              <canvas id="adminSeverityChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="ad-queue-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 class="ad-section-title" style="margin: 0; border: none;">Action Queue: Oldest Pending Reports</h3>
+            <button style="background: transparent; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer;">View All Pending ➡️</button>
+          </div>
+
+          <table class="ad-table">
+            <thead>
+            <tr>
+              <th>Report ID</th>
+              <th>Road Name</th>
+              <th>Barangay</th>
+              <th>AI Severity</th>
+              <th>Date Submitted</th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+            </thead>
+            <tbody id="admin-action-queue-body">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 30px; color: #666; font-style: italic;">
+                Fetching real-time data from server...
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
 
       <div id="view-report-priority" class="content-section hidden">
 
@@ -80,7 +139,7 @@
 
           <div style="text-align: center; margin-bottom: 30px;">
             <h2 style="font-family: 'Times New Roman', Times, serif; text-transform: uppercase; font-size: 24px; margin-bottom: 5px; color: #000;">High Priority Road Repair Masterlist</h2>
-            <p style="font-size: 14px; color: #333; margin: 0;">Date Generated: <strong>May 14, 2026</strong></p>
+            <p style="font-size: 14px; color: #333; margin: 0;">Date Generated: <strong></strong></p>
             <p style="font-size: 14px; color: #333; margin: 5px 0 0 0; font-style: italic;">For Immediate Action & Budget Allocation by the City Engineering Office (CEO)</p>
           </div>
 
@@ -88,37 +147,18 @@
             <thead>
             <tr>
               <th style="width: 5%;">Rank</th>
-              <th style="width: 15%;">Project ID</th>
+              <th style="width: 15%;">Report ID</th>
               <th style="width: 30%;">Road Name & Barangay</th>
-              <th style="width: 25%;">Damage Classification</th>
-              <th style="width: 15%;">Est. Size (L x W)</th>
-              <th style="width: 10%;">Severity</th>
+              <th style="width: 25%;">Damage Type</th>
+              <th style="width: 15%;">Est. Area (L x W)</th>
+              <th style="width: 10%;">Priority Tier</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-              <td style="text-align: center;"><strong>1</strong></td>
-              <td>#PRJ-0842</td>
-              <td><strong>Minuyan Proper Rd.</strong><br><span style="font-size: 11px; color: #555;">Brgy. Minuyan Proper</span></td>
-              <td>Deep Potholes / Surface Failure</td>
-              <td>5m x 6.5m</td>
-              <td style="text-align: center; font-weight: bold; color: #dc3545;">CRITICAL</td>
-            </tr>
-            <tr>
-              <td style="text-align: center;"><strong>2</strong></td>
-              <td>#PRJ-0891</td>
-              <td><strong>Gumaoc East Main</strong><br><span style="font-size: 11px; color: #555;">Brgy. Gumaoc East</span></td>
-              <td>Severe Cracking / Washout</td>
-              <td>12m x 4m</td>
-              <td style="text-align: center; font-weight: bold; color: #dc3545;">CRITICAL</td>
-            </tr>
-            <tr>
-              <td style="text-align: center;"><strong>3</strong></td>
-              <td>#PRJ-0904</td>
-              <td><strong>Muzon Market Access</strong><br><span style="font-size: 11px; color: #555;">Brgy. Muzon</span></td>
-              <td>Sinkhole Development</td>
-              <td>3m x 3m</td>
-              <td style="text-align: center; font-weight: bold; color: #ff8c00;">HIGH</td>
+              <td colspan="6" style="text-align: center; padding: 20px; color: #666; font-style: italic;">
+                Generating Priority List from Database...
+              </td>
             </tr>
             </tbody>
           </table>
@@ -194,10 +234,6 @@
 
           </div>
         </div>
-      </div>
-
-      <div id="view-dashboard" class="content-section">
-        <p>Road damage data and YOLO results will go here.</p>
       </div>
 
       <div id="view-reports" class="content-section hidden">
@@ -741,6 +777,7 @@
 </div>
 
 <script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="js/app.js"></script>
 
 <div id="accept-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">

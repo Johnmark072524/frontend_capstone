@@ -57,6 +57,32 @@ document.addEventListener('DOMContentLoaded', () => {
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
+          // ==========================================
+          // 🔍 THE NEW GEOCODER (SEARCH BAR)
+          // ==========================================
+          L.Control.geocoder({
+            defaultMarkGeocode: false,
+            geocoder: L.Control.Geocoder.nominatim({
+              geocodingQueryParams: {
+                countrycodes: 'ph',
+                viewbox: "120.95,14.90,121.15,14.75",
+                bounded: 1
+              }
+            })
+          })
+            .on('markgeocode', function(e) {
+
+              // 🚀 THE FIX: Force a close-up street-level zoom (Level 17)
+              // Instead of fitting the whole boundary, we dive straight into the center!
+              const targetLatLng = e.geocode.center;
+              map.setView(targetLatLng, 17);
+
+              // Note: The user must still click the road to drop the red pin.
+              showToast("Camera moved! Click the exact road to drop the pin.", "success");
+            })
+            .addTo(map);
+          // ==========================================
+
           map.on('click', function(e) {
             selectedLat = e.latlng.lat;
             selectedLng = e.latlng.lng;
@@ -552,17 +578,148 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 10. OFFICIAL REPORT LOGIC
-  // ==========================================
+// 10. OFFICIAL REPORT LOGIC (CEO PRIORITY LIST)
+// ==========================================
   const btnPrintPriority = document.getElementById('btn-print-priority');
   const viewReportPriority = document.getElementById('view-report-priority');
+  const btnPrintDocument = document.getElementById('btn-print-document');
+  const btnCloseReport = document.getElementById('btn-close-report');
 
+// 1. Hook up the Sidebar Button
   if (btnPrintPriority && viewReportPriority) {
     btnPrintPriority.addEventListener('click', () => {
-      contentSections.forEach(sec => sec.classList.add('hidden'));
+      // Hide all other dashboard sections
+      if (typeof contentSections !== 'undefined') {
+        contentSections.forEach(sec => sec.classList.add('hidden'));
+      }
       document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
+
+      // Show the official document
       viewReportPriority.classList.remove('hidden');
+
+      // 🚀 RUN THE ALGORITHM
+      generatePriorityList();
     });
+  }
+
+// 2. Hook up the Print & Back Buttons
+  if (btnPrintDocument) {
+    btnPrintDocument.addEventListener('click', () => window.print());
+  }
+  if (btnCloseReport) {
+    btnCloseReport.addEventListener('click', () => {
+      viewReportPriority.classList.add('hidden');
+      document.getElementById('view-dashboard').classList.remove('hidden');
+    });
+  }
+
+// ==========================================
+// 🧠 THE STRICT PRIORITY ALGORITHM 🧠
+// ==========================================
+  function generatePriorityList() {
+    fetch(`${API_BASE_URL}/api/reports`)
+      .then(response => response.json())
+      .then(reports => {
+
+        // 🛡️ THE GATEKEEPER: Only Validated Reports reach the CEO
+        const validatedReports = reports.filter(r => r.status === 'Validated');
+
+        // 🧮 CALCULATE SCORES
+        validatedReports.forEach(report => {
+          const severity = (report.severity || 'Unassessed').toLowerCase();
+          const importance = (report.roadImportance || '').toLowerCase();
+
+          // Default fallback for AI that hasn't graded the photo yet
+          report.tierScore = 0;
+          report.tierLabel = 'PENDING AI';
+          report.tierColor = '#6c757d'; // Gray
+
+          // STEP 1: THE STRICT DECISION TREE (3 TIERS)
+          if (severity === 'high') {
+            report.tierScore = 3;
+            report.tierLabel = 'HIGH';
+            report.tierColor = '#dc3545'; // Red
+          } else if (severity === 'medium') {
+            if (importance.includes('core')) {
+              report.tierScore = 3; // Bumps up to High!
+              report.tierLabel = 'HIGH';
+              report.tierColor = '#dc3545'; // Red
+            } else {
+              report.tierScore = 2; // Stays Medium
+              report.tierLabel = 'MEDIUM';
+              report.tierColor = '#ff8c00'; // Orange
+            }
+          } else if (severity === 'low') {
+            if (importance.includes('core')) {
+              report.tierScore = 2; // Bumps up to Medium!
+              report.tierLabel = 'MEDIUM';
+              report.tierColor = '#ff8c00'; // Orange
+            } else {
+              report.tierScore = 1; // Stays Low
+              report.tierLabel = 'LOW';
+              report.tierColor = '#28a745'; // Green
+            }
+          }
+
+          // STEP 2: THE TIE-BREAKER (Area)
+          const dLength = parseFloat(report.damageLength) || 0;
+          const dWidth = parseFloat(report.damageWidth) || 0;
+          report.areaScore = dLength * dWidth;
+        });
+
+        // 🔄 THE DOUBLE SORT (Tier First, then Area)
+        validatedReports.sort((a, b) => {
+          if (b.tierScore !== a.tierScore) {
+            return b.tierScore - a.tierScore;
+          }
+          // If they have the exact same Tier, sort by Largest Area
+          return b.areaScore - a.areaScore;
+        });
+
+        // 🖨️ RENDER TO HTML TABLE
+        const tbody = document.querySelector('.document-table tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = ''; // Wipe out the hardcoded HTML rows
+
+        if (validatedReports.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No validated reports available for dispatch.</td></tr>`;
+          return;
+        }
+
+        validatedReports.forEach((report, index) => {
+          // Formatting data safely
+          const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
+          const formatName = report.cityRoadName || 'Unnamed Road';
+          const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
+          // Damage Type is used ONLY as a label for the crew, not for math!
+          const formatDamage = report.damageType || 'Unspecified';
+          const dLength = report.damageLength || 0;
+          const dWidth = report.damageWidth || 0;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+                    <td style="text-align: center;"><strong>${index + 1}</strong></td>
+                    <td>${formatId}</td>
+                    <td><strong>${formatName}</strong><br><span style="font-size: 11px; color: #555;">Brgy. ${formatBrgy}</span></td>
+                    <td>${formatDamage}</td>
+                    <td>${dLength}m x ${dWidth}m</td>
+                    <td style="text-align: center; font-weight: bold; color: ${report.tierColor};">${report.tierLabel}</td>
+                `;
+          tbody.appendChild(tr);
+        });
+
+        // Auto-update Document Date to today
+        const dateEl = document.querySelector('.official-document p strong');
+        if(dateEl) {
+          dateEl.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+      })
+      .catch(err => {
+        console.error("Error generating priority list:", err);
+        showToast("Error loading priority list.", "error");
+      });
   }
 
 
@@ -592,8 +749,6 @@ function toggleEditOtherDamage() {
 // ==========================================
 // BACKEND API CONNECTION LOGIC (RoadWise)
 // ==========================================
-
-// STEP 1: Validate and show the custom popup
 // STEP 1: Validate and show the custom popup
 function submitRoadReport() {
   const roadName = document.getElementById("cityRoadName")?.value;
@@ -726,6 +881,20 @@ function executeFinalSubmission() {
     .then(data => {
       showToast("Report securely saved to the database!", "success");
       if (typeof resetAddReportForm === 'function') resetAddReportForm();
+
+      if (typeof loadBarangayReports === 'function') {
+        const brgyId = sessionStorage.getItem("barangayId");
+
+        // Destroy old chart to prevent invisible canvas crashes
+        const canvasId = 'severityChart';
+        if (typeof Chart !== 'undefined') {
+          let existingChart = Chart.getChart(canvasId);
+          if (existingChart) existingChart.destroy();
+        }
+
+        if (brgyId) loadBarangayReports(brgyId);
+      }
+
       if (submitBtn) {
         submitBtn.innerHTML = "Submit Report";
         submitBtn.disabled = false;
@@ -1079,11 +1248,70 @@ if (btnLocateMap) {
     }
   });
 }
-
 // ==========================================
 // BARANGAY DASHBOARD: FETCH REAL DATA (SAFE UI)
 // ==========================================
 let severityChartInstance = null;
+
+// 🧠 NEW: Progress Bar Logic (Fail-Safe Version)
+function calculateJurisdictionProgress(barangayId, reports) {
+  // 1. Calculate how many UNIQUE roads have been inspected
+  const inspectedRoadNames = new Set(reports.map(r => r.cityRoadName).filter(name => name));
+  const inspectedCount = inspectedRoadNames.size;
+
+  // 2. Fetch total assigned roads for this specific barangay from the database
+  // ⬇️ FIXED: Pointing exactly to your /api/roads endpoint!
+  fetch(`${API_BASE_URL}/api/roads`)
+    .then(res => {
+      if (!res.ok) throw new Error("API not found or returned an error.");
+      return res.json();
+    })
+    .then(allRoads => {
+      if (!Array.isArray(allRoads)) {
+        throw new Error("API did not return a valid array of roads.");
+      }
+
+      // Filter roads to only count ones belonging to this official's barangay
+      const barangayRoads = allRoads.filter(road => road.barangay && String(road.barangay.id) === String(barangayId));
+      const totalRoads = barangayRoads.length;
+
+      // Fallback: If DB has no roads assigned yet, use the inspected count
+      const displayTotal = totalRoads > 0 ? totalRoads : Math.max(inspectedCount, 1);
+
+      updateProgressBarUI(inspectedCount, displayTotal);
+    })
+    .catch(err => {
+      console.warn("Notice: Roads API unavailable or empty. Defaulting to dynamic quota.", err);
+      const displayTotal = Math.max(inspectedCount, 1);
+      updateProgressBarUI(inspectedCount, displayTotal);
+    });
+}
+
+// 🎨 Helper function to update the HTML cleanly
+function updateProgressBarUI(inspectedCount, displayTotal) {
+  let percentage = Math.round((inspectedCount / displayTotal) * 100);
+  if (percentage > 100) percentage = 100;
+
+  const progressText = document.getElementById('progress-text');
+  const progressPercent = document.getElementById('progress-percentage');
+  const barFill = document.getElementById('progress-bar-fill');
+
+  if (progressText && progressPercent && barFill) {
+    progressText.innerHTML = `<strong>${inspectedCount}</strong> out of <strong>${displayTotal}</strong> assigned roads inspected this month.`;
+    progressPercent.innerText = `${percentage}%`;
+    barFill.style.width = `${percentage}%`;
+
+    // Turn the bar Green if they reach 100% quota
+    if (percentage === 100) {
+      barFill.style.background = 'linear-gradient(90deg, #28a745, #34ce57)'; // Green
+      progressPercent.style.color = '#28a745';
+    } else {
+      barFill.style.background = 'linear-gradient(90deg, #007bff, #00d2ff)'; // Blue
+      progressPercent.style.color = '#007bff';
+    }
+  }
+}
+
 
 function loadBarangayReports(barangayId) {
   const listContainer = document.getElementById('barangay-report-list');
@@ -1098,6 +1326,10 @@ function loadBarangayReports(barangayId) {
     })
     .then(reports => {
       listContainer.innerHTML = "";
+
+      // 🚀 TRIGGER THE PROGRESS BAR MATH
+      calculateJurisdictionProgress(barangayId, reports);
+
       if (reports.length === 0) {
         listContainer.innerHTML = "<p style='text-align:center; padding: 20px;'>No reports found for your area.</p>";
         return;
@@ -1131,7 +1363,7 @@ function loadBarangayReports(barangayId) {
                   <div class="bd-item-image"><img src="${imgSrc}" alt="Report Image"></div>
                   <div class="bd-item-details">
                     <div>
-                      <div class="bd-item-title">${report.cityRoadName || 'Unknown Road'} Damage</div>
+                      <div class="bd-item-title">${report.cityRoadName || 'Unknown Road'} Inspection</div>
                       <div class="bd-item-meta">
                         <span>📍 Brgy. ID: ${report.barangay ? report.barangay.id : 'N/A'}</span>
                         <span>📅 ${dateStr}</span>
@@ -1139,17 +1371,17 @@ function loadBarangayReports(barangayId) {
                     </div>
                     ${report.status === 'Rejected' && report.adminRemarks ? `
                     <div class="bd-feedback-box"><strong style="color: #dc3545;">Admin Note:</strong> ${report.adminRemarks}</div>
-                    ` : `<p style="font-size: 13px; color: #666; margin-top: 5px;">${report.damageDescription || 'No description provided.'}</p>`}
+                    ` : `<p style="font-size: 13px; color: #666; margin-top: 5px;">${report.damageDescription || 'No damage reported.'}</p>`}
                   </div>
                  <div class="bd-item-actions">
-  <div class="bd-status-badge ${badgeClass}">${report.status}</div>
+                  <div class="bd-status-badge ${badgeClass}">${report.status}</div>
 
-  ${report.status === 'Rejected' ? `
-    <button class="bd-btn-action" onclick="openEditModal(${report.id})">Edit & Resubmit</button>
-  ` : `
-    <button class="bd-btn-action" style="background-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>
-  `}
-</div>
+                  ${report.status === 'Rejected' ? `
+                    <button class="bd-btn-action" onclick="openEditModal(${report.id})">Edit & Resubmit</button>
+                  ` : `
+                    <button class="bd-btn-action" style="background-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>
+                  `}
+                </div>
                 </div>`;
         listContainer.innerHTML += rowHtml;
       });
@@ -1177,19 +1409,15 @@ function updateSeverityChart(dataArray) {
   let existingChart = Chart.getChart(canvasId);
   if (existingChart) existingChart.destroy();
 
-  // ⬇️ NEW: Check if all severities are 0
   const totalSeverity = dataArray.reduce((a, b) => a + b, 0);
   const isEmpty = totalSeverity === 0;
 
   new Chart(ctx, {
     type: 'doughnut',
     data: {
-      // If empty, show "Pending", otherwise show "High/Medium/Low"
       labels: isEmpty ? ['Pending AI Assessment'] : ['High', 'Medium', 'Low'],
       datasets: [{
-        // If empty, give it a placeholder value of 1 so it draws a full circle
         data: isEmpty ? [1] : dataArray,
-        // If empty, color it grey. Otherwise use Red/Orange/Green
         backgroundColor: isEmpty ? ['#e9ecef'] : ['#dc3545', '#f0ad4e', '#28a745'],
         borderWidth: 0
       }]
@@ -1199,7 +1427,6 @@ function updateSeverityChart(dataArray) {
       maintainAspectRatio: false,
       plugins: {
         legend: { position: 'bottom' },
-        // Disable the hover popup if there's no data
         tooltip: { enabled: !isEmpty }
       },
       cutout: '70%'
@@ -1208,29 +1435,43 @@ function updateSeverityChart(dataArray) {
 }
 
 // ==========================================
-// SMART DASHBOARD LOADER (Matches your Login)
+// SMART DASHBOARD LOADER (AUTO-REFRESHING)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
 
-  // Check if we are on the Barangay Dashboard page
+  // 1. BARANGAY DASHBOARD LOGIC
   if (document.getElementById('barangay-report-list')) {
-
-    // 1. Check the session memory for the exact variable your login saved
     const storedBarangayId = sessionStorage.getItem("barangayId");
-
-    // 2. If it's missing, kick them back to login!
     if (!storedBarangayId) {
       alert("Security Check: You must log in first!");
       window.location.href = "login.html";
       return;
     }
 
-    // 3. If found, load their exact reports!
+    // Initial Load when logging in
     console.log("Welcome! Loading reports for Barangay ID: " + storedBarangayId);
     loadBarangayReports(storedBarangayId);
-  }
-});
 
+    // 🚀 THE NAVIGATION FIX (Mutation Observer)
+    // Watches the Barangay Dashboard. Every time you click the "Dashboard" sidebar button, it refreshes!
+    const brgyDashboardSection = document.getElementById('view-dashboard');
+    if (brgyDashboardSection) {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            if (!brgyDashboardSection.classList.contains('hidden')) {
+              // Destroy old chart before reloading to prevent glitches
+              if (severityChartInstance) severityChartInstance.destroy();
+              loadBarangayReports(storedBarangayId);
+            }
+          }
+        });
+      });
+      observer.observe(brgyDashboardSection, { attributes: true });
+    }
+  }
+
+});
 // ==========================================
 // MODAL CONTROLS (View & Edit)
 // ==========================================
@@ -1551,4 +1792,199 @@ function loadRoadsToDropdown() {
     if (typeBox) typeBox.innerHTML = `<option value="${selectedOption.dataset.type}">${selectedOption.dataset.type}</option>`;
     if (terrainBox) terrainBox.innerHTML = `<option value="${selectedOption.dataset.terrain}">${selectedOption.dataset.terrain}</option>`;
   });
+}
+// ==========================================
+// ADMIN DASHBOARD: FETCH REAL DATA (AUTO-REFRESHING)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+
+  // 1. Load data on the very first login
+  if (document.getElementById('adminComplianceChart')) {
+    loadAdminDashboardData();
+  }
+
+  // 2. 🚀 THE NAVIGATION FIX (Mutation Observer)
+  // This watches your Admin Dashboard HTML section. Whenever it becomes visible
+  // (meaning the user clicked "Dashboard" in the sidebar), it automatically fetches fresh data!
+  const dashboardSection = document.getElementById('view-admin-dashboard');
+  if (dashboardSection) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          // If the 'hidden' class is removed, the dashboard is on screen!
+          if (!dashboardSection.classList.contains('hidden')) {
+            loadAdminDashboardData();
+          }
+        }
+      });
+    });
+    observer.observe(dashboardSection, { attributes: true });
+  }
+});
+
+function loadAdminDashboardData() {
+  // 🚀 FIX 1: Add { cache: 'no-store' } to force a fresh database pull every single time
+  Promise.all([
+    fetch(`${API_BASE_URL}/api/reports`, { cache: 'no-store' }).then(res => res.ok ? res.json() : []),
+    fetch(`${API_BASE_URL}/api/roads`, { cache: 'no-store' }).then(res => res.ok ? res.json() : [])
+  ])
+    .then(([reports, roads]) => {
+
+      // 🚀 FIX 2: Bulletproof Text Matching (ignores capital letters and hidden spaces)
+      const pendingReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending validation');
+      const validatedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'validated');
+      const criticalReports = reports.filter(r => String(r.severity || '').trim().toLowerCase() === 'high' && String(r.status || '').trim().toLowerCase() === 'validated');
+
+      // City-Wide Quota Logic
+      const uniqueInspectedRoads = new Set(reports.map(r => r.cityRoadName).filter(name => name)).size;
+      const totalCityRoads = roads.length > 0 ? roads.length : Math.max(uniqueInspectedRoads, 1);
+      let quotaPercentage = Math.round((uniqueInspectedRoads / totalCityRoads) * 100);
+      if (quotaPercentage > 100) quotaPercentage = 100;
+
+      // Inject Metrics into HTML
+      document.getElementById('admin-metric-pending').innerText = pendingReports.length;
+      document.getElementById('admin-metric-quota').innerText = `${quotaPercentage}%`;
+      document.getElementById('admin-metric-critical').innerText = criticalReports.length;
+      document.getElementById('admin-metric-validated').innerText = validatedReports.length;
+
+      // 2. BUILD ACTION QUEUE (Top 5 Oldest Pending)
+      const queueBody = document.getElementById('admin-action-queue-body');
+      if (queueBody) {
+        queueBody.innerHTML = ''; // Clear out the old list
+
+        // Sort by oldest date first
+        pendingReports.sort((a, b) => new Date(a.dateSubmitted) - new Date(b.dateSubmitted));
+        const top5Pending = pendingReports.slice(0, 5);
+
+        if (top5Pending.length === 0) {
+          queueBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #666; padding: 20px;">All caught up! No pending reports.</td></tr>`;
+        } else {
+          top5Pending.forEach(report => {
+            const formatId = `#RPT-${String(report.id).padStart(4, '0')}`;
+            const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
+            const dateStr = new Date(report.dateSubmitted).toLocaleDateString();
+
+            // Bulletproof Severity Badge
+            const sev = String(report.severity || 'Unassessed').trim();
+            let badgeColor = '#e9ecef'; // Default grey
+            let badgeText = '#333';
+
+            if (sev.toLowerCase() === 'high') { badgeColor = '#ffeeba'; badgeText = '#856404'; }
+            else if (sev.toLowerCase() === 'medium') { badgeColor = '#ffe8a1'; badgeText = '#856404'; }
+            else if (sev.toLowerCase() === 'low') { badgeColor = '#d4edda'; badgeText = '#155724'; }
+
+            queueBody.innerHTML += `
+                        <tr>
+                            <td><strong>${formatId}</strong></td>
+                            <td>${report.cityRoadName || 'Unnamed Road'}</td>
+                            <td>${formatBrgy}</td>
+                            <td><span class="ad-badge" style="background:${badgeColor}; color:${badgeText};">${sev}</span></td>
+                            <td>${dateStr}</td>
+                            <td style="text-align: center;"><button class="ad-btn-review" onclick="jumpToReportsAndReview(${report.id})">Review</button></td>
+                        </tr>
+                    `;
+          });
+        }
+      }
+
+      // 3. RENDER CHARTS
+      renderRealAdminCharts(reports);
+
+    })
+    .catch(err => {
+      console.error("Error loading Admin Dashboard data:", err);
+    });
+}
+
+function renderRealAdminCharts(reports) {
+  // --- Chart 1: Severity Breakdown ---
+  let high = 0, med = 0, low = 0, clear = 0;
+  reports.forEach(r => {
+    const sev = (r.severity || '').toLowerCase();
+    if (sev === 'high') high++;
+    else if (sev === 'medium') med++;
+    else if (sev === 'low') low++;
+    else clear++;
+  });
+
+  const ctxDoughnut = document.getElementById('adminSeverityChart');
+  if (ctxDoughnut) {
+    // 🚀 THE CHART FIX: Destroy the old chart before drawing a new one!
+    let existingDoughnut = Chart.getChart(ctxDoughnut);
+    if (existingDoughnut) existingDoughnut.destroy();
+
+    new Chart(ctxDoughnut.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['High', 'Medium', 'Low', 'Pending/Clear'],
+        datasets: [{
+          data: [high, med, low, clear],
+          backgroundColor: ['#dc3545', '#f0ad4e', '#28a745', '#6c757d'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } }, cutout: '65%' }
+    });
+  }
+
+  // --- Chart 2: Barangay Compliance ---
+  const brgyData = {};
+  reports.forEach(r => {
+    const brgyName = (r.barangay && r.barangay.barangayName) ? r.barangay.barangayName : 'Unknown';
+    if (!brgyData[brgyName]) brgyData[brgyName] = new Set();
+    if (r.cityRoadName) brgyData[brgyName].add(r.cityRoadName);
+  });
+
+  const brgyLabels = [];
+  const brgyCounts = [];
+  Object.entries(brgyData)
+    .sort((a, b) => b[1].size - a[1].size)
+    .slice(0, 5)
+    .forEach(([name, roadSet]) => {
+      brgyLabels.push(name);
+      brgyCounts.push(roadSet.size);
+    });
+
+  const ctxBar = document.getElementById('adminComplianceChart');
+  if (ctxBar && brgyLabels.length > 0) {
+    // 🚀 THE CHART FIX: Destroy the old chart before drawing a new one!
+    let existingBar = Chart.getChart(ctxBar);
+    if (existingBar) existingBar.destroy();
+
+    new Chart(ctxBar.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: brgyLabels,
+        datasets: [{
+          label: 'Unique Roads Inspected',
+          data: brgyCounts,
+          backgroundColor: '#0B2545',
+          borderRadius: 4
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+  }
+}
+
+// ==========================================
+// ACTION QUEUE: TAB JUMP & REVIEW LOGIC
+// ==========================================
+function jumpToReportsAndReview(reportId) {
+  // 1. Find the "Reports" tab button in your sidebar
+  const reportsTabBtn = document.querySelector('.nav-menu li[data-target="view-reports"]');
+
+  // 2. Programmatically "click" it to switch the screen
+  if (reportsTabBtn) {
+    reportsTabBtn.click();
+  }
+
+  // 3. Wait a tiny fraction of a second for the screen to switch, then open the modal!
+  setTimeout(() => {
+    if (typeof reviewReport === 'function') {
+      reviewReport(reportId);
+    } else {
+      console.error("reviewReport function not found!");
+    }
+  }, 150);
 }

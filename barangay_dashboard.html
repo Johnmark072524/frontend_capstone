@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 </head>
 <body>
 
@@ -37,6 +39,19 @@
         <div style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
           <h2 style="margin: 0; color: #2c3e50; font-size: 24px;">Dashboard Overview</h2>
           <p style="margin: 5px 0 0 0; color: #6c757d;">Real-time metrics and severity tracking for your area.</p>
+        </div>
+
+        <div class="bd-progress-container" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #eaeaea;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+            <div>
+              <h3 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: bold;">Inspection Quota</h3>
+              <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;" id="progress-text">Calculating jurisdiction data...</p>
+            </div>
+            <div style="font-size: 32px; font-weight: bold; color: #007bff;" id="progress-percentage">0%</div>
+          </div>
+          <div style="width: 100%; background-color: #e9ecef; border-radius: 10px; height: 16px; overflow: hidden;">
+            <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #007bff, #00d2ff); border-radius: 10px; transition: width 1.5s ease-in-out;"></div>
+          </div>
         </div>
 
         <div class="bd-top-section">

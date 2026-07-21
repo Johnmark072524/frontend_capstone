@@ -571,7 +571,7 @@ textarea {
 }
 
 /* ========================================== */
-/* LOGIN PAGE STYLES (BulSU Split Style)      */
+/* LOGIN PAGE STYLES     */
 /* ========================================== */
 
 body.login-page {
@@ -1152,13 +1152,14 @@ body.login-page {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Row 1: Metrics */
 .ad-metrics-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* 🚀 FIX: Changed to 5 columns so they all fit perfectly on one row! */
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   margin-bottom: 25px;
 }
+
 .ad-metric-card {
   background: #ffffff;
   padding: 20px;
@@ -1204,7 +1205,31 @@ body.login-page {
 .ad-table tr:hover { background-color: #f8f9fa; }
 
 /* Status Badges */
-.ad-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-.ad-badge-high { background-color: #ffeeba; color: #856404; } /* Warning Orange for AI */
-.ad-btn-review { background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: background 0.2s;}
-.ad-btn-review:hover { background-color: #0056b3; }
+.ad-badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.ad-badge-high {
+  background-color: #ffeeba;
+  color: #856404;
+} /* Warning Orange for AI */
+
+.ad-btn-review {
+  background-color: var(--accent-blue); /* 🟦 NOW USES YOUR CONSISTENT THEME COLOR */
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500; /* Match .btn-small weight for consistency */
+  font-size: 12px;
+  transition: opacity 0.2s; /* Match .btn-small hover effect */
+}
+
+/* Replaced the old hardcoded blue hover with your consistent opacity hover */
+.ad-btn-review:hover {
+  opacity: 0.8;
+}

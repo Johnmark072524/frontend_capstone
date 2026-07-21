@@ -45,27 +45,40 @@
       <div id="view-admin-dashboard" class="content-section ad-dashboard-container">
 
         <div class="ad-metrics-row">
+
           <div class="ad-metric-card alert-card">
             <div class="ad-metric-title">⚠️ Pending Validations</div>
             <div class="ad-metric-value alert-text" id="admin-metric-pending">...</div>
             <div style="font-size: 12px; color: #dc3545; margin-top: 5px;">Requires Immediate Review</div>
           </div>
+
           <div class="ad-metric-card">
             <div class="ad-metric-title">📍 City-Wide Inspection Quota</div>
             <div class="ad-metric-value" id="admin-metric-quota">...</div>
             <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Roads Inspected vs Total</div>
           </div>
+
           <div class="ad-metric-card">
             <div class="ad-metric-title">🚨 Critical AI Hazards</div>
             <div class="ad-metric-value" style="color: #ff8c00;" id="admin-metric-critical">...</div>
             <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Awaiting Masterlist Dispatch</div>
           </div>
+
           <div class="ad-metric-card">
             <div class="ad-metric-title">✅ Total Validated Reports</div>
             <div class="ad-metric-value" style="color: #28a745;" id="admin-metric-validated">...</div>
             <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Historical Archive</div>
           </div>
+
+          <div class="ad-metric-card" style="border-top-color: #17a2b8;">
+            <div class="ad-metric-title">📨 Dispatched to CEO</div>
+            <div class="ad-metric-value" style="color: #17a2b8;" id="admin-metric-dispatched">...</div>
+            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Awaiting CEO Repair</div>
+          </div>
+
+
         </div>
+
 
         <div class="ad-charts-row">
           <div class="ad-chart-card ad-chart-left">
@@ -117,9 +130,16 @@
           <button class="btn-secondary" id="btn-close-report" style="background: #f8f9fa; color: #333; border: 1px solid #ccc; padding: 8px 15px; border-radius: 4px; cursor: pointer;">
             ⬅ Back to System
           </button>
-          <button class="btn-submit" id="btn-print-document" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-            <span class="icon">🖨️</span> Print Official Document
-          </button>
+
+          <div style="display: flex; gap: 15px;">
+            <button class="btn-submit" id="btn-print-document" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+              <span class="icon">🖨️</span> Print Official Document
+            </button>
+
+            <button type="button" id="btn-approve-dispatch" style="padding: 10px 20px; border: none; background: #dc3545; color: white; cursor: pointer; border-radius: 4px; font-weight: bold; box-shadow: 0 4px 6px rgba(220,53,69,0.3);">
+              🚀 Approve & Dispatch to CEO
+            </button>
+          </div>
         </div>
 
         <div class="official-document">
@@ -762,11 +782,13 @@
               <button type="button" class="btn-secondary close-add-road-btn">Cancel</button>
               <button type="submit" class="btn-submit" style="background-color: #1a0ca3; border: none;">Save City Road</button>
             </div>
+
           </form>
         </div>
 
       </div>
     </div>
+
 
   </div>
 
@@ -774,6 +796,32 @@
 <div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 999999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
   <span id="toast-icon" style="font-size: 20px;"></span>
   <span id="toast-message" style="font-weight: bold;"></span>
+</div>
+
+<div id="dispatch-confirm-modal" class="modal-overlay hidden" style="backdrop-filter: blur(4px); z-index: 10000;">
+  <div class="modal-content" style="max-width: 450px; padding: 0; overflow: hidden; border-radius: 12px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+    <div style="background-color: #f0f7ff; padding: 30px 20px 20px; text-align: center; border-bottom: 1px solid #cce5ff;">
+      <div style="background-color: #cce5ff; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; box-shadow: 0 4px 10px rgba(0,123,255,0.15);">
+        <span style="font-size: 32px;">📨</span>
+      </div>
+      <h2 style="margin: 0; color: #0056b3; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">Finalize Masterlist?</h2>
+    </div>
+    <div style="padding: 25px 30px; text-align: center; background: white;">
+      <p style="margin: 0; font-size: 15px; color: #444; line-height: 1.6;">
+        Are you absolutely sure you want to finalize this Priority List and dispatch it to the <strong>City Engineering Office</strong>?
+        <br><br>
+        <span style="color: #dc3545; font-size: 13px; font-weight: bold;">This action cannot be undone.</span>
+      </p>
+    </div>
+    <div style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #e9ecef; display: flex; gap: 15px; justify-content: space-between;">
+      <button type="button" onclick="document.getElementById('dispatch-confirm-modal').classList.add('hidden')" style="padding: 12px 20px; border: 1px solid #d1d5db; background: white; color: #4b5563; cursor: pointer; border-radius: 8px; font-weight: 600; flex: 1; transition: all 0.2s ease; font-size: 15px;">
+        Cancel
+      </button>
+      <button type="button" onclick="window.executePriorityDispatch(event)" style="padding: 12px 20px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 8px; font-weight: 600; flex: 1; box-shadow: 0 4px 12px rgba(0,123,255,0.3); transition: all 0.2s ease; font-size: 15px;">
+        Yes, Dispatch Now
+      </button>
+    </div>
+  </div>
 </div>
 
 <script src="js/config.js"></script>

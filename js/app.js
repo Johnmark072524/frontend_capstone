@@ -9,6 +9,10 @@ let redIcon; // Just declare it, don't build it yet!
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  if (document.getElementById('ceo-repair-queue-body')) {
+    loadCEODashboardData();
+  }
+
   // ==========================================
   // 🛡️ THE LEAFLET SAFETY CHECK 🛡️
   // ==========================================
@@ -188,9 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   } // <--- END OF THE SAFETY CHECK!
 
-// ==========================================
-// IMAGE UPLOAD & PREVIEW LOGIC
-// ==========================================
 
   // ==========================================
   // IMAGE UPLOAD & PREVIEW LOGIC
@@ -414,33 +415,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================================
-  // 4. CEO DASHBOARD LOGIC (Manage Repairs)
-  // ==========================================
-  const manageButtons = document.querySelectorAll('.manage-btn');
-  const manageModal = document.getElementById('manage-modal');
-
-  if (manageModal) {
-    const closeManageBtn = document.querySelector('.close-manage-btn');
-    const cancelRepairBtn = document.getElementById('btn-cancel-repair');
-    const completeRepairBtn = document.getElementById('btn-complete-repair');
-
-    manageButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        manageModal.classList.remove('hidden');
-      });
-    });
-
-    if (closeManageBtn) closeManageBtn.addEventListener('click', () => manageModal.classList.add('hidden'));
-    if (cancelRepairBtn) cancelRepairBtn.addEventListener('click', () => manageModal.classList.add('hidden'));
-
-    if (completeRepairBtn) {
-      completeRepairBtn.addEventListener('click', () => {
-        alert("Success! Photographic proof uploaded and project marked as COMPLETED.");
-        manageModal.classList.add('hidden');
-      });
-    }
-  }
 
   // ==========================================
   // 5. DROPDOWN PRINT MENU LOGIC
@@ -725,6 +699,154 @@ document.addEventListener('DOMContentLoaded', () => {
 
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
+
+
+// ==========================================
+// CEO DATA LOADER (FEEDS BOTH TABLES)
+// ==========================================
+window.loadCEODashboardData = function() {
+  fetch(`${API_BASE_URL}/api/reports`, { cache: 'no-store' })
+    .then(res => res.ok ? res.json() : [])
+    .then(reports => {
+
+      // 1. FILTER FOR ALL CEO DATA (Active + Completed)
+      const allCEOReports = reports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s === 'dispatched to ceo' || s === 'in progress' || s === 'completed' || s === 'repaired';
+      });
+
+      // 2. THE STRICT PRIORITY ALGORITHM
+      allCEOReports.forEach(report => {
+        const severity = (report.severity || 'Unassessed').toLowerCase();
+        const importance = (report.roadImportance || '').toLowerCase();
+
+        report.tierScore = 0;
+        report.tierLabel = 'PENDING AI';
+        report.tierColor = '#6c757d';
+
+        if (severity === 'high') {
+          report.tierScore = 3;
+          report.tierLabel = 'HIGH';
+          report.tierColor = '#dc3545';
+        } else if (severity === 'medium') {
+          if (importance.includes('core')) {
+            report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
+          } else {
+            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
+          }
+        } else if (severity === 'low') {
+          if (importance.includes('core')) {
+            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
+          } else {
+            report.tierScore = 1; report.tierLabel = 'LOW'; report.tierColor = '#28a745';
+          }
+        }
+
+        const dLength = parseFloat(report.damageLength) || 0;
+        const dWidth = parseFloat(report.damageWidth) || 0;
+        report.areaScore = dLength * dWidth;
+      });
+
+      // 3. SORT BY PRIORITY THEN AREA
+      allCEOReports.sort((a, b) => {
+        if (b.tierScore !== a.tierScore) return b.tierScore - a.tierScore;
+        return b.areaScore - a.areaScore;
+      });
+
+      // 4. SPLIT THE DATA (Active vs All)
+      const activeReports = allCEOReports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s === 'dispatched to ceo' || s === 'in progress';
+      });
+
+      // 5. METRICS (Count only the Active ones for the Dashboard Top Boxes)
+      const pendingDispatch = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
+      const inProgress = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'in progress');
+      const criticalHazards = activeReports.filter(r => r.tierLabel === 'HIGH');
+
+      const totalEl = document.getElementById('ceo-metric-total');
+      const critEl = document.getElementById('ceo-metric-critical');
+      const actEl = document.getElementById('ceo-metric-active');
+      if (totalEl) totalEl.innerText = pendingDispatch.length;
+      if (critEl) critEl.innerText = criticalHazards.length;
+      if (actEl) actEl.innerText = inProgress.length;
+
+      // 6. 🚀 RENDER BOTH TABLES SEPARATELY!
+      renderCEOTable(activeReports, 'ceo-repair-queue-body', true);
+      renderCEOTable(allCEOReports, 'ceo-masterlist-queue-body', false);
+
+    })
+    .catch(err => {
+      console.error("Error loading CEO Dashboard:", err);
+    });
+};
+
+// ==========================================
+// REUSABLE TABLE GENERATOR
+// ==========================================
+function renderCEOTable(dataArray, tbodyId, isDashboard) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (dataArray.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No projects found in this queue.</td></tr>`;
+    return;
+  }
+
+  dataArray.forEach((report) => {
+    const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
+    const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
+    const formatName = report.cityRoadName || 'Unnamed Road';
+    const area = (parseFloat(report.damageLength) || 0) * (parseFloat(report.damageWidth) || 0);
+    const formatArea = area > 0 ? `${area.toFixed(1)} sq.m` : 'Unknown';
+
+    const status = String(report.status || '').toLowerCase();
+
+    // 🚀 SMART ONCLICK: Jump if on Dashboard, just Open if already on Masterlist
+    const onClickAction = isDashboard ? `jumpToCEOMasterlistAndManage(${report.id})` : `openCEOManageModal(${report.id})`;
+
+    // Status Badge Logic
+    let statusHtml = `<span class="status-badge pending" style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">Dispatched</span>`;
+
+    // 🟦 CLEANED UP MANAGE BUTTON (Uses CSS Class for text/padding/border, inline just for the background/shadow)
+    let btnHtml = `<button class="btn-small manage-btn" onclick="${onClickAction}" style="background-color: var(--accent-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Manage</button>`;
+
+    if (status === 'in progress') {
+      statusHtml = `<span class="status-badge" style="background-color: #cce5ff; color: #004085; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">In Progress</span>`;
+    }
+    // If completed, make the badge Green and the button say "View Proof"
+    else if (status.includes('complet') || status.includes('repair')) {
+      statusHtml = `<span class="status-badge" style="background-color: #d4edda; color: #155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">✅ Completed</span>`;
+
+      // 🟩 CLEANED UP VIEW PROOF BUTTON
+      btnHtml = `<button class="btn-small manage-btn" onclick="${onClickAction}" style="background-color: #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">View Proof</button>`;
+    }
+
+    const tr = document.createElement('tr');
+    tr.style.borderLeft = `4px solid ${report.tierColor}`;
+
+    tr.innerHTML = `
+        <td><strong>${formatId}</strong></td>
+        <td>${formatBrgy}</td>
+        <td><strong>${formatName}</strong></td>
+        <td style="color: #555; font-weight: 500;">${formatArea}</td>
+        <td><span class="badge" style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">${report.tierLabel}</span></td>
+        <td style="display: flex; gap: 10px; align-items: center;">
+            ${statusHtml}
+            ${btnHtml}
+        </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+// Placeholder for opening the specific report
+window.openCEOManageModal = function(reportId) {
+  console.log("Opening Manage Modal for Project: " + reportId);
+  document.getElementById('manage-modal').classList.remove('hidden');
+};
+
 // Shows the text box if the user selects "Other" in the Damage Type dropdown
 function toggleOtherDamageType() {
   const select = document.getElementById('damageType');
@@ -745,6 +867,429 @@ function toggleEditOtherDamage() {
     otherInput.classList.add('hidden');
   }
 }
+
+// Global variables to store data for the CEO Map Button (which we will build next)
+let currentCEOProjectID = null;
+let currentCEOLat = 0;
+let currentCEOLng = 0;
+
+// ==========================================
+// CEO DASHBOARD: OPEN MANAGE MODAL
+// ==========================================
+window.openCEOManageModal = function(reportId) {
+  currentCEOProjectID = reportId;
+
+  // Automatically switch views from Dashboard to the Repair/Masterlist tab!
+  const dashboardView = document.getElementById('view-dashboard');
+  const repairView = document.getElementById('view-repair');
+
+  if (dashboardView && repairView && !dashboardView.classList.contains('hidden')) {
+    dashboardView.classList.add('hidden');
+    repairView.classList.remove('hidden');
+  }
+
+  // Force the map closed every time we open a new project
+  const mapContainer = document.getElementById('ceo-manage-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
+
+  const modal = document.getElementById('manage-modal');
+  if (!modal) return;
+
+  modal.classList.remove('hidden');
+  document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
+
+  fetch(`${API_BASE_URL}/api/reports/${reportId}`, { cache: 'no-store' })
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to fetch report details");
+      return res.json();
+    })
+    .then(report => {
+      // Save coordinates for the "Locate on Map" button
+      currentCEOLat = report.latitude;
+      currentCEOLng = report.longitude;
+
+      // 1. Core Details
+      document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(report.id).padStart(4, '0')}`;
+      document.getElementById('ceo-modal-brgy').innerText = report.barangay ? report.barangay.barangayName : 'Unknown';
+      document.getElementById('ceo-modal-road-name').innerText = report.cityRoadName || 'Unnamed Road';
+
+      // 2. Full Road Details
+      document.getElementById('ceo-modal-road-id').innerText = report.cityRoadId || 'N/A';
+      document.getElementById('ceo-modal-importance').innerText = report.roadImportance || 'N/A';
+      document.getElementById('ceo-modal-terrain').innerText = report.terrainType || 'N/A';
+      document.getElementById('ceo-modal-road-type').innerText = report.roadType || 'N/A';
+      document.getElementById('ceo-modal-length').innerText = report.length || 0;
+      document.getElementById('ceo-modal-width').innerText = report.width || 0;
+      document.getElementById('ceo-modal-culverts').innerText = report.lengthOfCulverts || 0;
+      document.getElementById('ceo-modal-bridges').innerText = report.numberOfBridges || 0;
+
+      // 3. Damage Details
+      document.getElementById('ceo-modal-damage-type').innerText = report.damageType || 'None';
+
+      const damageLen = parseFloat(report.damageLength) || 0;
+      const damageWid = parseFloat(report.damageWidth) || 0;
+      const damageArea = damageLen * damageWid;
+
+      document.getElementById('ceo-modal-damage-length').innerText = damageLen;
+      document.getElementById('ceo-modal-damage-width').innerText = damageWid;
+      document.getElementById('ceo-modal-damage-area').innerText = damageArea > 0 ? `${damageArea.toFixed(1)} sq.m` : '0 sq.m';
+
+      document.getElementById('ceo-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}°, ${report.longitude}°` : 'No GPS data';
+      document.getElementById('ceo-modal-submitter-name').innerText = report.reportedBy || 'Barangay Official';
+      document.getElementById('ceo-modal-description').innerText = report.damageDescription || 'No description provided.';
+
+      // 4. Priority Badge
+      const severity = String(report.severity || 'UNASSESSED').toUpperCase();
+      const priorityBadge = document.getElementById('ceo-modal-priority');
+      priorityBadge.innerText = severity;
+
+      if (severity === 'HIGH') {
+        priorityBadge.style.cssText = "background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      } else if (severity === 'MEDIUM') {
+        priorityBadge.style.cssText = "background-color: #ff8c00; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      } else if (severity === 'LOW') {
+        priorityBadge.style.cssText = "background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      } else {
+        priorityBadge.style.cssText = "background-color: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      }
+
+      // 5. Current Status Badge
+      const status = String(report.status || '');
+      const statusBadge = document.getElementById('ceo-modal-current-status');
+      statusBadge.innerText = status;
+      if (status.toLowerCase() === 'in progress') {
+        statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      } else {
+        statusBadge.style.cssText = "background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      }
+
+      // 6. Image Loading using report.damageImage
+      const imgEl = document.getElementById('ceo-modal-image');
+      const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
+
+      if (report.damageImage && report.damageImage !== 'no_image.jpg') {
+        imgEl.src = `${API_BASE_URL}/uploads/${report.damageImage}`;
+        imgEl.style.display = 'block';
+        placeholderEl.style.display = 'none';
+      } else {
+        imgEl.style.display = 'none';
+        placeholderEl.style.display = 'block';
+        placeholderEl.innerHTML = '<span class="icon" style="font-size: 30px;">📷</span><p style="margin-top: 10px; color: #888;">No original photo provided</p>';
+      }
+
+      // ==========================================
+      // 🚀 7. THE FIX: BUTTON LOCK & COMPLETED DATA
+      // ==========================================
+      const btnStartRepair = document.getElementById('ceo-btn-start-repair');
+      const completionForm = document.getElementById('ceo-completion-form');
+      const completedEvidence = document.getElementById('ceo-completed-evidence-section'); // New Read-Only Box
+
+      const proofImg = document.getElementById('ceo-modal-proof-image');
+      const proofRemarks = document.getElementById('ceo-modal-proof-remarks');
+
+      if (btnStartRepair) {
+        const currentStatus = status.toLowerCase();
+
+        // STATE 1: ALREADY COMPLETED
+        if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
+          btnStartRepair.innerHTML = `<span class="icon">✅</span> Already Completed`;
+          btnStartRepair.style.backgroundColor = "#6c757d";
+          btnStartRepair.style.cursor = "not-allowed";
+          btnStartRepair.disabled = true;
+
+          if (completionForm) completionForm.style.display = 'none'; // Hide upload form
+          if (completedEvidence) completedEvidence.style.display = 'block'; // Show Read-Only Data!
+
+          // Load the Proof Photo and Remarks from the database
+          if (report.proofOfRepairImage) {
+            proofImg.src = `${API_BASE_URL}/uploads/${report.proofOfRepairImage}`;
+            proofImg.style.display = 'inline-block';
+          } else {
+            proofImg.style.display = 'none';
+          }
+          proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
+
+          // STATE 2: IN PROGRESS
+        } else if (currentStatus.includes('progress')) {
+          btnStartRepair.innerHTML = `<span class="icon">✅</span> Already In Progress`;
+          btnStartRepair.style.backgroundColor = "#6c757d";
+          btnStartRepair.style.cursor = "not-allowed";
+          btnStartRepair.disabled = true;
+
+          if (completionForm) completionForm.style.display = 'block'; // Show Upload Form
+          if (completedEvidence) completedEvidence.style.display = 'none'; // Hide Read-Only
+
+          // STATE 3: BRAND NEW DISPATCH
+        } else {
+          btnStartRepair.innerHTML = `<span class="icon">👷</span> Mark as In Progress`;
+          btnStartRepair.style.backgroundColor = "";
+          btnStartRepair.style.cursor = "pointer";
+          btnStartRepair.disabled = false;
+
+          // Hide BOTH forms until they click "In Progress"
+          if (completionForm) completionForm.style.display = 'none';
+          if (completedEvidence) completedEvidence.style.display = 'none';
+        }
+      }
+
+    })
+    .catch(err => {
+      console.error("Error populating CEO modal:", err);
+      document.getElementById('ceo-modal-prj-id').innerText = "Database Error!";
+    });
+};
+// ==========================================
+// CEO ACTION QUEUE: TAB JUMP & MANAGE LOGIC
+// ==========================================
+window.jumpToCEOMasterlistAndManage = function(reportId) {
+  // 1. Find the "Repair Projects" tab button in the sidebar
+  // (Assuming your sidebar uses data-target="view-repair" for the CEO)
+  const repairTabBtn = document.querySelector('.nav-menu li[data-target="view-repair"]');
+
+  // 2. Programmatically "click" it to switch the screen and highlight the sidebar menu
+  if (repairTabBtn) {
+    repairTabBtn.click();
+  } else {
+    // Fallback just in case
+    document.getElementById('view-dashboard').classList.add('hidden');
+    document.getElementById('view-repair').classList.remove('hidden');
+  }
+
+  // 3. Wait 150ms for the screen to switch, then pop open the modal!
+  setTimeout(() => {
+    if (typeof openCEOManageModal === 'function') {
+      openCEOManageModal(reportId);
+    } else {
+      console.error("openCEOManageModal function not found!");
+    }
+  }, 150);
+};
+
+
+// ==========================================
+// CEO FILE UPLOAD: DRAG, DROP & PREVIEW
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const dropzone = document.getElementById('ceo-dropzone-container');
+  const fileInput = document.getElementById('ceo-repair-image-upload');
+  const defaultState = document.getElementById('ceo-dropzone-default');
+  const previewState = document.getElementById('ceo-dropzone-preview');
+  const previewImg = document.getElementById('ceo-preview-img');
+  const removeBtn = document.getElementById('ceo-btn-remove-image');
+  const fileNameDisplay = document.getElementById('ceo-repair-file-name');
+
+  // Only run this if we are actually on the CEO page
+  if (!dropzone || !fileInput) return;
+
+  // 1. Click dropzone to open file dialog (unless clicking the 'X' button)
+  dropzone.addEventListener('click', (e) => {
+    if (e.target !== removeBtn) {
+      fileInput.click();
+    }
+  });
+
+  // 2. Drag & Drop Visuals (Highlights blue when dragging a file over it)
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = '#0d6efd'; // Highlight border
+    dropzone.style.backgroundColor = '#e0f2fe'; // Light blue background
+  });
+
+  dropzone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = '#cbd5e1'; // Revert border
+    dropzone.style.backgroundColor = '#f8fafc'; // Revert background
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = '#cbd5e1';
+    dropzone.style.backgroundColor = '#f8fafc';
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      fileInput.files = e.dataTransfer.files; // Assign dragged file to input
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  });
+
+  // 3. Handle File Selection (If they click to browse)
+  fileInput.addEventListener('change', function() {
+    if (this.files && this.files.length > 0) {
+      handleFileUpload(this.files[0]);
+    }
+  });
+
+  // 4. Magic Function: Read the image, check size, and show the live preview!
+  function handleFileUpload(file) {
+    // Check if it is actually an image
+    if (!file.type.startsWith('image/')) {
+      showToast("Please upload a valid image file (JPG, PNG).", "error");
+      fileInput.value = ''; // Reset input
+      return;
+    }
+
+    // 🚀 THE FIX: Check if file is over 5MB (5 * 1024 * 1024 bytes = 5,242,880 bytes)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("File is too large! Must be under 5MB.", "error");
+      fileInput.value = ''; // Reset input so it doesn't try to upload anyway
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result; // Set the image source to the file data
+      defaultState.style.display = 'none'; // Hide the "Click to upload" text
+      previewState.style.display = 'block'; // Show the image!
+      fileNameDisplay.innerText = file.name;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // 5. Remove Button Logic (Clicking the red 'X')
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation(); // Stop the click from triggering the file dialog again
+    fileInput.value = ''; // Empty the invisible file input
+    previewImg.src = ''; // Clear the image
+    previewState.style.display = 'none'; // Hide the preview container
+    defaultState.style.display = 'block'; // Bring back the "Click to upload" text
+  });
+});
+
+// Global variables for the CEO Map
+let ceoManageMap = null;
+let ceoManageMarker = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ==========================================
+  // CEO MAP LOGIC (Locate on Map Button)
+  // ==========================================
+  const btnLocateMap = document.getElementById('ceo-btn-locate-map');
+
+  if (btnLocateMap) {
+    btnLocateMap.addEventListener('click', function(e) {
+      e.preventDefault(); // Stop page from jumping
+      const mapContainer = document.getElementById('ceo-manage-map-container');
+
+      // Safety check: Did the Barangay Official actually provide GPS coordinates?
+      if (!currentCEOLat || !currentCEOLng || (currentCEOLat === 0 && currentCEOLng === 0)) {
+        alert("No GPS coordinates were provided for this report.");
+        return;
+      }
+
+      // Toggle the map open/closed
+      if (mapContainer.style.display === 'none') {
+        mapContainer.style.display = 'block';
+
+        // Define a custom Red Icon for damages
+        const redIcon = new L.Icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+        });
+
+        // If the map hasn't been built yet, build it!
+        if (!ceoManageMap) {
+          ceoManageMap = L.map('ceo-manage-map').setView([currentCEOLat, currentCEOLng], 17);
+
+          // Switch to Esri World Imagery (Satellite View)
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+          }).addTo(ceoManageMap);
+
+          // Drop the RED pin!
+          ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], {icon: redIcon}).addTo(ceoManageMap);
+        } else {
+          // If the map is already built, just move the camera and update the pin location
+          ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
+          ceoManageMarker.setLatLng([currentCEOLat, currentCEOLng]);
+        }
+
+        // CRUCIAL LEAFLET TRICK: Leaflet breaks if loaded inside a hidden div.
+        // We must tell it to recalculate its size a fraction of a second after we unhide it.
+        setTimeout(() => {
+          ceoManageMap.invalidateSize();
+        }, 200);
+
+      } else {
+        // Close the map if they click the button again
+        mapContainer.style.display = 'none';
+      }
+    });
+  }
+});
+
+// ==========================================
+// CEO: MARK PROJECT AS "IN PROGRESS"
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const btnStartRepair = document.getElementById('ceo-btn-start-repair');
+
+  if (btnStartRepair) {
+    btnStartRepair.addEventListener('click', function() {
+      // Safety check to make sure a project is actually open
+      if (!currentCEOProjectID) return;
+
+      // 1. UI Loading State (Prevent spam clicking)
+      const originalText = this.innerHTML;
+      this.innerHTML = `<span class="icon">⏳</span> Updating...`;
+      this.disabled = true;
+      this.style.opacity = "0.7";
+
+      // 2. Call the Backend API
+      fetch(`${API_BASE_URL}/api/reports/${currentCEOProjectID}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: "In Progress" })
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("Failed to update status");
+
+          // 3. Success! Show the professional Toast Notification
+          showToast("Crew Dispatched! Admin notified that repairs are in progress.", "success");
+
+          // 4. Instantly update the badge inside the modal so it turns Blue
+          const statusBadge = document.getElementById('ceo-modal-current-status');
+          if (statusBadge) {
+            statusBadge.innerText = "In Progress";
+            statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+          }
+
+          // 5. Change the button to show it's already done
+          this.innerHTML = `<span class="icon">✅</span> Already In Progress`;
+          this.style.backgroundColor = "#6c757d"; // Turn it gray
+          this.style.cursor = "not-allowed";
+
+          // ==========================================
+          // 🚀 6. THE FIX: REVEAL THE UPLOAD FORM INSTANTLY
+          // ==========================================
+          const completionForm = document.getElementById('ceo-completion-form');
+          if (completionForm) {
+            completionForm.style.display = 'block';
+          }
+
+          // 7. Refresh the CEO Dashboard Table quietly in the background
+          if (typeof loadCEODashboardData === "function") {
+            loadCEODashboardData();
+          }
+        })
+        .catch(err => {
+          console.error("Status Update Error:", err);
+          showToast("Failed to update. Check database connection.", "error");
+
+          // If it fails, restore the button so they can try again
+          this.innerHTML = originalText;
+          this.disabled = false;
+          this.style.opacity = "1";
+        });
+    });
+  }
+});
 
 // ==========================================
 // BACKEND API CONNECTION LOGIC (RoadWise)
@@ -1029,7 +1574,13 @@ function handleLogin() {
 // ADMIN DASHBOARD: LOAD ALL REPORTS
 // ==========================================
 function loadAdminReports() {
-  // Note: We are targeting your specific '.data-table tbody' now!
+  // 🛡️ SAFETY CHECK: Only run this if we are actually on the Admin Dashboard!
+  // If the CEO metric card exists on this page, abort this admin function immediately.
+  if (document.getElementById('ceo-metric-total')) {
+    return;
+  }
+
+  // Target the Admin table specifically
   const reportsTableBody = document.querySelector('.data-table tbody');
 
   if (!reportsTableBody) return;
@@ -1044,7 +1595,7 @@ function loadAdminReports() {
       reportsTableBody.innerHTML = '';
 
       if (reports.length === 0) {
-        reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No road reports have been submitted yet.</td></tr>';
+        reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No road reports have been submitted yet.</td></tr>';
         return;
       }
 
@@ -1052,13 +1603,11 @@ function loadAdminReports() {
       reports.forEach(report => {
         const formattedId = `#RPT-${String(report.id || 0).padStart(4, '0')}`;
 
-        // Now it perfectly matches your Java model fields!
         const roadId = report.cityRoadId || 'N/A';
         const roadName = report.cityRoadName || 'Unknown Road';
         const severity = report.severity || 'Unassessed';
         const dateSubmitted = report.dateSubmitted || 'N/A';
 
-        // Safely fetch the exact variable name your backend uses!
         const barangayDisplay = (report.barangay && report.barangay.barangayName)
           ? report.barangay.barangayName
           : 'Unknown Barangay';
@@ -1067,10 +1616,8 @@ function loadAdminReports() {
           severity.toLowerCase() === 'medium' ? 'medium' :
             severity.toLowerCase() === 'low' ? 'low' : 'secondary';
 
-        // Safely grab the status
         const status = report.status || 'Pending';
 
-        // FIX: Make sure it checks for BOTH "Pending" and "Pending Validation"
         let statusHtml = (status === 'Pending' || status === 'Pending Validation')
           ? `<span class="status-badge pending">Pending Validation</span>`
           : `<span class="status-badge validated">${status}</span>`;
@@ -1095,7 +1642,7 @@ function loadAdminReports() {
     })
     .catch(error => {
       console.error("Error loading admin reports:", error);
-      reportsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red; padding: 20px;">Error loading reports from database.</td></tr>';
+      reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red; padding: 20px;">Error loading reports from database.</td></tr>';
     });
 }
 
@@ -1834,7 +2381,7 @@ function loadAdminDashboardData() {
       const pendingReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending validation');
       const validatedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'validated');
       const criticalReports = reports.filter(r => String(r.severity || '').trim().toLowerCase() === 'high' && String(r.status || '').trim().toLowerCase() === 'validated');
-
+      const dispatchedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
       // City-Wide Quota Logic
       const uniqueInspectedRoads = new Set(reports.map(r => r.cityRoadName).filter(name => name)).size;
       const totalCityRoads = roads.length > 0 ? roads.length : Math.max(uniqueInspectedRoads, 1);
@@ -1846,7 +2393,10 @@ function loadAdminDashboardData() {
       document.getElementById('admin-metric-quota').innerText = `${quotaPercentage}%`;
       document.getElementById('admin-metric-critical').innerText = criticalReports.length;
       document.getElementById('admin-metric-validated').innerText = validatedReports.length;
-
+      const dispatchedMetricEl = document.getElementById('admin-metric-dispatched');
+      if (dispatchedMetricEl) {
+        dispatchedMetricEl.innerText = dispatchedReports.length;
+      }
       // 2. BUILD ACTION QUEUE (Top 5 Oldest Pending)
       const queueBody = document.getElementById('admin-action-queue-body');
       if (queueBody) {
@@ -1988,3 +2538,124 @@ function jumpToReportsAndReview(reportId) {
     }
   }, 150);
 }
+
+// ==========================================
+// 🚀 FINAL APPROVE & DISPATCH TO CEO (UPGRADED)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const btnApproveDispatch = document.getElementById('btn-approve-dispatch');
+
+  // 1. Just open the custom modal when they click the button
+  if (btnApproveDispatch) {
+    btnApproveDispatch.addEventListener('click', () => {
+      const dispatchModal = document.getElementById('dispatch-confirm-modal');
+      if (dispatchModal) {
+        dispatchModal.classList.remove('hidden');
+      }
+    });
+  }
+});
+
+// 2. The actual execution function attached to the Modal's "Yes" button
+window.executePriorityDispatch = function(event) {
+  if (event) event.preventDefault();
+
+  const dispatchModal = document.getElementById('dispatch-confirm-modal');
+  const btnApproveDispatch = document.getElementById('btn-approve-dispatch');
+
+  // Hide the modal
+  if (dispatchModal) dispatchModal.classList.add('hidden');
+
+  if (btnApproveDispatch) {
+    btnApproveDispatch.innerText = "⏳ Dispatching...";
+    btnApproveDispatch.disabled = true;
+  }
+
+  // Call the Java Endpoint
+  fetch(`${API_BASE_URL}/api/reports/dispatch-masterlist`, {
+    method: 'PUT'
+  })
+    .then(response => {
+      if (!response.ok) throw new Error("Failed to dispatch");
+      return response.text();
+    })
+    .then(message => {
+      // 🚀 THE BEAUTIFUL TOAST SUCCESS MESSAGE
+      showToast(message, "success");
+
+      // Return to the main dashboard
+      document.getElementById('view-report-priority').classList.add('hidden');
+      document.getElementById('view-admin-dashboard').classList.remove('hidden');
+
+      // Force a data refresh so the 'Validated' count drops to zero
+      loadAdminDashboardData();
+    })
+    .catch(err => {
+      console.error(err);
+      showToast("Error dispatching Masterlist. Is the server running?", "error");
+      if (btnApproveDispatch) {
+        btnApproveDispatch.innerText = "🚀 Approve & Dispatch to CEO";
+        btnApproveDispatch.disabled = false;
+      }
+    });
+};
+
+// ==========================================
+// CEO: BULLETPROOF SUBMIT REPAIR
+// ==========================================
+window.submitCEOCompletion = function() {
+  if (!currentCEOProjectID) return;
+
+  const btnCompleteRepair = document.getElementById('ceo-btn-complete-repair');
+  const imageInput = document.getElementById('ceo-repair-image-upload');
+  const remarksInput = document.getElementById('ceo-repair-remarks');
+  const dropzoneContainer = document.getElementById('ceo-dropzone-container');
+
+  // Validation: Image is REQUIRED
+  if (!imageInput.files || imageInput.files.length === 0) {
+    showToast("Please upload a Proof of Repair photo!", "error");
+    if (dropzoneContainer) {
+      dropzoneContainer.style.borderColor = "red";
+      setTimeout(() => dropzoneContainer.style.borderColor = "#cbd5e1", 2000);
+    }
+    return;
+  }
+
+  // UI Loading State
+  const originalText = btnCompleteRepair.innerHTML;
+  btnCompleteRepair.innerHTML = `<span class="icon">⏳</span> Uploading Proof...`;
+  btnCompleteRepair.disabled = true;
+
+  // Build the Form Data
+  const formData = new FormData();
+  formData.append("proofImage", imageInput.files[0]);
+  formData.append("repairRemarks", remarksInput.value || "");
+
+  // Send to Backend
+  fetch(`${API_BASE_URL}/api/reports/${currentCEOProjectID}/complete`, {
+    method: 'POST',
+    body: formData
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    })
+    .then(data => {
+      showToast("Project marked as Completed!", "success");
+
+      // Close modal and refresh data
+      document.getElementById('manage-modal').classList.add('hidden');
+      if (typeof loadCEODashboardData === "function") {
+        loadCEODashboardData();
+      }
+    })
+    .catch(err => {
+      console.error("Completion Error:", err);
+      showToast("Failed to complete. Check console.", "error");
+    })
+    .finally(() => {
+      // Restore button state
+      btnCompleteRepair.innerHTML = originalText;
+      btnCompleteRepair.disabled = false;
+    });
+};

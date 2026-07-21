@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RoadWise | City Engineering</title>
-
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -31,9 +34,6 @@
     <header class="top-header">
       <div>
         <h1>Engineering Overview</h1>
-        <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">Municipality of Norzagaray</p>
-      </div>
-
       <button class="header-profile-btn">
         <span class="icon">👤</span> City Engineering Office
       </button>
@@ -97,8 +97,63 @@
         </div>
       </div>
 
-      <div id="view-dashboard" class="content-section">
-        <p>City-wide road damage severity, budget tracking, and maintenance schedules will go here.</p>
+      <div id="view-dashboard" class="content-section ad-dashboard-container">
+        <div class="section-header-flex" style="margin-bottom: 20px;">
+          <h2>Engineering Executive Overview</h2>
+        </div>
+
+        <div class="ad-metrics-row" style="grid-template-columns: repeat(3, 1fr);">
+
+          <div class="ad-metric-card" style="border-top-color: #17a2b8;">
+            <div class="ad-metric-title">📨 Total Dispatched</div>
+            <div class="ad-metric-value" style="color: #17a2b8;" id="ceo-metric-total">0</div>
+            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Awaiting CEO Action</div>
+          </div>
+
+          <div class="ad-metric-card alert-card">
+            <div class="ad-metric-title">🚨 Critical Hazards</div>
+            <div class="ad-metric-value alert-text" id="ceo-metric-critical">0</div>
+            <div style="font-size: 12px; color: #dc3545; margin-top: 5px;">High Priority Dispatches</div>
+          </div>
+
+          <div class="ad-metric-card" style="border-top-color: #ffc107;">
+            <div class="ad-metric-title">🚧 Active Projects</div>
+            <div class="ad-metric-value" style="color: #ffc107;" id="ceo-metric-active">0</div>
+            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Repairs Currently In Progress</div>
+          </div>
+
+        </div>
+
+        <div class="ad-queue-card" style="margin-top: 25px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 class="ad-section-title" style="margin: 0; border: none;">Active Repair Queue</h3>
+            <button onclick="document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-repair').classList.remove('hidden');" style="background: transparent; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #555; font-weight: bold;">
+              View Masterlist ➡️
+            </button>
+
+          </div>
+
+          <table class="ad-table">
+            <thead>
+            <tr>
+              <th>Project ID</th>
+              <th>Barangay</th>
+              <th>Road Name</th>
+              <th>Est. Area</th>
+              <th>Final Priority</th>
+              <th>Status / Action</th>
+            </tr>
+            </thead>
+            <tbody id="ceo-repair-queue-body">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 30px; color: #666; font-style: italic;">
+                Loading active repair queue...
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
 
       <div id="view-repair" class="content-section hidden">
@@ -144,41 +199,16 @@
           <table class="data-table">
             <thead>
             <tr>
-              <th>Project ID</th>
-              <th>Location (Barangay)</th>
-              <th>Road Name</th>
-              <th>Priority Level</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th style="width: 12%;">Project ID</th>
+              <th style="width: 18%;">Location (Brgy)</th>
+              <th style="width: 25%;">Road Name</th>
+              <th style="width: 15%;">Est. Area</th>
+              <th style="width: 15%;">Priority Level</th>
+              <th style="width: 15%;">Action</th>
             </tr>
             </thead>
-            <tbody>
-            <tr style="background-color: #fffafb; border-left: 4px solid #dc3545;">
-              <td>#PRJ-0842</td>
-              <td>Minuyan Proper</td>
-              <td>Minuyan Proper Rd.</td>
-              <td><span class="badge high">CRITICAL</span></td>
-              <td><span class="status-badge pending">Pending Dispatch</span></td>
-              <td><button class="btn-small manage-btn">Manage</button></td>
-            </tr>
-
-            <tr style="border-left: 4px solid #ffc107;">
-              <td>#PRJ-0843</td>
-              <td>San Mateo</td>
-              <td>Access Road B</td>
-              <td><span class="badge medium">MEDIUM</span></td>
-              <td><span class="status-badge pending">Pending Dispatch</span></td>
-              <td><button class="btn-small manage-btn">Manage</button></td>
-            </tr>
-
-            <tr style="border-left: 4px solid var(--accent-blue);">
-              <td>#PRJ-0839</td>
-              <td>Poblacion</td>
-              <td>Plaza Ring Road</td>
-              <td><span class="badge low">LOW</span></td>
-              <td><span class="status-badge" style="background-color: #cce5ff; color: #004085;">In Progress</span></td>
-              <td><button class="btn-small manage-btn">Manage</button></td>
-            </tr>
+            <tbody id="ceo-masterlist-queue-body">
+            <tr><td colspan="6" style="text-align:center; padding: 20px;">Loading Masterlist...</td></tr>
             </tbody>
           </table>
         </div>
@@ -313,8 +343,8 @@
     <div class="modal-content">
 
       <div class="modal-header">
-        <h2>Manage Project <span class="highlight">#PRJ-0842</span></h2>
-        <button class="close-manage-btn close-modal-btn">✕</button>
+        <h2>Manage Project <span class="highlight" id="ceo-modal-prj-id">#PRJ-0000</span></h2>
+        <button class="close-manage-btn close-modal-btn" onclick="document.getElementById('manage-modal').classList.add('hidden')">✕</button>
       </div>
 
       <div class="modal-body">
@@ -322,42 +352,58 @@
         <div class="report-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 class="section-title" style="margin-bottom: 0;">Original Damage Report</h3>
-            <button class="btn-action" id="btn-locate-map" style="background-color: #4a4a4a;">
+            <button class="btn-action" id="ceo-btn-locate-map" style="background-color: #4a4a4a;">
               <span class="icon">🗺️</span> Locate on Map
             </button>
           </div>
 
+          <div id="ceo-manage-map-container" style="display: none; margin-bottom: 15px; border-radius: 8px; overflow: hidden; border: 1px solid #ccc;">
+            <div id="ceo-manage-map" style="height: 250px; width: 100%; z-index: 1;"></div>
+          </div>
+
           <div class="report-detail-grid">
-            <div><strong>Barangay:</strong> Minuyan Proper</div>
-            <div><strong>City Road Name:</strong> Minuyan Proper Rd.</div>
-            <div><strong>City Road ID:</strong> CR-1042</div>
-            <div><strong>Road Importance:</strong> Primary</div>
-            <div><strong>Terrain Type:</strong> Flat</div>
-            <div><strong>Road Type:</strong> Concrete</div>
-            <div><strong>Length (m):</strong> 1500</div>
-            <div><strong>Width (m):</strong> 6.5</div>
-            <div><strong>Length of Culverts:</strong> 12m</div>
-            <div><strong>Number of Bridges:</strong> 0</div>
-            <div><strong>Priority Level:</strong> <span class="badge high">CRITICAL</span></div>
-            <div><strong>GPS Coordinates:</strong> 14.8080° N, 121.0456° E</div>
+            <div><strong>Barangay:</strong> <span id="ceo-modal-brgy">Loading...</span></div>
+            <div><strong>City Road Name:</strong> <span id="ceo-modal-road-name">Loading...</span></div>
+            <div><strong>City Road ID:</strong> <span id="ceo-modal-road-id">Loading...</span></div>
+            <div><strong>Road Importance:</strong> <span id="ceo-modal-importance">Loading...</span></div>
+
+            <div><strong>Terrain Type:</strong> <span id="ceo-modal-terrain">Loading...</span></div>
+            <div><strong>Road Type:</strong> <span id="ceo-modal-road-type">Loading...</span></div>
+            <div><strong>Road Length (m):</strong> <span id="ceo-modal-length">Loading...</span></div>
+            <div><strong>Road Width (m):</strong> <span id="ceo-modal-width">Loading...</span></div>
+            <div><strong>Length of Culverts (m):</strong> <span id="ceo-modal-culverts">Loading...</span></div>
+            <div><strong>Number of Bridges:</strong> <span id="ceo-modal-bridges">Loading...</span></div>
+
+            <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 10px;"></div>
+            <div><strong>Damage Type:</strong> <span id="ceo-modal-damage-type">Loading...</span></div>
+            <div><strong>Damage Length (m):</strong> <span id="ceo-modal-damage-length">0</span></div>
+            <div><strong>Damage Width (m):</strong> <span id="ceo-modal-damage-width">0</span></div>
+            <div style="background: #fff3cd; padding: 4px 8px; border-radius: 4px;"><strong>Damage Area:</strong> <span id="ceo-modal-damage-area" style="font-weight: bold; color: #856404;">0 sq.m</span></div>
+
+            <div><strong>Priority Level:</strong> <span class="badge" id="ceo-modal-priority">LOADING</span></div>
+
+            <div style="grid-column: 1 / -1;"><strong>GPS Coordinates:</strong> <span id="ceo-modal-gps">Loading...</span></div>
 
             <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 5px;">
               <strong>Originally Submitted By:</strong>
-              <span id="modal-submitter-name" style="color: var(--primary-blue); font-weight: bold;">Kap. Marciano Gatchalian (Barangay Muzon)</span>
+              <span id="ceo-modal-submitter-name" style="color: var(--primary-blue); font-weight: bold;">Loading...</span>
             </div>
           </div>
         </div>
 
         <div class="report-section">
           <h3 class="section-title">Damage Evidence</h3>
-          <div class="report-image-placeholder">
-            <span class="icon">📷</span>
-            <p>Original Damage Photo Provided by Barangay</p>
+          <div class="report-image-placeholder" id="ceo-modal-image-container" style="text-align: center;">
+            <img id="ceo-modal-image" src="" alt="Damage Photo" style="max-width: 100%; max-height: 300px; border-radius: 8px; display: none;" />
+            <div id="ceo-modal-image-placeholder-text">
+              <span class="icon">📷</span>
+              <p>Loading photo...</p>
+            </div>
           </div>
 
           <div class="report-description" style="margin-top: 15px;">
             <strong>Damage Description:</strong>
-            <p>Deep potholes covering a 5-meter stretch. Causing severe traffic buildup and potential hazard to tricycles.</p>
+            <p id="ceo-modal-description">Loading description...</p>
           </div>
         </div>
 
@@ -365,35 +411,69 @@
           <h3 class="section-title" style="margin-bottom: 10px;">Dispatch Crew</h3>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Notify the system that engineers are currently on-site working on this repair.</p>
           <div style="display: flex; gap: 10px; align-items: center;">
-            <span class="status-badge pending" id="modal-current-status">Pending Dispatch</span>
+            <span class="status-badge pending" id="ceo-modal-current-status">Loading...</span>
             <span style="color: #888;">➔</span>
-            <button class="btn-small" id="btn-start-repair" style="background-color: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer;">
+            <button class="btn-small" id="ceo-btn-start-repair" style="background-color: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer;">
               <span class="icon">👷</span> Mark as "In Progress"
             </button>
           </div>
         </div>
 
-        <div class="report-section" style="border-bottom: none; background-color: #f8fcf8; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb;">
+        <div id="ceo-completion-form" class="report-section" style="border-bottom: none; background-color: #f8fcf8; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb; margin-top: 20px;">
           <h3 class="section-title" style="color: #28a745; margin-bottom: 10px;">Project Resolution</h3>
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Please upload photographic proof of the completed road repair to officially close this project ticket.</p>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Please upload photographic proof of the completed road repair and provide optional remarks to officially close this project ticket.</p>
 
-          <strong style="display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Upload Repair Image:</strong>
-          <div class="upload-dropzone">
-            <span class="icon" style="font-size: 24px; color: var(--accent-blue);">📸</span>
-            <p>Click to upload or drag photo here</p>
-            <span style="font-size: 11px; color: #888;">JPG or PNG (Max 5MB)</span>
+          <strong style="display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Upload Repair Image (Required)*</strong>
+
+          <div id="ceo-dropzone-container" class="upload-dropzone" style="position: relative; cursor: pointer; border: 2px dashed #cbd5e1; padding: 30px; text-align: center; border-radius: 8px; transition: 0.3s; background: #f8fafc; margin-bottom: 15px;">
+            <input type="file" id="ceo-repair-image-upload" accept="image/*" style="display: none;" />
+            <div id="ceo-dropzone-default">
+              <span class="icon" style="font-size: 32px; color: var(--accent-blue);">📸</span>
+              <p style="margin: 10px 0 5px 0; color: #334155; font-weight: 500;">Click to upload or drag photo here</p>
+              <span style="font-size: 11px; color: #64748b;">JPG or PNG (Max 5MB)</span>
+            </div>
+            <div id="ceo-dropzone-preview" style="display: none; position: relative; margin-top: 10px;">
+              <img id="ceo-preview-img" src="" alt="Preview" style="max-height: 160px; border-radius: 8px; max-width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
+              <button id="ceo-btn-remove-image" type="button" style="position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 14px; display: flex; align-items: center; justify-content: center;">✕</button>
+              <div id="ceo-repair-file-name" style="margin-top: 10px; font-size: 12px; color: #16a34a; font-weight: bold;"></div>
+            </div>
           </div>
 
-          <div class="form-actions" style="margin-top: 20px; gap: 15px;">
-            <button class="btn-secondary" id="btn-cancel-repair">Cancel</button>
-            <button class="btn-submit" id="btn-complete-repair" style="background-color: #28a745;"><span class="icon">🏁</span> Mark as Completed</button>
+          <label style="font-weight: bold; font-size: 13px; color: var(--text-main); display: block; margin-bottom: 5px;">Official Repair Remarks (Optional)</label>
+          <textarea id="ceo-repair-remarks" rows="3" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 13px;" placeholder="e.g., Applied 2 tons of hot mix asphalt. Drain cleared."></textarea>
+
+          <div class="form-actions" style="margin-top: 20px; display: flex; gap: 15px;">
+            <button type="button" class="btn-secondary" id="ceo-btn-cancel-repair" onclick="document.getElementById('manage-modal').classList.add('hidden')" style="background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 6px;">
+              <span class="icon" style="font-size: 12px;">✖️</span> Cancel
+            </button>
+
+            <button type="button" class="btn-submit" id="ceo-btn-complete-repair" onclick="submitCEOCompletion()" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 6px;">
+              <span class="icon">🏁</span> Mark as Completed
+            </button>
           </div>
         </div>
 
+        <div id="ceo-completed-evidence-section" class="report-section" style="display: none; background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <h3 class="section-title" style="color: #16a34a; margin-bottom: 10px;"><span class="icon">✅</span> Repair Completed</h3>
+          <div style="margin-bottom: 15px;">
+            <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
+            <div style="margin-top: 10px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">
+              <img id="ceo-modal-proof-image" src="" alt="Proof of Repair" style="max-height: 250px; border-radius: 4px; max-width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            </div>
+          </div>
+          <div>
+            <strong style="color: #166534; font-size: 13px;">Official Remarks:</strong>
+            <p id="ceo-modal-proof-remarks" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #dcfce3; color: #374151; font-size: 13px; margin-top: 5px;">No remarks provided.</p>
+          </div>
+        </div>
+        </div>
       </div>
     </div>
   </div>
-
+</div>
+<div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 999999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
+  <span id="toast-icon" style="font-size: 20px;"></span>
+  <span id="toast-message" style="font-weight: bold;"></span>
 </div>
 <script src="js/config.js"></script>
 

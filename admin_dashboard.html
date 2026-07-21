@@ -39,6 +39,16 @@
 
   <div class="main-content">
 
+    <header class="top-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03); height: 75px; z-index: 10; position: relative; border-bottom: none;">
+      <div>
+        <h1 style="margin: 0; font-size: 22px; color: #1e293b; font-weight: 700; letter-spacing: -0.5px;">CPDO Overview</h1>
+      </div>
+
+      <button class="header-profile-btn" style="background: #f0f4ff; border: 1px solid #d6e4ff; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #1a0ca3; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
+        <span class="icon" style="background: linear-gradient(135deg, #1a0ca3, #4361ee); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(26,12,163,0.4);">👤</span>
+        <span style="font-size: 14px;">CPDO Admin</span>
+      </button>
+    </header>
 
     <main class="content-area">
 
@@ -203,8 +213,11 @@
 
       <div id="view-profile" class="content-section hidden">
 
-        <div class="section-header-flex" style="margin-bottom: 20px;">
-          <h2>Administrator Settings</h2>
+        <div class="section-header-flex" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0;">Administrator Settings</h2>
+          <button id="btn-back-dashboard" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s;">
+            <span style="font-size: 14px;">⬅️</span> Back to Dashboard
+          </button>
         </div>
 
         <div class="profile-split-container">

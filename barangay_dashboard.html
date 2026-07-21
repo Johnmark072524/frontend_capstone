@@ -11,6 +11,23 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+  <style>
+    /* 🚀 Barangay Green Theme Overrides */
+    .sidebar .nav-menu li.active {
+      background-color: rgba(40, 167, 69, 0.08) !important;
+      border-left: 4px solid #28a745 !important;
+    }
+    .sidebar .nav-menu li.active a,
+    .sidebar .nav-menu li.active .icon {
+      color: #28a745 !important;
+    }
+    .content-area {
+      padding: 30px 40px !important; /* Gives the dashboard better breathing room */
+      background-color: #f8fafc; /* Softer background color */
+    }
+  </style>
+
 </head>
 <body>
 
@@ -20,6 +37,7 @@
     <div class="brand">
       <img src="img/logo.png" alt="RoadWise Logo" class="brand-logo">
     </div>
+
     <nav class="nav-menu">
       <span class="menu-label">LOCAL MENU</span>
       <ul>
@@ -32,25 +50,31 @@
 
   <div class="main-content">
 
+    <header class="top-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03); height: 75px; z-index: 10; position: relative; border-bottom: none;">
+      <div>
+        <h1 style="margin: 0; font-size: 22px; color: #1e293b; font-weight: 700; letter-spacing: -0.5px;">Barangay Overview</h1>
+      </div>
+      <button class="header-profile-btn" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #166534; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
+        <span class="icon" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(40,167,69,0.4);">🏛️</span>
+        <span style="font-size: 14px;">Barangay Official</span>
+      </button>
+    </header>
+
     <main class="content-area">
 
       <div id="view-dashboard" class="content-section">
 
-        <div style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-          <h2 style="margin: 0; color: #2c3e50; font-size: 24px;">Dashboard Overview</h2>
-          <p style="margin: 5px 0 0 0; color: #6c757d;">Real-time metrics and severity tracking for your area.</p>
-        </div>
-
-        <div class="bd-progress-container" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #eaeaea;">
+        <div class="bd-progress-container" style="background: white; padding: 25px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border: 1px solid #f1f5f9;">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
             <div>
-              <h3 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: bold;">Inspection Quota</h3>
-              <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 14px;" id="progress-text">Calculating jurisdiction data...</p>
+              <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">Inspection Quota</h3>
+              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;" id="progress-text">Calculating jurisdiction data...</p>
             </div>
-            <div style="font-size: 32px; font-weight: bold; color: #007bff;" id="progress-percentage">0%</div>
+            <div style="font-size: 36px; font-weight: 800; color: #28a745; line-height: 1;" id="progress-percentage">0%</div>
           </div>
-          <div style="width: 100%; background-color: #e9ecef; border-radius: 10px; height: 16px; overflow: hidden;">
-            <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #007bff, #00d2ff); border-radius: 10px; transition: width 1.5s ease-in-out;"></div>
+
+          <div style="width: 100%; background-color: #f1f5f9; border-radius: 10px; height: 14px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+            <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #28a745, #20c997); border-radius: 10px; transition: width 1.5s ease-in-out; box-shadow: 0 2px 4px rgba(40,167,69,0.3);"></div>
           </div>
         </div>
 
@@ -231,6 +255,65 @@
       <h2>Account Settings</h2>
       <p>Preferences and account details will go here.</p>
     </div>
+
+      <div id="view-profile" class="content-section hidden">
+
+        <div class="section-header-flex" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0;">Barangay Office Settings</h2>
+          <button id="btn-back-dashboard" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s;">
+            <span style="font-size: 14px;">⬅️</span> Back to Dashboard
+          </button>
+        </div>
+
+        <div class="profile-split-container">
+
+          <div class="profile-sidebar">
+            <div class="profile-header-mini">
+              <div class="profile-avatar-mini" style="background: linear-gradient(135deg, #28a745, #20c997);">🏛️</div>
+              <h4 style="margin: 0; color: #155724;">Juan Dela Cruz</h4>
+              <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-muted);">Barangay Official</p>
+            </div>
+
+            <ul class="profile-nav" id="profile-nav-menu">
+              <li class="active" data-target="tab-identity">Official Details</li>
+              <li data-target="tab-security">Security & Password</li>
+              <li class="logout-btn" style="margin-top: auto; color: #dc3545; border-bottom: none;">Log Out ➔</li>
+            </ul>
+          </div>
+
+          <div class="profile-content">
+
+            <div id="tab-identity" class="profile-tab active">
+              <h3 style="margin-bottom: 25px; color: #155724; border-bottom: 2px solid #eee; padding-bottom: 10px;">Official Profile</h3>
+              <div class="profile-detail-row"><strong>Department:</strong> <span>Barangay Local Government Unit</span></div>
+              <div class="profile-detail-row"><strong>Role:</strong> <span>Barangay Official</span></div>
+              <div class="profile-detail-row"><strong>Official Email:</strong> <span>official@sjdm.gov.ph</span></div>
+              <div class="profile-detail-row"><strong>System ID:</strong> <span>BO-2024-001</span></div>
+              <div class="profile-detail-row" style="border-bottom: none;"><strong>Account Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></div>
+            </div>
+
+            <div id="tab-security" class="profile-tab hidden">
+              <h3 style="margin-bottom: 25px; color: #155724; border-bottom: 2px solid #eee; padding-bottom: 10px;">Change Password</h3>
+              <form>
+                <div class="form-group-vertical" style="margin-bottom: 15px;">
+                  <label style="display:block; margin-bottom:5px; font-size: 13px; color: #555;">Current Password</label>
+                  <input type="password" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-group-vertical" style="margin-bottom: 15px;">
+                  <label style="display:block; margin-bottom:5px; font-size: 13px; color: #555;">New Password</label>
+                  <input type="password" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-group-vertical" style="margin-bottom: 25px;">
+                  <label style="display:block; margin-bottom:5px; font-size: 13px; color: #555;">Confirm New Password</label>
+                  <input type="password" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <button type="submit" class="btn-submit" style="background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">Update Password</button>
+              </form>
+            </div>
+
+          </div>
+        </div>
+      </div>
 
     </main>
   </div> </div> <div id="map-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center;">

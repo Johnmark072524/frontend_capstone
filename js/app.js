@@ -552,6 +552,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
+  // BACK TO DASHBOARD BUTTON
+  // ==========================================
+  const backToDashBtn = document.getElementById('btn-back-dashboard');
+  if (backToDashBtn) {
+    backToDashBtn.addEventListener('click', () => {
+      // 1. Hide the profile view
+      if (viewProfile) viewProfile.classList.add('hidden');
+
+      // 2. Show the main dashboard view (Make sure the ID matches your dashboard!)
+      const mainDashboard = document.getElementById('view-dashboard') || document.getElementById('view-admin-dashboard');
+      if (mainDashboard) mainDashboard.classList.remove('hidden');
+
+      // 3. Re-highlight the "Dashboard" button in the left sidebar
+      document.querySelectorAll('.nav-menu li').forEach(li => {
+        const target = li.getAttribute('data-target');
+        if (target === 'view-dashboard' || target === 'view-admin-dashboard') {
+          li.classList.add('active');
+        } else {
+          li.classList.remove('active');
+        }
+      });
+    });
+  }
+
+  // ==========================================
 // 10. OFFICIAL REPORT LOGIC (CEO PRIORITY LIST)
 // ==========================================
   const btnPrintPriority = document.getElementById('btn-print-priority');
@@ -1544,19 +1569,33 @@ function handleLogin() {
       return response.json();
     })
     .then(data => {
-      // SUCCESS! Save the REAL user data based on your custom Java response
+      // SUCCESS! Save the REAL user data
       sessionStorage.setItem("userId", data.userId);
+      sessionStorage.setItem("userRole", data.role); // 🚀 NEW: Save their role!
 
-      // *** THIS IS THE CRUCIAL LINE THAT MAKES YOUR DROPDOWN WORK! ***
       if (data.barangayId) {
         sessionStorage.setItem("barangayId", data.barangayId);
       }
 
       showToast("Login Successful!", "success");
 
-      // Wait 1 second so they can see the success toast, then redirect
+      // 5. 🚀 THE FIX: DYNAMIC ROUTING BASED ON ROLE
       setTimeout(() => {
-        window.location.href = "barangay_dashboard.html";
+        // Convert role to lowercase so we don't worry about exact capitalization
+        const userRole = String(data.role).toLowerCase();
+
+        if (userRole.includes("admin") || userRole.includes("cpdo")) {
+          // Route CPDO Admin
+          window.location.href = "admin_dashboard.html";
+        }
+        else if (userRole.includes("ceo") || userRole.includes("engineer")) {
+          // Route City Engineering Office
+          window.location.href = "ceo_dashboard.html";
+        }
+        else {
+          // Default to Barangay Dashboard
+          window.location.href = "barangay_dashboard.html";
+        }
       }, 1000);
     })
     .catch(error => {

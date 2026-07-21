@@ -6,5 +6,5 @@ let API_BASE_URL = "http://localhost:8080"; // Default for your laptop
 if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
 
   // 🚀 THIS IS THE LINE YOU CHANGE! Paste your specific Ngrok link here:
-  API_BASE_URL = "https://ngrok.com/docs/errors/err_ngrok_4018";
+  API_BASE_URL = "https://vitamins-april-unify.ngrok-free.dev";
 }

@@ -1719,12 +1719,9 @@ loadAdminReports();
 function reviewReport(reportId) {
 
   currentReviewReportId = reportId;
-  // 1. Fetch the exact report from the backend database
-  fetch(`${API_BASE_URL}/api/reports/${reportId}`)
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to fetch report details");
-      return response.json();
-    })
+
+  // 🚀 FIXED: Now using apiFetch to bypass ngrok!
+  apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       // 2. Format basic data
       const formattedId = `#RPT-${String(report.id).padStart(4, '0')}`;

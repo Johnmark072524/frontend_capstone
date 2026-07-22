@@ -2444,14 +2444,27 @@ function loadAdminDashboardData() {
       if (document.getElementById('admin-metric-critical')) document.getElementById('admin-metric-critical').innerText = criticalReports.length;
       if (document.getElementById('admin-metric-validated')) document.getElementById('admin-metric-validated').innerText = validatedReports.length;
       if (document.getElementById('admin-metric-dispatched')) document.getElementById('admin-metric-dispatched').innerText = dispatchedReports.length;
-
-      // BUILD ACTION QUEUE
+// BUILD ACTION QUEUE
       const queueBody = document.querySelector('#view-admin-dashboard #admin-action-queue-body');
 
       if (!queueBody) {
         console.error("🚨 [Admin Dashboard] ERROR: Could not find the 'admin-action-queue-body' table in the HTML!");
       } else {
         console.log("✅ [Admin Dashboard] Found HTML Table. Building rows...");
+
+        // 🚀 THE VISIBILITY OVERRIDE: Force the table to show itself, ignoring rogue CSS!
+        queueBody.style.display = "table-row-group";
+        queueBody.style.visibility = "visible";
+        queueBody.style.opacity = "1";
+
+        const parentCard = queueBody.closest('.ad-queue-card');
+        if (parentCard) {
+          parentCard.style.display = "block";
+          parentCard.style.visibility = "visible";
+          parentCard.style.opacity = "1";
+        }
+
+        // Now safely clear and build the table
         queueBody.innerHTML = '';
 
         pendingReports.sort((a, b) => new Date(a.dateSubmitted) - new Date(b.dateSubmitted));

@@ -1,3 +1,22 @@
+// A reusable function for all your API calls
+async function apiFetch(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...API_HEADERS, // Automatically adds your ngrok fix from config.js
+      ...options.headers
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed with status: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 // ==========================================
 // GLOBAL MAP VARIABLES (Must remain empty at first!)
 // ==========================================
@@ -1898,18 +1917,14 @@ function updateProgressBarUI(inspectedCount, displayTotal) {
   }
 }
 
-
 function loadBarangayReports(barangayId) {
   const listContainer = document.getElementById('barangay-report-list');
   if (!listContainer) return;
 
   listContainer.innerHTML = "<p style='text-align:center; padding: 20px;'>Loading your reports...</p>";
 
-  fetch(`${API_BASE_URL}/api/reports/barangay/${barangayId}`)
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to fetch reports");
-      return response.json();
-    })
+  // 🚀 Replaced standard fetch with your new wrapper
+  apiFetch(`/api/reports/barangay/${barangayId}`)
     .then(reports => {
       listContainer.innerHTML = "";
 
@@ -1981,9 +1996,10 @@ function loadBarangayReports(barangayId) {
       // Update Chart
       updateSeverityChart([highSev, medSev, lowSev]);
     })
+    // 👇 The properly formatted catch block 👇
     .catch(error => {
-      console.error(error);
-      listContainer.innerHTML = "<p style='color:red;'>Failed to load reports.</p>";
+      console.error("Error loading reports:", error);
+      listContainer.innerHTML = "<p style='text-align:center; padding: 20px; color: red;'>Failed to load reports. Please try again.</p>";
     });
 }
 
@@ -2019,7 +2035,6 @@ function updateSeverityChart(dataArray) {
     }
   });
 }
-
 // ==========================================
 // SMART DASHBOARD LOADER (AUTO-REFRESHING)
 // ==========================================
@@ -2339,12 +2354,8 @@ function loadRoadsToDropdown() {
     return;
   }
 
-  // 3. NOW fetch the roads using the ID and our dynamic config variable!
-  fetch(`${API_BASE_URL}/api/roads/barangay/${loggedInBarangayId}`)
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to fetch roads");
-      return response.json();
-    })
+  // 3. NOW fetch the roads using the ID and our new apiFetch wrapper!
+  apiFetch(`/api/roads/barangay/${loggedInBarangayId}`)
     .then(roads => {
       roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
 

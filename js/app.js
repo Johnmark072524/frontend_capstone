@@ -1865,12 +1865,8 @@ function calculateJurisdictionProgress(barangayId, reports) {
   const inspectedCount = inspectedRoadNames.size;
 
   // 2. Fetch total assigned roads for this specific barangay from the database
-  // ⬇️ FIXED: Pointing exactly to your /api/roads endpoint!
-  fetch(`${API_BASE_URL}/api/roads`)
-    .then(res => {
-      if (!res.ok) throw new Error("API not found or returned an error.");
-      return res.json();
-    })
+  // 🚀 FIXED: Now using apiFetch to bypass ngrok!
+  apiFetch(`/api/roads`)
     .then(allRoads => {
       if (!Array.isArray(allRoads)) {
         throw new Error("API did not return a valid array of roads.");

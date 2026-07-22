@@ -1233,3 +1233,24 @@ body.login-page {
 .ad-btn-review:hover {
   opacity: 0.8;
 }
+
+/* ==========================================
+   🚀 FORCE ACTION QUEUE VISIBILITY (VERCEL FIX)
+   ========================================== */
+#view-admin-dashboard .ad-queue-card {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#view-admin-dashboard .ad-table {
+  display: table !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#view-admin-dashboard #admin-action-queue-body {
+  display: table-row-group !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}

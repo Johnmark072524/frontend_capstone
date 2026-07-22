@@ -2413,44 +2413,55 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function loadAdminDashboardData() {
-  // 🚀 FIXED: Using the new apiFetch wrapper inside Promise.all!
-  // If either fails, it safely falls back to an empty array [] so the charts don't crash
+  console.log("🚀 [Admin Dashboard] Starting data fetch...");
+
   Promise.all([
-    apiFetch(`/api/reports`, { cache: 'no-store' }).catch(() => []),
-    apiFetch(`/api/roads`, { cache: 'no-store' }).catch(() => [])
+    apiFetch(`/api/reports`, { cache: 'no-store' }).catch(err => {
+      console.error("🚨 [Reports API] Failed inside Promise.all:", err);
+      return []; // Return empty so charts don't crash
+    }),
+    apiFetch(`/api/roads`, { cache: 'no-store' }).catch(err => {
+      console.error("🚨 [Roads API] Failed inside Promise.all:", err);
+      return [];
+    })
   ])
     .then(([reports, roads]) => {
+      console.log(`✅ [Admin Dashboard] Success! Fetched ${reports.length} reports and ${roads.length} roads.`);
 
-      // 🚀 FIX 2: Bulletproof Text Matching (ignores capital letters and hidden spaces)
       const pendingReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending validation');
+
+      console.log(`🔎 [Admin Dashboard] Filter caught ${pendingReports.length} 'Pending Validation' reports.`);
+
       const validatedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'validated');
       const criticalReports = reports.filter(r => String(r.severity || '').trim().toLowerCase() === 'high' && String(r.status || '').trim().toLowerCase() === 'validated');
       const dispatchedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
-      // City-Wide Quota Logic
+
       const uniqueInspectedRoads = new Set(reports.map(r => r.cityRoadName).filter(name => name)).size;
       const totalCityRoads = roads.length > 0 ? roads.length : Math.max(uniqueInspectedRoads, 1);
       let quotaPercentage = Math.round((uniqueInspectedRoads / totalCityRoads) * 100);
       if (quotaPercentage > 100) quotaPercentage = 100;
 
-      // Inject Metrics into HTML
-      document.getElementById('admin-metric-pending').innerText = pendingReports.length;
-      document.getElementById('admin-metric-quota').innerText = `${quotaPercentage}%`;
-      document.getElementById('admin-metric-critical').innerText = criticalReports.length;
-      document.getElementById('admin-metric-validated').innerText = validatedReports.length;
-      const dispatchedMetricEl = document.getElementById('admin-metric-dispatched');
-      if (dispatchedMetricEl) {
-        dispatchedMetricEl.innerText = dispatchedReports.length;
-      }
-      // 2. BUILD ACTION QUEUE (Top 5 Oldest Pending)
-      const queueBody = document.getElementById('admin-action-queue-body');
-      if (queueBody) {
-        queueBody.innerHTML = ''; // Clear out the old list
+      // Inject Metrics
+      if (document.getElementById('admin-metric-pending')) document.getElementById('admin-metric-pending').innerText = pendingReports.length;
+      if (document.getElementById('admin-metric-quota')) document.getElementById('admin-metric-quota').innerText = `${quotaPercentage}%`;
+      if (document.getElementById('admin-metric-critical')) document.getElementById('admin-metric-critical').innerText = criticalReports.length;
+      if (document.getElementById('admin-metric-validated')) document.getElementById('admin-metric-validated').innerText = validatedReports.length;
+      if (document.getElementById('admin-metric-dispatched')) document.getElementById('admin-metric-dispatched').innerText = dispatchedReports.length;
 
-        // Sort by oldest date first
+      // BUILD ACTION QUEUE
+      const queueBody = document.getElementById('admin-action-queue-body');
+
+      if (!queueBody) {
+        console.error("🚨 [Admin Dashboard] ERROR: Could not find the 'admin-action-queue-body' table in the HTML!");
+      } else {
+        console.log("✅ [Admin Dashboard] Found HTML Table. Building rows...");
+        queueBody.innerHTML = '';
+
         pendingReports.sort((a, b) => new Date(a.dateSubmitted) - new Date(b.dateSubmitted));
         const top5Pending = pendingReports.slice(0, 5);
 
         if (top5Pending.length === 0) {
+          console.log("⚠️ [Admin Dashboard] Table is empty because there are no pending reports to show.");
           queueBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #666; padding: 20px;">All caught up! No pending reports.</td></tr>`;
         } else {
           top5Pending.forEach(report => {
@@ -2458,11 +2469,8 @@ function loadAdminDashboardData() {
             const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
             const dateStr = new Date(report.dateSubmitted).toLocaleDateString();
 
-            // Bulletproof Severity Badge
             const sev = String(report.severity || 'Unassessed').trim();
-            let badgeColor = '#e9ecef'; // Default grey
-            let badgeText = '#333';
-
+            let badgeColor = '#e9ecef', badgeText = '#333';
             if (sev.toLowerCase() === 'high') { badgeColor = '#ffeeba'; badgeText = '#856404'; }
             else if (sev.toLowerCase() === 'medium') { badgeColor = '#ffe8a1'; badgeText = '#856404'; }
             else if (sev.toLowerCase() === 'low') { badgeColor = '#d4edda'; badgeText = '#155724'; }
@@ -2478,15 +2486,14 @@ function loadAdminDashboardData() {
                         </tr>
                     `;
           });
+          console.log("✅ [Admin Dashboard] Successfully added rows to the table!");
         }
       }
 
-      // 3. RENDER CHARTS
       renderRealAdminCharts(reports);
-
     })
     .catch(err => {
-      console.error("Error loading Admin Dashboard data:", err);
+      console.error("🚨 Error loading Admin Dashboard data:", err);
     });
 }
 

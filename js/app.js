@@ -946,11 +946,8 @@ window.openCEOManageModal = function(reportId) {
   modal.classList.remove('hidden');
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
-  fetch(`${API_BASE_URL}/api/reports/${reportId}`, { cache: 'no-store' })
-    .then(res => {
-      if (!res.ok) throw new Error("Failed to fetch report details");
-      return res.json();
-    })
+  // 🚀 FIXED: Upgraded to apiFetch to successfully bypass Ngrok
+  apiFetch(`/api/reports/${reportId}`, { cache: 'no-store' })
     .then(report => {
       // Save coordinates for the "Locate on Map" button
       currentCEOLat = report.latitude;

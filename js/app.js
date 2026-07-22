@@ -2446,7 +2446,7 @@ function loadAdminDashboardData() {
       if (document.getElementById('admin-metric-dispatched')) document.getElementById('admin-metric-dispatched').innerText = dispatchedReports.length;
 
       // BUILD ACTION QUEUE
-      const queueBody = document.getElementById('admin-action-queue-body');
+      const queueBody = document.querySelector('#view-admin-dashboard #admin-action-queue-body');
 
       if (!queueBody) {
         console.error("🚨 [Admin Dashboard] ERROR: Could not find the 'admin-action-queue-body' table in the HTML!");

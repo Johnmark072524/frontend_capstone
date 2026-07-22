@@ -2444,34 +2444,23 @@ function loadAdminDashboardData() {
       if (document.getElementById('admin-metric-critical')) document.getElementById('admin-metric-critical').innerText = criticalReports.length;
       if (document.getElementById('admin-metric-validated')) document.getElementById('admin-metric-validated').innerText = validatedReports.length;
       if (document.getElementById('admin-metric-dispatched')) document.getElementById('admin-metric-dispatched').innerText = dispatchedReports.length;
-// BUILD ACTION QUEUE
-      const queueBody = document.querySelector('#view-admin-dashboard #admin-action-queue-body');
+
+      // ==========================================
+      // 🚀 BUILD ACTION QUEUE (FRESH REBUILD)
+      // ==========================================
+      const queueBody = document.getElementById('fresh-admin-queue-body');
 
       if (!queueBody) {
-        console.error("🚨 [Admin Dashboard] ERROR: Could not find the 'admin-action-queue-body' table in the HTML!");
+        console.error("🚨 [Admin Dashboard] ERROR: Could not find 'fresh-admin-queue-body'!");
       } else {
-        console.log("✅ [Admin Dashboard] Found HTML Table. Building rows...");
+        console.log("✅ [Admin Dashboard] Found Fresh HTML Table. Building rows...");
 
-        // 🚀 THE VISIBILITY OVERRIDE: Force the table to show itself, ignoring rogue CSS!
-        queueBody.style.display = "table-row-group";
-        queueBody.style.visibility = "visible";
-        queueBody.style.opacity = "1";
-
-        const parentCard = queueBody.closest('.ad-queue-card');
-        if (parentCard) {
-          parentCard.style.display = "block";
-          parentCard.style.visibility = "visible";
-          parentCard.style.opacity = "1";
-        }
-
-        // Now safely clear and build the table
-        queueBody.innerHTML = '';
+        queueBody.innerHTML = ''; // Clear out the 'fetching' text
 
         pendingReports.sort((a, b) => new Date(a.dateSubmitted) - new Date(b.dateSubmitted));
         const top5Pending = pendingReports.slice(0, 5);
 
         if (top5Pending.length === 0) {
-          console.log("⚠️ [Admin Dashboard] Table is empty because there are no pending reports to show.");
           queueBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #666; padding: 20px;">All caught up! No pending reports.</td></tr>`;
         } else {
           top5Pending.forEach(report => {
@@ -2485,18 +2474,21 @@ function loadAdminDashboardData() {
             else if (sev.toLowerCase() === 'medium') { badgeColor = '#ffe8a1'; badgeText = '#856404'; }
             else if (sev.toLowerCase() === 'low') { badgeColor = '#d4edda'; badgeText = '#155724'; }
 
+            // Notice we added inline styles to the <td> elements just to be safe
             queueBody.innerHTML += `
-                        <tr>
-                            <td><strong>${formatId}</strong></td>
-                            <td>${report.cityRoadName || 'Unnamed Road'}</td>
-                            <td>${formatBrgy}</td>
-                            <td><span class="ad-badge" style="background:${badgeColor}; color:${badgeText};">${sev}</span></td>
-                            <td>${dateStr}</td>
-                            <td style="text-align: center;"><button class="ad-btn-review" onclick="jumpToReportsAndReview(${report.id})">Review</button></td>
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatId}</strong></td>
+                            <td style="padding: 12px; color: #333; font-size: 14px;">${report.cityRoadName || 'Unnamed Road'}</td>
+                            <td style="padding: 12px; color: #333; font-size: 14px;">${formatBrgy}</td>
+                            <td style="padding: 12px;"><span class="ad-badge" style="background:${badgeColor}; color:${badgeText}; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">${sev}</span></td>
+                            <td style="padding: 12px; color: #333; font-size: 14px;">${dateStr}</td>
+                            <td style="padding: 12px; text-align: center;">
+                                <button onclick="jumpToReportsAndReview(${report.id})" style="background-color: #1c10a3; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px;">Review</button>
+                            </td>
                         </tr>
                     `;
           });
-          console.log("✅ [Admin Dashboard] Successfully added rows to the table!");
+          console.log("✅ [Admin Dashboard] Successfully added rows to the fresh table!");
         }
       }
 

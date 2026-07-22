@@ -1643,11 +1643,8 @@ function loadAdminReports() {
 
   if (!reportsTableBody) return;
 
-  fetch(`${API_BASE_URL}/api/reports`)
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to fetch reports");
-      return response.json();
-    })
+  // 🚀 FIXED: Using the new apiFetch wrapper to bypass Ngrok
+  apiFetch(`/api/reports`)
     .then(reports => {
       // Clear out any hardcoded HTML rows or loading text
       reportsTableBody.innerHTML = '';
@@ -2416,10 +2413,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function loadAdminDashboardData() {
-  // 🚀 FIX 1: Add { cache: 'no-store' } to force a fresh database pull every single time
+  // 🚀 FIXED: Using the new apiFetch wrapper inside Promise.all!
+  // If either fails, it safely falls back to an empty array [] so the charts don't crash
   Promise.all([
-    fetch(`${API_BASE_URL}/api/reports`, { cache: 'no-store' }).then(res => res.ok ? res.json() : []),
-    fetch(`${API_BASE_URL}/api/roads`, { cache: 'no-store' }).then(res => res.ok ? res.json() : [])
+    apiFetch(`/api/reports`, { cache: 'no-store' }).catch(() => []),
+    apiFetch(`/api/roads`, { cache: 'no-store' }).catch(() => [])
   ])
     .then(([reports, roads]) => {
 

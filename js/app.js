@@ -749,8 +749,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // CEO DATA LOADER (FEEDS BOTH TABLES)
 // ==========================================
 window.loadCEODashboardData = function() {
-  fetch(`${API_BASE_URL}/api/reports`, { cache: 'no-store' })
-    .then(res => res.ok ? res.json() : [])
+  // 🚀 FIXED: Upgraded to apiFetch to successfully bypass Ngrok
+  apiFetch(`/api/reports`, { cache: 'no-store' })
+    .catch(err => {
+      console.error("🚨 [CEO API] Failed to fetch:", err);
+      return []; // Return an empty array so the page doesn't crash
+    })
     .then(reports => {
 
       // 1. FILTER FOR ALL CEO DATA (Active + Completed)

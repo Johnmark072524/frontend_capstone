@@ -126,33 +126,37 @@
 
         </div>
 
-        <div class="fresh-queue-container ad-queue-card" style="margin-top: 25px; display: block; visibility: visible; opacity: 1;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 class="ad-section-title" style="margin: 0; border: none;">Active Repair Queue</h3>
-            <button onclick="document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-repair').classList.remove('hidden');" style="background: transparent; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #555; font-weight: bold;">
-              View Masterlist ➡️
+        <div style="background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 25px; margin-top: 25px; border: 1px solid #e2e8f0;">
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f8fafc; padding-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 700;">Active Repair Queue</h3>
+            <button onclick="document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-repair').classList.remove('hidden');" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: #334155; font-weight: 600; font-size: 13px; transition: 0.2s;">
+              View Masterlist ➔
             </button>
           </div>
 
-          <table class="ad-table" style="width: 100%; border-collapse: collapse; display: table;">
-            <thead>
-            <tr>
-              <th>Project ID</th>
-              <th>Barangay</th>
-              <th>Road Name</th>
-              <th>Est. Area</th>
-              <th>Final Priority</th>
-              <th>Status / Action</th>
-            </tr>
-            </thead>
-            <tbody id="deploy-dash-table" style="display: table-row-group;">
-            <tr>
-              <td colspan="6" style="text-align: center; padding: 30px; color: #666; font-style: italic;">
-                Loading active repair queue...
-              </td>
-            </tr>
-            </tbody>
-          </table>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+              <tr style="background-color: #f1f5f9; color: #475569; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 15px; border-bottom: 1px solid #e2e8f0; border-radius: 6px 0 0 0;">Project ID</th>
+                <th style="padding: 15px; border-bottom: 1px solid #e2e8f0;">Barangay</th>
+                <th style="padding: 15px; border-bottom: 1px solid #e2e8f0;">Road Name</th>
+                <th style="padding: 15px; border-bottom: 1px solid #e2e8f0;">Est. Area</th>
+                <th style="padding: 15px; border-bottom: 1px solid #e2e8f0;">Priority</th>
+                <th style="padding: 15px; border-bottom: 1px solid #e2e8f0; border-radius: 0 6px 0 0; text-align: center;">Action</th>
+              </tr>
+              </thead>
+              <tbody id="ultimate-ceo-dash-table" style="font-size: 14px; color: #334155;">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic;">
+                  Fetching active repairs...
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
         </div>
 
       </div>

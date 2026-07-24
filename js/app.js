@@ -870,34 +870,24 @@ window.loadCEODashboardData = function() {
       if (actEl) actEl.innerText = inProgress.length;
 
       // Render tables safely
-      renderCEOTable(activeReports, 'deploy-dash-table', true);
+      renderCEOTable(activeReports, 'ultimate-ceo-dash-table', true);
       renderCEOTable(allCEOReports, 'deploy-master-table', false);
     });
 };
 
 // ==========================================
-// REUSABLE TABLE GENERATOR (WITH RENDER LOCK)
+// REUSABLE TABLE GENERATOR (CLEAN VERSION)
 // ==========================================
 window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
   const tbody = document.getElementById(tbodyId);
 
-  if (!tbody) {
-    console.error(`🚨 CRITICAL ERROR: Could not find table ID: "${tbodyId}" in HTML!`);
-    return;
-  }
-
-  // Force Parent Visibility
-  const parentTable = tbody.closest('table');
-  if (parentTable) {
-    parentTable.style.display = "table";
-    parentTable.style.width = "100%";
-  }
+  if (!tbody) return; // Fail silently if table isn't on screen
 
   // Clear previous entries
   tbody.innerHTML = '';
 
   if (dataArray.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">No projects found in this queue.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">No active projects found.</td></tr>`;
     return;
   }
 
@@ -911,33 +901,31 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     const status = String(report.status || '').toLowerCase();
     const onClickAction = isDashboard ? `jumpToCEOMasterlistAndManage(${report.id})` : `openCEOManageModal(${report.id})`;
 
-    let statusHtml = `<span style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">Dispatched</span>`;
-    let btnHtml = `<button onclick="${onClickAction}" style="background-color: #1c10a3; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Manage</button>`;
+    let statusHtml = `<span style="background:#dcfce3; color:#166534; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">Dispatched</span>`;
+    let btnHtml = `<button onclick="${onClickAction}" style="background-color: #1e40af; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 2px 4px rgba(30,64,175,0.2);">Manage</button>`;
 
     if (status === 'in progress') {
-      statusHtml = `<span style="background-color: #cce5ff; color: #004085; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">In Progress</span>`;
+      statusHtml = `<span style="background-color: #dbeafe; color: #1e40af; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">In Progress</span>`;
     } else if (status.includes('complet') || status.includes('repair')) {
-      statusHtml = `<span style="background-color: #d4edda; color: #155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">✅ Completed</span>`;
-      btnHtml = `<button onclick="${onClickAction}" style="background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">View Proof</button>`;
+      statusHtml = `<span style="background-color: #f1f5f9; color: #475569; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">✅ Completed</span>`;
+      btnHtml = `<button onclick="${onClickAction}" style="background-color: #16a34a; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 2px 4px rgba(22,163,74,0.2);">View Proof</button>`;
     }
 
     const tr = document.createElement('tr');
-    tr.style.borderBottom = "1px solid #eee";
-    tr.style.borderLeft = `4px solid ${report.tierColor}`;
-    tr.style.backgroundColor = "#ffffff";
+    tr.style.borderBottom = "1px solid #f1f5f9";
+    tr.style.transition = "background-color 0.2s";
 
-    // EXTREME BRUTE FORCE: Force the row to display properly
-    tr.style.display = "table-row";
-    tr.style.visibility = "visible";
-    tr.style.opacity = "1";
+    // Slight hover effect trick for inline styles
+    tr.onmouseover = () => tr.style.backgroundColor = "#f8fafc";
+    tr.onmouseout = () => tr.style.backgroundColor = "transparent";
 
     tr.innerHTML = `
-        <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatId}</strong></td>
-        <td style="padding: 12px; color: #333; font-size: 14px;">${formatBrgy}</td>
-        <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatName}</strong></td>
-        <td style="padding: 12px; color: #555; font-size: 14px; font-weight: 500;">${formatArea}</td>
-        <td style="padding: 12px;"><span style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; display:inline-block;">${report.tierLabel}</span></td>
-        <td style="padding: 12px; display: flex; gap: 10px; align-items: center;">
+        <td style="padding: 15px; border-left: 4px solid ${report.tierColor};"><strong>${formatId}</strong></td>
+        <td style="padding: 15px;">${formatBrgy}</td>
+        <td style="padding: 15px; font-weight: 600; color: #0f172a;">${formatName}</td>
+        <td style="padding: 15px; color: #64748b;">${formatArea}</td>
+        <td style="padding: 15px;"><span style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;">${report.tierLabel}</span></td>
+        <td style="padding: 15px; text-align: center; display: flex; gap: 10px; justify-content: center; align-items: center;">
             ${statusHtml}
             ${btnHtml}
         </td>

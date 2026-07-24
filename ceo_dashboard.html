@@ -126,16 +126,15 @@
 
         </div>
 
-        <div class="ad-queue-card" style="margin-top: 25px;">
+        <div class="fresh-queue-container ad-queue-card" style="margin-top: 25px; display: block; visibility: visible; opacity: 1;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 class="ad-section-title" style="margin: 0; border: none;">Active Repair Queue</h3>
             <button onclick="document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-repair').classList.remove('hidden');" style="background: transparent; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #555; font-weight: bold;">
               View Masterlist ➡️
             </button>
-
           </div>
 
-          <table class="ad-table">
+          <table class="ad-table" style="width: 100%; border-collapse: collapse; display: table;">
             <thead>
             <tr>
               <th>Project ID</th>
@@ -146,7 +145,7 @@
               <th>Status / Action</th>
             </tr>
             </thead>
-            <tbody id="ceo-repair-queue-body">
+            <tbody id="fresh-ceo-repair-queue-body" style="display: table-row-group;">
             <tr>
               <td colspan="6" style="text-align: center; padding: 30px; color: #666; font-style: italic;">
                 Loading active repair queue...
@@ -179,26 +178,16 @@
               </button>
 
               <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; width: 210px; z-index: 100; overflow: hidden;">
-
-                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: var(--text-main);">
-                  📑 All Projects
-                </button>
-
-                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 600;">
-                  🚨 Priority List
-                </button>
-
-                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 600;">
-                  ✅ Repaired City Roads
-                </button>
-
+                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: var(--text-main);">📑 All Projects</button>
+                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 600;">🚨 Priority List</button>
+                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 600;">✅ Repaired City Roads</button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="table-container">
-          <table class="data-table">
+        <div class="fresh-table-container table-container" style="display: block; visibility: visible; opacity: 1;">
+          <table class="data-table" style="width: 100%; border-collapse: collapse; display: table;">
             <thead>
             <tr>
               <th style="width: 12%;">Project ID</th>
@@ -209,14 +198,13 @@
               <th style="width: 15%;">Action</th>
             </tr>
             </thead>
-            <tbody id="ceo-masterlist-queue-body">
+            <tbody id="fresh-ceo-masterlist-queue-body" style="display: table-row-group;">
             <tr><td colspan="6" style="text-align:center; padding: 20px;">Loading Masterlist...</td></tr>
             </tbody>
           </table>
         </div>
 
       </div>
-
       <div id="view-settings" class="content-section hidden">
         <h2>Engineering Settings</h2>
         <p>Office preferences go here.</p>

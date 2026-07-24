@@ -776,47 +776,51 @@ document.addEventListener('DOMContentLoaded', () => {
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
 // ==========================================
-// 🚀 AUTO-START CEO DASHBOARD ON LOGIN
+// 🚀 CEO DASHBOARD: SAFE AUTO-START
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
-  const ceoDashboard = document.getElementById('view-dashboard');
-
-  // If the CEO dashboard exists in the HTML, run the fetch!
-  if (ceoDashboard) {
-    console.log("✅ Page loaded! Auto-starting CEO Dashboard fetch...");
-    // Force the execution of the brain function
+  // 1. Fire EXACTLY ONCE on initial login
+  if (document.getElementById('view-dashboard')) {
     setTimeout(() => {
       if (typeof window.loadCEODashboardData === 'function') {
         window.loadCEODashboardData();
-      } else {
-        console.error("🚨 CRITICAL ERROR: The loadCEODashboardData function is missing!");
       }
     }, 100);
   }
+
+  // 2. Fire EXACTLY ONCE when clicking the sidebar tabs
+  const sidebarLinks = document.querySelectorAll('.nav-menu li[data-target]');
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      const target = link.getAttribute('data-target');
+      if (target === 'view-dashboard' || target === 'view-repair') {
+        if (typeof window.loadCEODashboardData === 'function') {
+          window.loadCEODashboardData();
+        }
+      }
+    });
+  });
 });
 
 // ==========================================
 // CEO DATA LOADER (THE MAIN BRAIN)
 // ==========================================
 window.loadCEODashboardData = function() {
-  console.log("🚀 Fetching CEO data from database...");
+  console.log("🚀 [SAFE FETCH] Grabbing CEO data...");
 
-  // Bypassing Ngrok securely
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .catch(err => {
       console.error("🚨 [CEO API] Failed to fetch:", err);
       return [];
     })
     .then(reports => {
-      console.log(`✅ Successfully fetched ${reports.length} total reports.`);
+      console.log(`✅ [SAFE FETCH] Loaded ${reports.length} reports.`);
 
-      // 1. FILTER FOR ALL CEO DATA
       const allCEOReports = reports.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress' || s === 'completed' || s === 'repaired';
       });
 
-      // 2. THE STRICT PRIORITY ALGORITHM
       allCEOReports.forEach(report => {
         const severity = (report.severity || 'Unassessed').toLowerCase();
         const importance = (report.roadImportance || '').toLowerCase();
@@ -844,19 +848,16 @@ window.loadCEODashboardData = function() {
         report.areaScore = dLength * dWidth;
       });
 
-      // 3. SORT BY PRIORITY THEN AREA
       allCEOReports.sort((a, b) => {
         if (b.tierScore !== a.tierScore) return b.tierScore - a.tierScore;
         return b.areaScore - a.areaScore;
       });
 
-      // 4. SPLIT THE DATA
       const activeReports = allCEOReports.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress';
       });
 
-      // 5. METRICS
       const pendingDispatch = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
       const inProgress = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'in progress');
       const criticalHazards = activeReports.filter(r => r.tierLabel === 'HIGH');
@@ -868,49 +869,31 @@ window.loadCEODashboardData = function() {
       if (critEl) critEl.innerText = criticalHazards.length;
       if (actEl) actEl.innerText = inProgress.length;
 
-      // 6. 🚀 RENDER BOTH TABLES USING NUCLEAR DEPLOY IDs!
+      // Render tables safely
       renderCEOTable(activeReports, 'deploy-dash-table', true);
       renderCEOTable(allCEOReports, 'deploy-master-table', false);
-
-    })
-    .catch(err => {
-      console.error("Error processing CEO Dashboard Data:", err);
     });
 };
 
 // ==========================================
-// REUSABLE TABLE GENERATOR (WITH ADMIN BRUTE FORCE)
+// REUSABLE TABLE GENERATOR (WITH RENDER LOCK)
 // ==========================================
 window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
   const tbody = document.getElementById(tbodyId);
 
-  // 🚨 DIAGNOSTIC CHECK
   if (!tbody) {
-    console.error(`🚨 CRITICAL ERROR: Could not find table ID: "${tbodyId}" in the HTML!`);
+    console.error(`🚨 CRITICAL ERROR: Could not find table ID: "${tbodyId}" in HTML!`);
     return;
   }
 
-  // ========================================================
-  // 🔨 SECRET 1: THE PARENT OVERRIDE (BREAK VERCEL'S CACHE)
-  // ========================================================
+  // Force Parent Visibility
   const parentTable = tbody.closest('table');
   if (parentTable) {
     parentTable.style.display = "table";
     parentTable.style.width = "100%";
-    parentTable.style.visibility = "visible";
-    parentTable.style.opacity = "1";
   }
 
-  // Look for either the Dashboard Card OR the Masterlist Container
-  const parentCard = tbody.closest('.ad-queue-card') || tbody.closest('.table-container');
-  if (parentCard) {
-    parentCard.style.display = "block";
-    parentCard.style.visibility = "visible";
-    parentCard.style.opacity = "1";
-  }
-  // ========================================================
-
-  console.log(`✅ Found table: ${tbodyId}. Injecting ${dataArray.length} rows.`);
+  // Clear previous entries
   tbody.innerHTML = '';
 
   if (dataArray.length === 0) {
@@ -928,9 +911,6 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     const status = String(report.status || '').toLowerCase();
     const onClickAction = isDashboard ? `jumpToCEOMasterlistAndManage(${report.id})` : `openCEOManageModal(${report.id})`;
 
-    // ========================================================
-    // 🔨 SECRET 2: INLINE CSS FOR BADGES AND BUTTONS
-    // ========================================================
     let statusHtml = `<span style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">Dispatched</span>`;
     let btnHtml = `<button onclick="${onClickAction}" style="background-color: #1c10a3; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Manage</button>`;
 
@@ -941,13 +921,15 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
       btnHtml = `<button onclick="${onClickAction}" style="background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">View Proof</button>`;
     }
 
-    // ========================================================
-    // 🔨 SECRET 3: INLINE CSS FOR TABLE ROWS AND CELLS
-    // ========================================================
     const tr = document.createElement('tr');
     tr.style.borderBottom = "1px solid #eee";
     tr.style.borderLeft = `4px solid ${report.tierColor}`;
     tr.style.backgroundColor = "#ffffff";
+
+    // EXTREME BRUTE FORCE: Force the row to display properly
+    tr.style.display = "table-row";
+    tr.style.visibility = "visible";
+    tr.style.opacity = "1";
 
     tr.innerHTML = `
         <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatId}</strong></td>
@@ -962,7 +944,9 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     `;
     tbody.appendChild(tr);
   });
-};// Placeholder for opening the specific report
+};
+
+// Placeholder for opening the specific report
 window.openCEOManageModal = function(reportId) {
   console.log("Opening Manage Modal for Project: " + reportId);
   document.getElementById('manage-modal').classList.remove('hidden');

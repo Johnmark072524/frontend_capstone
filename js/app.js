@@ -2132,8 +2132,7 @@ function closeBdModals() {
 
 // 1. OPEN VIEW MODAL (DETAILED GRID)
 function openViewModal(reportId) {
-  fetch(`${API_BASE_URL}/api/reports/${reportId}`)
-    .then(res => res.json())
+  apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       // Header
       document.getElementById('view-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
@@ -2198,8 +2197,7 @@ function openViewModal(reportId) {
 // 2. OPEN EDIT MODAL (Full Form Replica)
 // ==========================================
 function openEditModal(reportId) {
-  fetch(`${API_BASE_URL}/api/reports/${reportId}`)
-    .then(res => res.json())
+  apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       document.getElementById('edit-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
       document.getElementById('edit-report-id').value = report.id;
@@ -2293,6 +2291,9 @@ function submitEditedReport() {
 
   fetch(`${API_BASE_URL}/api/reports/update/${reportId}`, {
     method: 'PUT',
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    },
     body: formData
   })
     .then(response => {

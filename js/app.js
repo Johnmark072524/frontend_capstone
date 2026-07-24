@@ -743,21 +743,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
+// ==========================================
+// 🚀 AUTO-START CEO DASHBOARD ON LOGIN
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const ceoDashboard = document.getElementById('view-dashboard');
 
+  // If the CEO dashboard exists in the HTML, run the fetch!
+  if (ceoDashboard) {
+    console.log("✅ Page loaded! Auto-starting CEO Dashboard fetch...");
+    // Force the execution of the brain function
+    setTimeout(() => {
+      if (typeof window.loadCEODashboardData === 'function') {
+        window.loadCEODashboardData();
+      } else {
+        console.error("🚨 CRITICAL ERROR: The loadCEODashboardData function is missing!");
+      }
+    }, 100);
+  }
+});
 
 // ==========================================
-// CEO DATA LOADER (FEEDS BOTH TABLES)
+// CEO DATA LOADER (THE MAIN BRAIN)
 // ==========================================
 window.loadCEODashboardData = function() {
-  // 🚀 FIXED: Upgraded to apiFetch to successfully bypass Ngrok
+  console.log("🚀 Fetching CEO data from database...");
+
+  // Bypassing Ngrok securely
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .catch(err => {
       console.error("🚨 [CEO API] Failed to fetch:", err);
-      return []; // Return an empty array so the page doesn't crash
+      return [];
     })
     .then(reports => {
+      console.log(`✅ Successfully fetched ${reports.length} total reports.`);
 
-      // 1. FILTER FOR ALL CEO DATA (Active + Completed)
+      // 1. FILTER FOR ALL CEO DATA
       const allCEOReports = reports.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress' || s === 'completed' || s === 'repaired';
@@ -768,14 +789,10 @@ window.loadCEODashboardData = function() {
         const severity = (report.severity || 'Unassessed').toLowerCase();
         const importance = (report.roadImportance || '').toLowerCase();
 
-        report.tierScore = 0;
-        report.tierLabel = 'PENDING AI';
-        report.tierColor = '#6c757d';
+        report.tierScore = 0; report.tierLabel = 'PENDING AI'; report.tierColor = '#6c757d';
 
         if (severity === 'high') {
-          report.tierScore = 3;
-          report.tierLabel = 'HIGH';
-          report.tierColor = '#dc3545';
+          report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
         } else if (severity === 'medium') {
           if (importance.includes('core')) {
             report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
@@ -801,13 +818,13 @@ window.loadCEODashboardData = function() {
         return b.areaScore - a.areaScore;
       });
 
-      // 4. SPLIT THE DATA (Active vs All)
+      // 4. SPLIT THE DATA
       const activeReports = allCEOReports.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress';
       });
 
-      // 5. METRICS (Count only the Active ones for the Dashboard Top Boxes)
+      // 5. METRICS
       const pendingDispatch = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
       const inProgress = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'in progress');
       const criticalHazards = activeReports.filter(r => r.tierLabel === 'HIGH');
@@ -819,23 +836,29 @@ window.loadCEODashboardData = function() {
       if (critEl) critEl.innerText = criticalHazards.length;
       if (actEl) actEl.innerText = inProgress.length;
 
-      // 6. 🚀 RENDER BOTH TABLES SEPARATELY! (Using Fresh IDs)
+      // 6. 🚀 RENDER BOTH TABLES USING THE FRESH IDs!
       renderCEOTable(activeReports, 'fresh-ceo-repair-queue-body', true);
       renderCEOTable(allCEOReports, 'fresh-ceo-masterlist-queue-body', false);
 
     })
     .catch(err => {
-      console.error("Error loading CEO Dashboard:", err);
+      console.error("Error processing CEO Dashboard Data:", err);
     });
 };
 
 // ==========================================
-// REUSABLE TABLE GENERATOR
+// REUSABLE TABLE GENERATOR (WITH DIAGNOSTICS)
 // ==========================================
-function renderCEOTable(dataArray, tbodyId, isDashboard) {
+window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
   const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
 
+  // 🚨 DIAGNOSTIC CHECK
+  if (!tbody) {
+    console.error(`🚨 CRITICAL ERROR: Could not find table ID: "${tbodyId}" in the HTML!`);
+    return;
+  }
+
+  console.log(`✅ Found table: ${tbodyId}. Injecting ${dataArray.length} rows.`);
   tbody.innerHTML = '';
 
   if (dataArray.length === 0) {
@@ -851,30 +874,20 @@ function renderCEOTable(dataArray, tbodyId, isDashboard) {
     const formatArea = area > 0 ? `${area.toFixed(1)} sq.m` : 'Unknown';
 
     const status = String(report.status || '').toLowerCase();
-
-    // 🚀 SMART ONCLICK: Jump if on Dashboard, just Open if already on Masterlist
     const onClickAction = isDashboard ? `jumpToCEOMasterlistAndManage(${report.id})` : `openCEOManageModal(${report.id})`;
 
-    // Status Badge Logic
     let statusHtml = `<span class="status-badge pending" style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">Dispatched</span>`;
-
-    // 🟦 CLEANED UP MANAGE BUTTON (Uses CSS Class for text/padding/border, inline just for the background/shadow)
     let btnHtml = `<button class="btn-small manage-btn" onclick="${onClickAction}" style="background-color: var(--accent-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Manage</button>`;
 
     if (status === 'in progress') {
       statusHtml = `<span class="status-badge" style="background-color: #cce5ff; color: #004085; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">In Progress</span>`;
-    }
-    // If completed, make the badge Green and the button say "View Proof"
-    else if (status.includes('complet') || status.includes('repair')) {
+    } else if (status.includes('complet') || status.includes('repair')) {
       statusHtml = `<span class="status-badge" style="background-color: #d4edda; color: #155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">✅ Completed</span>`;
-
-      // 🟩 CLEANED UP VIEW PROOF BUTTON
       btnHtml = `<button class="btn-small manage-btn" onclick="${onClickAction}" style="background-color: #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">View Proof</button>`;
     }
 
     const tr = document.createElement('tr');
     tr.style.borderLeft = `4px solid ${report.tierColor}`;
-
     tr.innerHTML = `
         <td><strong>${formatId}</strong></td>
         <td>${formatBrgy}</td>
@@ -888,7 +901,7 @@ function renderCEOTable(dataArray, tbodyId, isDashboard) {
     `;
     tbody.appendChild(tr);
   });
-}
+};
 // Placeholder for opening the specific report
 window.openCEOManageModal = function(reportId) {
   console.log("Opening Manage Modal for Project: " + reportId);

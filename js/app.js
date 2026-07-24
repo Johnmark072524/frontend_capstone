@@ -819,9 +819,9 @@ window.loadCEODashboardData = function() {
       if (critEl) critEl.innerText = criticalHazards.length;
       if (actEl) actEl.innerText = inProgress.length;
 
-      // 6. 🚀 RENDER BOTH TABLES SEPARATELY!
-      renderCEOTable(activeReports, 'ceo-repair-queue-body', true);
-      renderCEOTable(allCEOReports, 'ceo-masterlist-queue-body', false);
+      // 6. 🚀 RENDER BOTH TABLES SEPARATELY! (Using Fresh IDs)
+      renderCEOTable(activeReports, 'fresh-ceo-repair-queue-body', true);
+      renderCEOTable(allCEOReports, 'fresh-ceo-masterlist-queue-body', false);
 
     })
     .catch(err => {

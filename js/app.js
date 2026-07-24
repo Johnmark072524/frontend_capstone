@@ -920,10 +920,10 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     tr.onmouseout = () => tr.style.backgroundColor = "transparent";
 
     tr.innerHTML = `
-        <td style="padding: 15px; border-left: 4px solid ${report.tierColor};"><strong>${formatId}</strong></td>
+       <td style="padding: 15px; border-left: 4px solid ${report.tierColor}; white-space: nowrap;"><strong>${formatId}</strong></td>
         <td style="padding: 15px;">${formatBrgy}</td>
         <td style="padding: 15px; font-weight: 600; color: #0f172a;">${formatName}</td>
-        <td style="padding: 15px; color: #64748b;">${formatArea}</td>
+        <td style="padding: 15px; color: #64748b; white-space: nowrap;">${formatArea}</td>
         <td style="padding: 15px;"><span style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;">${report.tierLabel}</span></td>
         <td style="padding: 15px; text-align: center; display: flex; gap: 10px; justify-content: center; align-items: center;">
             ${statusHtml}

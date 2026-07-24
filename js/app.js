@@ -836,9 +836,9 @@ window.loadCEODashboardData = function() {
       if (critEl) critEl.innerText = criticalHazards.length;
       if (actEl) actEl.innerText = inProgress.length;
 
-      // 6. 🚀 RENDER BOTH TABLES USING THE FRESH IDs!
-      renderCEOTable(activeReports, 'fresh-ceo-repair-queue-body', true);
-      renderCEOTable(allCEOReports, 'fresh-ceo-masterlist-queue-body', false);
+      // 6. 🚀 RENDER BOTH TABLES USING NUCLEAR DEPLOY IDs!
+      renderCEOTable(activeReports, 'deploy-dash-table', true);
+      renderCEOTable(allCEOReports, 'deploy-master-table', false);
 
     })
     .catch(err => {

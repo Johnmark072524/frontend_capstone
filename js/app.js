@@ -28,8 +28,40 @@ let redIcon; // Just declare it, don't build it yet!
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  if (document.getElementById('ceo-repair-queue-body')) {
-    loadCEODashboardData();
+  // ==========================================
+  // 🚀 CEO DASHBOARD: THE "ADMIN MAGIC" WATCHDOG
+  // ==========================================
+  // 1. Initial Load Check (Using the layout ID instead of table IDs)
+  if (document.getElementById('view-dashboard')) {
+    if (typeof loadCEODashboardData === 'function') {
+      loadCEODashboardData();
+    }
+  }
+
+  // 2. The Watchdog for the Main CEO Dashboard Tab
+  const ceoDashboardSection = document.getElementById('view-dashboard');
+  if (ceoDashboardSection) {
+    const observer1 = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class' && !ceoDashboardSection.classList.contains('hidden')) {
+          if (typeof loadCEODashboardData === 'function') loadCEODashboardData();
+        }
+      });
+    });
+    observer1.observe(ceoDashboardSection, { attributes: true });
+  }
+
+  // 3. The Watchdog for the Repair Projects Tab
+  const ceoRepairSection = document.getElementById('view-repair');
+  if (ceoRepairSection) {
+    const observer2 = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class' && !ceoRepairSection.classList.contains('hidden')) {
+          if (typeof loadCEODashboardData === 'function') loadCEODashboardData();
+        }
+      });
+    });
+    observer2.observe(ceoRepairSection, { attributes: true });
   }
 
   // ==========================================

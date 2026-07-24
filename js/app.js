@@ -847,7 +847,7 @@ window.loadCEODashboardData = function() {
 };
 
 // ==========================================
-// REUSABLE TABLE GENERATOR (WITH DIAGNOSTICS)
+// REUSABLE TABLE GENERATOR (WITH ADMIN BRUTE FORCE)
 // ==========================================
 window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
   const tbody = document.getElementById(tbodyId);
@@ -858,11 +858,31 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     return;
   }
 
+  // ========================================================
+  // 🔨 SECRET 1: THE PARENT OVERRIDE (BREAK VERCEL'S CACHE)
+  // ========================================================
+  const parentTable = tbody.closest('table');
+  if (parentTable) {
+    parentTable.style.display = "table";
+    parentTable.style.width = "100%";
+    parentTable.style.visibility = "visible";
+    parentTable.style.opacity = "1";
+  }
+
+  // Look for either the Dashboard Card OR the Masterlist Container
+  const parentCard = tbody.closest('.ad-queue-card') || tbody.closest('.table-container');
+  if (parentCard) {
+    parentCard.style.display = "block";
+    parentCard.style.visibility = "visible";
+    parentCard.style.opacity = "1";
+  }
+  // ========================================================
+
   console.log(`✅ Found table: ${tbodyId}. Injecting ${dataArray.length} rows.`);
   tbody.innerHTML = '';
 
   if (dataArray.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No projects found in this queue.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">No projects found in this queue.</td></tr>`;
     return;
   }
 
@@ -876,33 +896,41 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     const status = String(report.status || '').toLowerCase();
     const onClickAction = isDashboard ? `jumpToCEOMasterlistAndManage(${report.id})` : `openCEOManageModal(${report.id})`;
 
-    let statusHtml = `<span class="status-badge pending" style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">Dispatched</span>`;
-    let btnHtml = `<button class="btn-small manage-btn" onclick="${onClickAction}" style="background-color: var(--accent-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Manage</button>`;
+    // ========================================================
+    // 🔨 SECRET 2: INLINE CSS FOR BADGES AND BUTTONS
+    // ========================================================
+    let statusHtml = `<span style="background:#d4edda; color:#155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">Dispatched</span>`;
+    let btnHtml = `<button onclick="${onClickAction}" style="background-color: #1c10a3; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Manage</button>`;
 
     if (status === 'in progress') {
-      statusHtml = `<span class="status-badge" style="background-color: #cce5ff; color: #004085; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">In Progress</span>`;
+      statusHtml = `<span style="background-color: #cce5ff; color: #004085; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">In Progress</span>`;
     } else if (status.includes('complet') || status.includes('repair')) {
-      statusHtml = `<span class="status-badge" style="background-color: #d4edda; color: #155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold;">✅ Completed</span>`;
-      btnHtml = `<button class="btn-small manage-btn" onclick="${onClickAction}" style="background-color: #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">View Proof</button>`;
+      statusHtml = `<span style="background-color: #d4edda; color: #155724; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; display:inline-block;">✅ Completed</span>`;
+      btnHtml = `<button onclick="${onClickAction}" style="background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">View Proof</button>`;
     }
 
+    // ========================================================
+    // 🔨 SECRET 3: INLINE CSS FOR TABLE ROWS AND CELLS
+    // ========================================================
     const tr = document.createElement('tr');
+    tr.style.borderBottom = "1px solid #eee";
     tr.style.borderLeft = `4px solid ${report.tierColor}`;
+    tr.style.backgroundColor = "#ffffff";
+
     tr.innerHTML = `
-        <td><strong>${formatId}</strong></td>
-        <td>${formatBrgy}</td>
-        <td><strong>${formatName}</strong></td>
-        <td style="color: #555; font-weight: 500;">${formatArea}</td>
-        <td><span class="badge" style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">${report.tierLabel}</span></td>
-        <td style="display: flex; gap: 10px; align-items: center;">
+        <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatId}</strong></td>
+        <td style="padding: 12px; color: #333; font-size: 14px;">${formatBrgy}</td>
+        <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatName}</strong></td>
+        <td style="padding: 12px; color: #555; font-size: 14px; font-weight: 500;">${formatArea}</td>
+        <td style="padding: 12px;"><span style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; display:inline-block;">${report.tierLabel}</span></td>
+        <td style="padding: 12px; display: flex; gap: 10px; align-items: center;">
             ${statusHtml}
             ${btnHtml}
         </td>
     `;
     tbody.appendChild(tr);
   });
-};
-// Placeholder for opening the specific report
+};// Placeholder for opening the specific report
 window.openCEOManageModal = function(reportId) {
   console.log("Opening Manage Modal for Project: " + reportId);
   document.getElementById('manage-modal').classList.remove('hidden');

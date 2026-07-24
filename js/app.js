@@ -1053,11 +1053,14 @@ window.openCEOManageModal = function(reportId) {
         statusBadge.style.cssText = "background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
       }
 
-      // 6. Image Loading using report.damageImage
+      // ==========================================
+      // 🚀 6. IMAGE LOADING (MATCHING ADMIN LOGIC)
+      // ==========================================
       const imgEl = document.getElementById('ceo-modal-image');
       const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
 
       if (report.damageImage && report.damageImage !== 'no_image.jpg') {
+        // Point it directly to Spring Boot just like the Admin does!
         imgEl.src = `${API_BASE_URL}/uploads/${report.damageImage}`;
         imgEl.style.display = 'block';
         placeholderEl.style.display = 'none';

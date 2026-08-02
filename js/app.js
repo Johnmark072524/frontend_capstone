@@ -1982,8 +1982,6 @@ function loadBarangayReports(barangayId) {
   // 🚀 Replaced standard fetch with your new wrapper
   apiFetch(`/api/reports/barangay/${barangayId}`)
     .then(reports => {
-      listContainer.innerHTML = "";
-
       // 🚀 TRIGGER THE PROGRESS BAR MATH
       calculateJurisdictionProgress(barangayId, reports);
 
@@ -1994,6 +1992,9 @@ function loadBarangayReports(barangayId) {
 
       let pending = 0, validated = 0, rejected = 0;
       let highSev = 0, medSev = 0, lowSev = 0;
+
+      // 🚀 BEST PRACTICE: Build a single HTML string instead of updating the DOM 50 times
+      let allRowsHtml = "";
 
       reports.forEach(report => {
         if (report.status === "Pending") pending++;
@@ -2010,14 +2011,13 @@ function loadBarangayReports(barangayId) {
 
         let dateStr = new Date(report.dateSubmitted).toLocaleDateString();
 
-        let imgSrc = "https://placehold.co/300x200/png?text=No+Image";
-        if (report.damageImage && report.damageImage !== "no_image.jpg") {
-          imgSrc = report.damageImage.startsWith("http") ? report.damageImage : `${API_BASE_URL}/uploads/${report.damageImage}`;
-        }
-
+        // 🚀 THE FIX: We removed the old image logic. We now assign a UNIQUE ID to the image tag
+        // and put a "Loading..." placeholder in it temporarily.
         let rowHtml = `
                 <div class="bd-list-item">
-                  <div class="bd-item-image"><img src="${imgSrc}" alt="Report Image"></div>
+                  <div class="bd-item-image">
+                    <img id="brgy-preview-img-${report.id}" src="https://placehold.co/300x200/png?text=Loading..." alt="Report Image">
+                  </div>
                   <div class="bd-item-details">
                     <div>
                       <div class="bd-item-title">${report.cityRoadName || 'Unknown Road'} Inspection</div>
@@ -2040,7 +2040,17 @@ function loadBarangayReports(barangayId) {
                   `}
                 </div>
                 </div>`;
-        listContainer.innerHTML += rowHtml;
+
+        allRowsHtml += rowHtml;
+      });
+
+      // 1. Inject all the HTML into the page at once
+      listContainer.innerHTML = allRowsHtml;
+
+      // 🚀 2. THE FIX: Now that the images are actually on the screen, loop through the
+      // reports one more time and securely download the image blobs into their unique IDs!
+      reports.forEach(report => {
+        loadSecureImage(`brgy-preview-img-${report.id}`, report.damageImage);
       });
 
       // Update Metrics
@@ -2052,7 +2062,6 @@ function loadBarangayReports(barangayId) {
       // Update Chart
       updateSeverityChart([highSev, medSev, lowSev]);
     })
-    // 👇 The properly formatted catch block 👇
     .catch(error => {
       console.error("Error loading reports:", error);
       listContainer.innerHTML = "<p style='text-align:center; padding: 20px; color: red;'>Failed to load reports. Please try again.</p>";
@@ -2129,9 +2138,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
-// ==========================================
-// MODAL CONTROLS (View & Edit)
-// ==========================================
+
 // ==========================================
 // BULLETPROOF CLOSE FUNCTION
 // ==========================================

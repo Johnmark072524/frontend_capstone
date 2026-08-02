@@ -18,24 +18,29 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ==========================================
-// 🚀 SECURE IMAGE FETCHER (NGROK BYPASS)
+// 🚀 SECURE IMAGE FETCHER (BULLETPROOF VERSION)
 // ==========================================
 window.loadSecureImage = function(imgElementId, imageName) {
   const imgEl = document.getElementById(imgElementId);
   if (!imgEl) return;
 
-  if (!imageName || imageName === 'no_image.jpg') {
+  // 🛡️ THE FIX: Catch empty, "no_image.jpg", AND literal strings of "undefined" or "null"
+  if (!imageName ||
+    imageName === 'no_image.jpg' ||
+    String(imageName).trim().toLowerCase() === 'undefined' ||
+    String(imageName).trim().toLowerCase() === 'null') {
+
     imgEl.src = "https://placehold.co/500x300/png?text=No+Photo+Provided";
     imgEl.style.display = 'block';
-    return;
+    return; // Stop here, do not fetch!
   }
 
-  const url = imageName.startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
+  const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
 
   // Force the download securely behind the scenes
   fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
     .then(res => {
-      if (!res.ok) throw new Error("Image fetch failed");
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
       return res.blob();
     })
     .then(blob => {

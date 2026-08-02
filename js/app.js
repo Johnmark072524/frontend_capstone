@@ -18,6 +18,38 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // ==========================================
+// 🚀 SECURE IMAGE FETCHER (NGROK BYPASS)
+// ==========================================
+window.loadSecureImage = function(imgElementId, imageName) {
+  const imgEl = document.getElementById(imgElementId);
+  if (!imgEl) return;
+
+  if (!imageName || imageName === 'no_image.jpg') {
+    imgEl.src = "https://placehold.co/500x300/png?text=No+Photo+Provided";
+    imgEl.style.display = 'block';
+    return;
+  }
+
+  const url = imageName.startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
+
+  // Force the download securely behind the scenes
+  fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+    .then(res => {
+      if (!res.ok) throw new Error("Image fetch failed");
+      return res.blob();
+    })
+    .then(blob => {
+      imgEl.src = URL.createObjectURL(blob);
+      imgEl.style.display = 'block';
+    })
+    .catch(err => {
+      console.error("Failed to load secure image:", err);
+      imgEl.src = "https://placehold.co/500x300/png?text=Image+Error";
+      imgEl.style.display = 'block';
+    });
+};
+
+// ==========================================
 // GLOBAL MAP VARIABLES (Must remain empty at first!)
 // ==========================================
 let map;
@@ -1054,21 +1086,13 @@ window.openCEOManageModal = function(reportId) {
       }
 
       // ==========================================
-      // 🚀 6. IMAGE LOADING (MATCHING ADMIN LOGIC)
+      // 🚀 6. IMAGE LOADING (SECURE BLOB FETCHER)
       // ==========================================
-      const imgEl = document.getElementById('ceo-modal-image');
       const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
+      if (placeholderEl) placeholderEl.style.display = 'none';
 
-      if (report.damageImage && report.damageImage !== 'no_image.jpg') {
-        // Point it directly to Spring Boot just like the Admin does!
-        imgEl.src = `${API_BASE_URL}/uploads/${report.damageImage}`;
-        imgEl.style.display = 'block';
-        placeholderEl.style.display = 'none';
-      } else {
-        imgEl.style.display = 'none';
-        placeholderEl.style.display = 'block';
-        placeholderEl.innerHTML = '<span class="icon" style="font-size: 30px;">📷</span><p style="margin-top: 10px; color: #888;">No original photo provided</p>';
-      }
+      loadSecureImage('ceo-modal-image', report.damageImage);
+
 
       // ==========================================
       // 🚀 7. THE FIX: BUTTON LOCK & COMPLETED DATA
@@ -1077,7 +1101,6 @@ window.openCEOManageModal = function(reportId) {
       const completionForm = document.getElementById('ceo-completion-form');
       const completedEvidence = document.getElementById('ceo-completed-evidence-section'); // New Read-Only Box
 
-      const proofImg = document.getElementById('ceo-modal-proof-image');
       const proofRemarks = document.getElementById('ceo-modal-proof-remarks');
 
       if (btnStartRepair) {
@@ -1093,13 +1116,8 @@ window.openCEOManageModal = function(reportId) {
           if (completionForm) completionForm.style.display = 'none'; // Hide upload form
           if (completedEvidence) completedEvidence.style.display = 'block'; // Show Read-Only Data!
 
-          // Load the Proof Photo and Remarks from the database
-          if (report.proofOfRepairImage) {
-            proofImg.src = `${API_BASE_URL}/uploads/${report.proofOfRepairImage}`;
-            proofImg.style.display = 'inline-block';
-          } else {
-            proofImg.style.display = 'none';
-          }
+          // 🚀 SECURELY Load the Proof Photo and Remarks
+          loadSecureImage('ceo-modal-proof-image', report.proofOfRepairImage);
           proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
           // STATE 2: IN PROGRESS
@@ -1815,14 +1833,8 @@ function reviewReport(reportId) {
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
       // 4. Handle the Image Upload Display
-      const imageEl = document.getElementById('modal-damage-image');
-      if (report.damageImage && report.damageImage !== 'no_image.jpg') {
-        // Point it to your Spring Boot uploads folder
-        imageEl.src = `${API_BASE_URL}/uploads/${report.damageImage}`;
-        imageEl.style.display = 'block';
-      } else {
-        imageEl.style.display = 'none'; // Hide if no image
-      }
+      // 🚀 FIXED: Securely load image
+      loadSecureImage('modal-damage-image', report.damageImage);
 
       // 5. Open the modal!
       document.getElementById('review-modal').classList.remove('hidden');
@@ -2169,12 +2181,8 @@ function openViewModal(reportId) {
       // Damage Evidence Section
       document.getElementById('view-modal-desc').innerText = report.damageDescription || "No description provided.";
 
-      let imgSrc = "https://placehold.co/500x300/png?text=No+Image+Provided";
-      if (report.damageImage && report.damageImage !== "no_image.jpg") {
-        imgSrc = report.damageImage.startsWith("http") ? report.damageImage : `${API_BASE_URL}/uploads/${report.damageImage}`;
-      }
-      document.getElementById('view-modal-img').src = imgSrc;
-
+      // 🚀 FIXED: Securely load image (bypasses Ngrok/CORS)
+      loadSecureImage('view-modal-img', report.damageImage);
       // Feedback Section
       const feedbackBox = document.getElementById('view-modal-feedback');
       if (report.adminRemarks) {
@@ -2240,11 +2248,9 @@ function openEditModal(reportId) {
       }
       // ✏️ EDITABLE DESCRIPTION & IMAGE
       document.getElementById('edit-modal-desc').value = report.damageDescription || "";
-      let imgSrc = "https://placehold.co/300x200/png?text=No+Image";
-      if (report.damageImage && report.damageImage !== "no_image.jpg") {
-        imgSrc = report.damageImage.startsWith("http") ? report.damageImage : `${API_BASE_URL}/uploads/${report.damageImage}`;
-      }
-      document.getElementById('edit-modal-current-img').src = imgSrc;
+
+      // 🚀 FIXED: Securely load image (bypasses Ngrok/CORS)
+      loadSecureImage('edit-modal-current-img', report.damageImage);
 
       // Clear old file inputs
       document.getElementById('edit-modal-img').value = "";

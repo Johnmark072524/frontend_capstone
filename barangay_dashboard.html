@@ -350,189 +350,202 @@
 </div>
 
 <div id="bd-view-modal" class="bd-modal-overlay">
-  <div class="bd-modal-box" style="max-width: 650px;">
-    <span class="bd-close-btn" onclick="closeBdModals()">&times;</span>
+  <div class="bd-modal-box" style="max-width: 650px; display: flex; flex-direction: column; padding: 0; overflow: hidden; max-height: 90vh;">
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-      <h2 style="margin: 0; color:#2c3e50;">Report <span id="view-modal-id-header" style="color: #007bff;">#</span></h2>
-      <div id="view-modal-status" class="bd-status-badge">Status</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding: 20px; background: white; z-index: 10; flex-shrink: 0;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <h2 style="margin: 0; color:#2c3e50;">Report <span id="view-modal-id-header" style="color: #007bff;">#</span></h2>
+        <div id="view-modal-status" class="bd-status-badge">Status</div>
+      </div>
+      <span class="bd-close-btn" onclick="closeBdModals()" style="position: static; font-size: 28px; cursor: pointer; line-height: 1; color: #666;">&times;</span>
     </div>
 
-    <div class="bd-report-section">
-      <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Assessment Overview</h3>
-      <div class="bd-detail-grid">
-        <div><strong>Severity Level:</strong> <span id="view-modal-severity" style="font-weight: bold;"></span></div>
-        <div><strong>Date Submitted:</strong> <span id="view-modal-date"></span></div>
-        <div style="grid-column: 1 / -1;"><strong>GPS:</strong> <span id="view-modal-gps" style="color: #28a745; font-family: monospace;"></span></div>
+    <div class="bd-modal-body" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
+
+      <div class="bd-report-section">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Assessment Overview</h3>
+        <div class="bd-detail-grid">
+          <div><strong>Severity Level:</strong> <span id="view-modal-severity" style="font-weight: bold;"></span></div>
+          <div><strong>Date Submitted:</strong> <span id="view-modal-date"></span></div>
+          <div style="grid-column: 1 / -1;"><strong>GPS:</strong> <span id="view-modal-gps" style="color: #28a745; font-family: monospace;"></span></div>
+        </div>
       </div>
-    </div>
 
-    <div class="bd-report-section">
-      <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Road & Damage Details</h3>
-      <div class="bd-detail-grid">
-        <div><strong>City Road Name:</strong> <span id="view-modal-road-name"></span></div>
-        <div><strong>City Road ID:</strong> <span id="view-modal-road-id"></span></div>
-        <div><strong>Road Importance:</strong> <span id="view-modal-importance"></span></div>
-        <div><strong>Terrain Type:</strong> <span id="view-modal-terrain"></span></div>
-        <div><strong>Road Type:</strong> <span id="view-modal-road-type"></span></div>
-        <div><strong>Road Length:</strong> <span id="view-modal-length"></span> m</div>
-        <div><strong>Road Width:</strong> <span id="view-modal-width"></span> m</div>
-        <div><strong>Culverts:</strong> <span id="view-modal-culverts"></span> m</div>
-        <div><strong>Bridges:</strong> <span id="view-modal-bridges"></span></div>
+      <div class="bd-report-section">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Road & Damage Details</h3>
+        <div class="bd-detail-grid">
+          <div><strong>City Road Name:</strong> <span id="view-modal-road-name"></span></div>
+          <div><strong>City Road ID:</strong> <span id="view-modal-road-id"></span></div>
+          <div><strong>Road Importance:</strong> <span id="view-modal-importance"></span></div>
+          <div><strong>Terrain Type:</strong> <span id="view-modal-terrain"></span></div>
+          <div><strong>Road Type:</strong> <span id="view-modal-road-type"></span></div>
+          <div><strong>Road Length:</strong> <span id="view-modal-length"></span> m</div>
+          <div><strong>Road Width:</strong> <span id="view-modal-width"></span> m</div>
+          <div><strong>Culverts:</strong> <span id="view-modal-culverts"></span> m</div>
+          <div><strong>Bridges:</strong> <span id="view-modal-bridges"></span></div>
 
-        <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px;"></div>
-        <div><strong>Damage Type:</strong> <span id="view-modal-damage-type" style="color: #d9534f; font-weight: bold;"></span></div>
-        <div><strong>Damage Length:</strong> <span id="view-modal-damage-length"></span> m</div>
-        <div><strong>Damage Width:</strong> <span id="view-modal-damage-width"></span> m</div>
+          <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px;"></div>
+          <div><strong>Damage Type:</strong> <span id="view-modal-damage-type" style="color: #d9534f; font-weight: bold;"></span></div>
+          <div><strong>Damage Length:</strong> <span id="view-modal-damage-length"></span> m</div>
+          <div><strong>Damage Width:</strong> <span id="view-modal-damage-width"></span> m</div>
+        </div>
       </div>
-    </div>
 
-    <div class="bd-report-section">
-      <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Damage Evidence</h3>
-      <img id="view-modal-img" class="bd-modal-img" src="" alt="Damage Image" style="height: auto; max-height: 300px;">
-      <p style="margin-top: 10px; font-size: 14px; line-height: 1.5;"><strong>Description:</strong> <span id="view-modal-desc"></span></p>
+      <div class="bd-report-section" style="border-bottom: none;">
+        <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Damage Evidence</h3>
+        <img id="view-modal-img" class="bd-modal-img" src="" alt="Damage Image" style="height: auto; max-height: 300px;">
+        <p style="margin-top: 10px; font-size: 14px; line-height: 1.5;"><strong>Description:</strong> <span id="view-modal-desc"></span></p>
 
-      <div id="view-modal-feedback" class="bd-feedback-box" style="display:none; margin-top:15px; background-color: #fff3cd; border-left-color: #ffc107;">
-        <strong style="color: #856404;">Admin Remarks:</strong> <span id="view-modal-remarks" style="color: #533f03;"></span>
+        <div id="view-modal-feedback" class="bd-feedback-box" style="display:none; margin-top:15px; background-color: #fff3cd; border-left-color: #ffc107;">
+          <strong style="color: #856404;">Admin Remarks:</strong> <span id="view-modal-remarks" style="color: #533f03;"></span>
+        </div>
       </div>
+
     </div>
   </div>
 </div>
 
 <div id="bd-edit-modal" class="bd-modal-overlay">
-  <div class="bd-modal-box" style="max-width: 800px;"> <span class="bd-close-btn" onclick="closeBdModals()">&times;</span>
+  <div class="bd-modal-box" style="max-width: 800px; display: flex; flex-direction: column; padding: 0; overflow: hidden; max-height: 90vh;">
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-      <h2 style="margin: 0; color:#dc3545;">Fix Report <span id="edit-modal-id-header" style="color: #007bff;">#</span></h2>
-      <div class="bd-status-badge bd-badge-rejected">Rejected</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding: 20px; background: white; z-index: 10; flex-shrink: 0;">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <h2 style="margin: 0; color:#dc3545;">Fix Report <span id="edit-modal-id-header" style="color: #007bff;">#</span></h2>
+        <div class="bd-status-badge bd-badge-rejected">Rejected</div>
+      </div>
+      <span class="bd-close-btn" onclick="closeBdModals()" style="position: static; font-size: 28px; cursor: pointer; line-height: 1; color: #666;">&times;</span>
     </div>
 
-    <div class="bd-feedback-box" style="margin-bottom: 20px; font-size: 15px; padding: 12px; border-left: 5px solid #dc3545; background-color: #f8d7da; color: #721c24;">
-      <strong>⚠️ Admin Feedback:</strong> <span id="edit-modal-remarks"></span>
-    </div>
+    <div class="bd-modal-body" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
 
-    <form id="bd-edit-form" onsubmit="event.preventDefault();">
-      <input type="hidden" id="edit-report-id">
-
-      <div class="form-section">
-        <h3 class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Road Details</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">City Road Name</label>
-              <input type="text" id="edit-modal-road-name" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Road Importance</label>
-              <input type="text" id="edit-modal-importance" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Road Type</label>
-              <input type="text" id="edit-modal-road-type" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Width (m) <span style="color: red;">*</span></label>
-              <input type="number" id="edit-modal-width" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Number of Bridges</label>
-              <input type="number" id="edit-modal-bridges" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">City Road ID</label>
-              <input type="text" id="edit-modal-road-id" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Terrain Type</label>
-              <input type="text" id="edit-modal-terrain" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Length of Culverts (m)</label>
-              <input type="number" id="edit-modal-culverts" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Length (m) <span style="color: red;">*</span></label>
-              <input type="number" id="edit-modal-length" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Severity Estimate</label>
-              <input type="text" id="edit-modal-severity" disabled style="background-color: #e9ecef; color: #6c757d; font-style: italic; font-weight: 600; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            </div>
-          </div>
-
-        </div>
+      <div class="bd-feedback-box" style="margin-bottom: 20px; font-size: 15px; padding: 12px; border-left: 5px solid #dc3545; background-color: #f8d7da; color: #721c24;">
+        <strong>⚠️ Admin Feedback:</strong> <span id="edit-modal-remarks"></span>
       </div>
 
-      <div class="form-section" style="margin-top: 25px;">
-        <h3 class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Damage Information</h3>
+      <form id="bd-edit-form" onsubmit="event.preventDefault();">
+        <input type="hidden" id="edit-report-id">
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
-          <div style="display: flex; flex-direction: column;">
-            <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Type</label>
-            <select id="edit-modal-damage-type" onchange="toggleEditOtherDamage()" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-              <option value="Pothole">Pothole</option>
-              <option value="Surface Cracking">Surface Cracking</option>
-              <option value="Edge Deformation">Edge Deformation</option>
-              <option value="Washout/Sinkhole">Washout / Sinkhole</option>
-              <option value="None">None (Standard Inventory)</option>
-              <option value="Other">Other (Please specify)</option>
-            </select>
-            <input type="text" id="edit-modal-damage-other" placeholder="Specify other damage..." class="hidden" style="margin-top: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-          </div>
+        <div class="form-section">
+          <h3 class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Road Details</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
 
-          <div style="display: flex; gap: 10px;">
-            <div style="display: flex; flex-direction: column; flex: 1;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Length (m)</label>
-              <input type="number" id="edit-modal-damage-length" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">City Road Name</label>
+                <input type="text" id="edit-modal-road-name" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Road Importance</label>
+                <input type="text" id="edit-modal-importance" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Road Type</label>
+                <input type="text" id="edit-modal-road-type" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Width (m) <span style="color: red;">*</span></label>
+                <input type="number" id="edit-modal-width" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Number of Bridges</label>
+                <input type="number" id="edit-modal-bridges" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
             </div>
-            <div style="display: flex; flex-direction: column; flex: 1;">
-              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Width (m)</label>
-              <input type="number" id="edit-modal-damage-width" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">City Road ID</label>
+                <input type="text" id="edit-modal-road-id" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Terrain Type</label>
+                <input type="text" id="edit-modal-terrain" disabled style="background-color: #f0f0f0; color: #555; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Length of Culverts (m)</label>
+                <input type="number" id="edit-modal-culverts" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Length (m) <span style="color: red;">*</span></label>
+                <input type="number" id="edit-modal-length" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Severity Estimate</label>
+                <input type="text" id="edit-modal-severity" disabled style="background-color: #e9ecef; color: #6c757d; font-style: italic; font-weight: 600; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
             </div>
+
           </div>
         </div>
 
-        <div style="display: flex; flex-direction: column; margin-bottom: 15px;">
-          <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Description</label>
-          <textarea id="edit-modal-desc" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;" rows="3"></textarea>
-        </div>
+        <div class="form-section" style="margin-top: 25px;">
+          <h3 class="section-title" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Damage Information</h3>
 
-        <div style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa; margin-bottom: 15px;">
-          <span style="display: block; font-weight: 600; margin-bottom: 10px; color: #333;">Upload New Photo (Optional)</span>
-          <img id="edit-modal-current-img" src="" alt="Current Damage" style="max-width: 100%; max-height: 150px; display: block; margin: 0 auto 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-          <input type="file" id="edit-modal-img" accept="image/*" style="display: none;">
-          <div>
-            <button type="button" class="bd-btn-action" onclick="document.getElementById('edit-modal-img').click()" style="background-color: #eef2f7; color: #333; border: 1px solid #cdd4dc; width: auto; padding: 8px 15px;">
-              <span class="icon">📤</span> Select New Photo
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+            <div style="display: flex; flex-direction: column;">
+              <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Type</label>
+              <select id="edit-modal-damage-type" onchange="toggleEditOtherDamage()" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <option value="Pothole">Pothole</option>
+                <option value="Surface Cracking">Surface Cracking</option>
+                <option value="Edge Deformation">Edge Deformation</option>
+                <option value="Washout/Sinkhole">Washout / Sinkhole</option>
+                <option value="None">None (Standard Inventory)</option>
+                <option value="Other">Other (Please specify)</option>
+              </select>
+              <input type="text" id="edit-modal-damage-other" placeholder="Specify other damage..." class="hidden" style="margin-top: 8px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <div style="display: flex; flex-direction: column; flex: 1;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Length (m)</label>
+                <input type="number" id="edit-modal-damage-length" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+              <div style="display: flex; flex-direction: column; flex: 1;">
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Width (m)</label>
+                <input type="number" id="edit-modal-damage-width" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; margin-bottom: 15px;">
+            <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Damage Description</label>
+            <textarea id="edit-modal-desc" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-family: inherit;" rows="3"></textarea>
+          </div>
+
+          <div style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa; margin-bottom: 15px;">
+            <span style="display: block; font-weight: 600; margin-bottom: 10px; color: #333;">Upload New Photo (Optional)</span>
+            <img id="edit-modal-current-img" src="" alt="Current Damage" style="max-width: 100%; max-height: 150px; display: block; margin: 0 auto 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <input type="file" id="edit-modal-img" accept="image/*" style="display: none;">
+            <div>
+              <button type="button" class="bd-btn-action" onclick="document.getElementById('edit-modal-img').click()" style="background-color: #eef2f7; color: #333; border: 1px solid #cdd4dc; width: auto; padding: 8px 15px;">
+                <span class="icon">📤</span> Select New Photo
+              </button>
+            </div>
+            <p id="edit-modal-filename" style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;"></p>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
+            <div style="display: flex; align-items: center;">
+              <span style="font-weight: 600; font-size: 13px; margin-right: 10px;">GPS Coordinates:</span>
+              <span id="edit-modal-gps" style="font-size: 13px; color: #28a745; font-weight: bold; font-family: monospace;"></span>
+            </div>
+
+            <button type="button" class="btn-action" id="btn-edit-define-map" style="padding: 6px 12px; font-size: 12px;">
+              <span class="icon">📍</span> Update Location
             </button>
+
+            <input type="hidden" id="edit-latitude">
+            <input type="hidden" id="edit-longitude">
           </div>
-          <p id="edit-modal-filename" style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;"></p>
         </div>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ccc;">
-          <div style="display: flex; align-items: center;">
-            <span style="font-weight: 600; font-size: 13px; margin-right: 10px;">GPS Coordinates:</span>
-            <span id="edit-modal-gps" style="font-size: 13px; color: #28a745; font-weight: bold; font-family: monospace;"></span>
-          </div>
-
-          <button type="button" class="btn-action" id="btn-edit-define-map" style="padding: 6px 12px; font-size: 12px;">
-            <span class="icon">📍</span> Update Location
-          </button>
-
-          <input type="hidden" id="edit-latitude">
-          <input type="hidden" id="edit-longitude">
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+          <button type="button" class="bd-btn-action" style="flex: 1; padding: 12px; font-size: 16px;" onclick="submitEditedReport()">Submit Revisions</button>
+          <button type="button" class="bd-btn-action" style="background-color: #6c757d; width: auto; padding: 12px;" onclick="closeBdModals()">Cancel</button>
         </div>
-      </div>
+      </form>
 
-      <div style="display: flex; gap: 10px; margin-top: 25px;">
-        <button type="button" class="bd-btn-action" style="flex: 1; padding: 12px; font-size: 16px;" onclick="submitEditedReport()">Submit Revisions</button>
-        <button type="button" class="bd-btn-action" style="background-color: #6c757d; width: auto; padding: 12px;" onclick="closeBdModals()">Cancel</button>
-      </div>
-    </form>
+    </div>
   </div>
 </div>
 

@@ -1071,10 +1071,18 @@ window.openCEOManageModal = function(reportId) {
   const mapContainer = document.getElementById('ceo-manage-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
+  // 1. FIRST: Define and grab the modal
   const modal = document.getElementById('manage-modal');
   if (!modal) return;
 
+  // 2. Unhide the modal
   modal.classList.remove('hidden');
+
+  // 3. 🚀 THE FIX: Now that 'modal' exists, it is safe to reset the scrollbar!
+  const modalBody = modal.querySelector('.modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
+
+  // 4. Set temporary loading text
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
   // 🚀 FIXED: Upgraded to apiFetch to successfully bypass Ngrok
@@ -1834,8 +1842,25 @@ loadAdminReports();
 // ADMIN DASHBOARD: OPEN REVIEW MODAL
 // ==========================================
 function reviewReport(reportId) {
-
   currentReviewReportId = reportId;
+
+  // 1. FIRST: Define and grab the modal
+  const modal = document.getElementById('review-modal');
+  if (!modal) return;
+
+  // 2. Unhide the modal
+  modal.classList.remove('hidden');
+
+  // 3. 🚀 THE FIX: Now that 'modal' exists, safely reset the scrollbar!
+  const modalBody = modal.querySelector('.modal-body');
+  if (modalBody) modalBody.scrollTop = 0;
+
+  // ⬇️ FORCE THE MAP CONTAINER CLOSED WHEN OPENING A NEW REPORT ⬇️
+  const mapContainer = document.getElementById('admin-review-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
+
+  // Temporary loading text
+  document.getElementById('modal-header-id').textContent = `#RPT-${String(reportId).padStart(4, '0')} (Loading...)`;
 
   // 🚀 FIXED: Now using apiFetch to bypass ngrok!
   apiFetch(`/api/reports/${reportId}`)
@@ -1847,14 +1872,11 @@ function reviewReport(reportId) {
         severity.toLowerCase() === 'medium' ? 'medium' :
           severity.toLowerCase() === 'low' ? 'low' : 'secondary';
 
-      // ⬇️ NEW: SAVE THE COORDINATES FOR THE MAP BUTTON ⬇️
+      // ⬇️ SAVE THE COORDINATES FOR THE MAP BUTTON ⬇️
       currentReviewLat = report.latitude;
       currentReviewLng = report.longitude;
 
-      // ⬇️ NEW: FORCE THE MAP CONTAINER CLOSED WHEN OPENING A NEW REPORT ⬇️
-      document.getElementById('admin-review-map-container').style.display = 'none';
-
-      // 3. Inject text into the HTML IDs we just created
+      // 3. Inject text into the HTML IDs
       document.getElementById('modal-header-id').textContent = formattedId;
       document.getElementById('modal-report-id').textContent = formattedId;
 
@@ -1884,21 +1906,26 @@ function reviewReport(reportId) {
 
       // 4. Handle the Image Upload Display
       // 🚀 FIXED: Securely load image
+      const placeholderEl = document.getElementById('modal-damage-image');
+      if (placeholderEl) placeholderEl.style.display = 'none'; // Hide until loaded
       loadSecureImage('modal-damage-image', report.damageImage);
 
-      // 5. Open the modal!
-      document.getElementById('review-modal').classList.remove('hidden');
     })
     .catch(error => {
       console.error("Error:", error);
-      alert("Error loading report data.");
+      document.getElementById('modal-header-id').textContent = "Database Error!";
     });
 }
 
-// Function to cleanly close the modal
-function closeReviewModal() {
-  document.getElementById('review-modal').classList.add('hidden');
-}
+// ==========================================
+// ADMIN DASHBOARD: CLOSE REVIEW MODAL
+// ==========================================
+window.closeReviewModal = function() {
+  const modal = document.getElementById('review-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+};
 
 // ==========================================
 // ADMIN DASHBOARD: LOCATE ON MAP BUTTON

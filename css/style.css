@@ -32,10 +32,10 @@
 /* 3. APP LAYOUT */
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh; /* 🚀 FIXED: Locked to exactly the screen height */
   background-color: var(--bg-color);
+  overflow: hidden; /* 🚀 FIXED: Stops the whole page from bleeding down */
 }
-
 /* 4. SIDEBAR STYLING */
 .sidebar {
   width: 260px;
@@ -44,6 +44,8 @@
   flex-direction: column;
   box-shadow: 2px 0 15px rgba(0,0,0,0.03);
   z-index: 10;
+  height: 100vh; /* 🚀 FIXED: Sidebar spans exactly top to bottom */
+  overflow-y: auto; /* Just in case your menu items get too long */
 }
 
 /* Logo Area Styling */
@@ -129,6 +131,8 @@
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  height: 100vh; /* 🚀 FIXED: Locks the content wrapper */
+  overflow: hidden; /* 🚀 FIXED: Prevents content from pushing the header off screen */
 }
 
 /* 8. TOP HEADER STYLING */
@@ -167,6 +171,8 @@
 
 .content-area {
   padding: 0 40px 40px 40px;
+  flex-grow: 1; /* Takes up all space under the top header */
+  overflow-y: auto; /* 🚀 THE MAGIC FIX: Only the reports/tables will scroll! */
 }
 
 /* --- 9. FORM STYLES (Add New Report) --- */
@@ -369,15 +375,22 @@ textarea {
   border-radius: 8px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.05);
   border: 1px solid #eaeaea;
-  overflow: hidden;
+
+  /* 🚀 THE FIX: Tell the box to stop growing and scroll internally instead! */
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+/* 🚀 PIN THE HEADERS TO THE TOP */
+.data-table th,
+.ad-table th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 2px 4px -2px rgba(0,0,0,0.2); /* Adds a nice shadow under the sticky header */
 }
 
+/* Keep your existing table cell padding */
 .data-table th,
 .data-table td {
   padding: 16px 20px;

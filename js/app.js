@@ -1758,20 +1758,16 @@ function handleLogin() {
 // ==========================================
 function loadAdminReports() {
   // 🛡️ SAFETY CHECK: Only run this if we are actually on the Admin Dashboard!
-  // If the CEO metric card exists on this page, abort this admin function immediately.
   if (document.getElementById('ceo-metric-total')) {
     return;
   }
 
-  // Target the Admin table specifically
   const reportsTableBody = document.querySelector('.data-table tbody');
-
   if (!reportsTableBody) return;
 
   // 🚀 FIXED: Using the new apiFetch wrapper to bypass Ngrok
   apiFetch(`/api/reports`)
     .then(reports => {
-      // Clear out any hardcoded HTML rows or loading text
       reportsTableBody.innerHTML = '';
 
       if (reports.length === 0) {
@@ -1779,10 +1775,35 @@ function loadAdminReports() {
         return;
       }
 
-      // Loop through every report in the database
+      // ==========================================
+      // 🚀 THE FIX: SMART PRIORITY SORTING
+      // ==========================================
+      reports.sort((a, b) => {
+        // 1. Assign Priority Weights based on Status
+        const getPriority = (status) => {
+          const s = String(status || '').toLowerCase();
+          if (s.includes('pending')) return 1;    // Highest Priority (Top)
+          if (s.includes('validate') || s.includes('dispatch')) return 2; // Middle Priority
+          return 3; // Lowest Priority (Completed, Rejected, etc. go to bottom)
+        };
+
+        const priorityA = getPriority(a.status);
+        const priorityB = getPriority(b.status);
+
+        // 2. Sort by Priority Group First
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB; // 1 comes before 2, etc.
+        }
+
+        // 3. If they have the same priority (e.g., both are Pending), sort newest first!
+        return new Date(b.dateSubmitted) - new Date(a.dateSubmitted);
+      });
+
+      // ==========================================
+      // BUILD TABLE ROWS
+      // ==========================================
       reports.forEach(report => {
         const formattedId = `#RPT-${String(report.id || 0).padStart(4, '0')}`;
-
         const roadId = report.cityRoadId || 'N/A';
         const roadName = report.cityRoadName || 'Unknown Road';
         const severity = report.severity || 'Unassessed';
@@ -1804,9 +1825,16 @@ function loadAdminReports() {
 
         let buttonHtml = (status === 'Pending' || status === 'Pending Validation')
           ? `<button class="btn-small validate-btn" onclick="reviewReport(${report.id})">Review</button>`
-          : `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Done</button>`;
+          : `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed; opacity: 0.7;">Done</button>`;
 
         const row = document.createElement('tr');
+
+        // Optional UI Polish: Make the 'Done' rows slightly transparent so they fade into the background
+        if (status !== 'Pending' && status !== 'Pending Validation') {
+          row.style.opacity = '0.6';
+          row.style.backgroundColor = '#fafafa';
+        }
+
         row.innerHTML = `
                     <td>${formattedId}</td>
                     <td>${barangayDisplay}</td>
@@ -2612,7 +2640,8 @@ function loadAdminDashboardData() {
 
         queueBody.innerHTML = ''; // Clear out the 'fetching' text
 
-        pendingReports.sort((a, b) => new Date(a.dateSubmitted) - new Date(b.dateSubmitted));
+        // 🚀 FIXED: 'b' minus 'a' forces the newest dates to the very top!
+        pendingReports.sort((a, b) => new Date(b.dateSubmitted) - new Date(a.dateSubmitted));
         const top5Pending = pendingReports.slice(0, 5);
 
         if (top5Pending.length === 0) {

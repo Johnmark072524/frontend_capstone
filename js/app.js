@@ -1,3 +1,35 @@
+// ==========================================
+// 🚀 GLOBAL SECURITY BOUNCER (RUNS IMMEDIATELY)
+// ==========================================
+(function enforceSecurity() {
+  const currentPath = window.location.pathname.toLowerCase();
+
+  // Check if the user has active session data
+  const storedRole = sessionStorage.getItem("userRole");
+  const storedUserId = sessionStorage.getItem("userId");
+
+  const isLoggedIn = storedRole && storedUserId;
+
+  // RULE 1: If NOT logged in, but trying to access ANY dashboard -> Kick to Login
+  if (!isLoggedIn && currentPath.includes("dashboard")) {
+    window.location.replace("login.html");
+    return;
+  }
+
+  // RULE 2: If LOGGED IN, but trying to go back to the Login page -> Kick to Dashboard
+  if (isLoggedIn && currentPath.includes("login.html")) {
+    const userRole = String(storedRole).toLowerCase();
+
+    if (userRole.includes("admin") || userRole.includes("cpdo")) {
+      window.location.replace("admin_dashboard.html");
+    } else if (userRole.includes("ceo") || userRole.includes("engineer")) {
+      window.location.replace("ceo_dashboard.html");
+    } else {
+      window.location.replace("barangay_dashboard.html");
+    }
+  }
+})();
+
 // A reusable function for all your API calls
 async function apiFetch(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -631,11 +663,14 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
-
   const logoutBtn = document.querySelector('.logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-      window.location.href = 'login.html';
+      // 1. Wipe all sensitive data from the browser memory
+      sessionStorage.clear();
+
+      // 2. Shred the history stack and return to login
+      window.location.replace('login.html');
     });
   }
 
@@ -1670,22 +1705,18 @@ function handleLogin() {
 
       showToast("Login Successful!", "success");
 
-      // 5. 🚀 THE FIX: DYNAMIC ROUTING BASED ON ROLE
+      // 5. 🚀 THE FIX: SECURE DYNAMIC ROUTING (Shreds History)
       setTimeout(() => {
-        // Convert role to lowercase so we don't worry about exact capitalization
         const userRole = String(data.role).toLowerCase();
 
         if (userRole.includes("admin") || userRole.includes("cpdo")) {
-          // Route CPDO Admin
-          window.location.href = "admin_dashboard.html";
+          window.location.replace("admin_dashboard.html");
         }
         else if (userRole.includes("ceo") || userRole.includes("engineer")) {
-          // Route City Engineering Office
-          window.location.href = "ceo_dashboard.html";
+          window.location.replace("ceo_dashboard.html");
         }
         else {
-          // Default to Barangay Dashboard
-          window.location.href = "barangay_dashboard.html";
+          window.location.replace("barangay_dashboard.html");
         }
       }, 1000);
     })

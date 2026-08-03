@@ -359,25 +359,84 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 1. SIDEBAR NAVIGATION LOGIC
-  // ==========================================
-  const navLinks = document.querySelectorAll('.nav-menu li[data-target]');
-  const contentSections = document.querySelectorAll('.content-section');
+// 🚀 UNIFIED DASHBOARD INITIALIZATION & SPA ROUTING
+// ==========================================
+  document.addEventListener("DOMContentLoaded", () => {
 
-  navLinks.forEach(link => {
-    link.addEventListener('click', function(event) {
-      event.preventDefault();
+    // 🕵️ THE PAGE DETECTOR: Which dashboard are we currently on?
+    const currentUrl = window.location.pathname.toLowerCase();
+    const isCEODashboard = currentUrl.includes("ceo");
 
+    // ------------------------------------------
+    // 1. SAFE AUTO-START (Only runs on the CEO page)
+    // ------------------------------------------
+    setTimeout(() => {
+      if (isCEODashboard && typeof window.loadCEODashboardData === 'function') {
+        window.loadCEODashboardData();
+      }
+    }, 100);
+
+    // ------------------------------------------
+    // 2. SPA HISTORY ROUTING (Fixes the Back Button globally!)
+    // ------------------------------------------
+    const navLinks = document.querySelectorAll('.nav-menu li[data-target]');
+    const contentSections = document.querySelectorAll('.content-section');
+
+    // 🛠 Helper Function: Handles the actual hiding/showing of screens
+    function switchView(targetId) {
+      if (!targetId) return;
+
+      // Visual class swapping (Works on ALL dashboards)
       navLinks.forEach(nav => nav.classList.remove('active'));
-      this.classList.add('active');
-
       contentSections.forEach(section => section.classList.add('hidden'));
 
-      const targetId = this.getAttribute('data-target');
-      if (targetId) {
-        document.getElementById(targetId).classList.remove('hidden');
+      const activeLink = document.querySelector(`.nav-menu li[data-target="${targetId}"]`);
+      if (activeLink) activeLink.classList.add('active');
+
+      const targetSection = document.getElementById(targetId);
+      if (targetSection) targetSection.classList.remove('hidden');
+
+      // 🚀 DYNAMIC DATA LOADING: Only fetch data if they are on the CEO dashboard
+      if (isCEODashboard && (targetId === 'view-dashboard' || targetId === 'view-repair')) {
+        if (typeof window.loadCEODashboardData === 'function') {
+          window.loadCEODashboardData();
+        }
+      }
+    }
+
+    // 👆 Handle Sidebar Clicks
+    navLinks.forEach(link => {
+      link.addEventListener('click', function(event) {
+        event.preventDefault();
+        const targetId = this.getAttribute('data-target');
+
+        // Push history state so the Back button wakes up
+        history.pushState({ target: targetId }, "", "#" + targetId);
+
+        switchView(targetId);
+      });
+    });
+
+    // ⏪ THE BACK BUTTON WATCHER
+    window.addEventListener('popstate', function(event) {
+      if (event.state && event.state.target) {
+        switchView(event.state.target);
+      } else {
+        const defaultHash = window.location.hash.replace('#', '') || 'view-dashboard';
+        switchView(defaultHash);
       }
     });
+
+    // 🟢 INITIAL LOAD RECORDING
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      switchView(hash);
+    } else {
+      const activeTab = document.querySelector('.nav-menu li.active');
+      const startTarget = activeTab ? activeTab.getAttribute('data-target') : 'view-dashboard';
+      history.replaceState({ target: startTarget }, "", "#" + startTarget);
+    }
+
   });
 
 // ==========================================
@@ -847,32 +906,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
-// ==========================================
-// 🚀 CEO DASHBOARD: SAFE AUTO-START
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  // 1. Fire EXACTLY ONCE on initial login
-  if (document.getElementById('view-dashboard')) {
-    setTimeout(() => {
-      if (typeof window.loadCEODashboardData === 'function') {
-        window.loadCEODashboardData();
-      }
-    }, 100);
-  }
-
-  // 2. Fire EXACTLY ONCE when clicking the sidebar tabs
-  const sidebarLinks = document.querySelectorAll('.nav-menu li[data-target]');
-  sidebarLinks.forEach(link => {
-    link.addEventListener('click', () => {
-      const target = link.getAttribute('data-target');
-      if (target === 'view-dashboard' || target === 'view-repair') {
-        if (typeof window.loadCEODashboardData === 'function') {
-          window.loadCEODashboardData();
-        }
-      }
-    });
-  });
-});
 
 // ==========================================
 // CEO DATA LOADER (THE MAIN BRAIN)

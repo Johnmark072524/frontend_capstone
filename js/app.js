@@ -779,17 +779,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // 🧠 THE STRICT PRIORITY ALGORITHM 🧠
 // ==========================================
   function generatePriorityList() {
-    fetch(`${API_BASE_URL}/api/reports`)
-      .then(response => response.json())
+
+    // 🚀 THE FIX: Swapped standard fetch for apiFetch to bypass Ngrok CORS
+    apiFetch(`/api/reports`)
       .then(reports => {
 
         // 🛡️ THE GATEKEEPER: Only Validated Reports reach the CEO
-        const validatedReports = reports.filter(r => r.status === 'Validated');
+        const validatedReports = reports.filter(r => String(r.status || '').toLowerCase() === 'validated');
 
         // 🧮 CALCULATE SCORES
         validatedReports.forEach(report => {
-          const severity = (report.severity || 'Unassessed').toLowerCase();
-          const importance = (report.roadImportance || '').toLowerCase();
+          const severity = String(report.severity || 'Unassessed').toLowerCase();
+          const importance = String(report.roadImportance || '').toLowerCase();
 
           // Default fallback for AI that hasn't graded the photo yet
           report.tierScore = 0;

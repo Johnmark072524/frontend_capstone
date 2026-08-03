@@ -2277,7 +2277,14 @@ function openViewModal(reportId) {
       }
 
       // Finally, show the modal!
-      document.getElementById('bd-view-modal').classList.add('active');
+      const viewModal = document.getElementById('bd-view-modal');
+      viewModal.classList.add('active');
+
+      // 🚀 THE FIX: Scroll the View Modal back to the top
+      const viewModalBody = viewModal.querySelector('.bd-modal-body');
+      if (viewModalBody) {
+        viewModalBody.scrollTop = 0;
+      }
     })
     .catch(err => {
       console.error(err);
@@ -2340,7 +2347,15 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-img').value = "";
       document.getElementById('edit-modal-filename').innerText = "";
 
-      document.getElementById('bd-edit-modal').classList.add('active');
+      // Finally, show the edit modal!
+      const editModal = document.getElementById('bd-edit-modal');
+      editModal.classList.add('active');
+
+      // 🚀 THE FIX: Scroll the Edit Modal back to the top
+      const editModalBody = editModal.querySelector('.bd-modal-body');
+      if (editModalBody) {
+        editModalBody.scrollTop = 0;
+      }
     })
     .catch(err => showToast("Error loading report.", "error"));
 }

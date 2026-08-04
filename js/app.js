@@ -2930,7 +2930,6 @@ window.submitCEOCompletion = function() {
       btnCompleteRepair.disabled = false;
     });
 };
-
 // ==========================================
 // ADMIN DASHBOARD: LOAD REPAIR TRACKING
 // ==========================================
@@ -2942,11 +2941,13 @@ function loadTrackingData() {
     .then(reports => {
       trackingTableBody.innerHTML = '';
 
+      // 🚀 FIX 1: Allow "closed" projects into the table
       const trackedReports = reports.filter(r => {
         const status = String(r.status || '').toLowerCase().trim();
         return status === 'dispatched to ceo' ||
           status === 'in progress' ||
-          status === 'completed';
+          status === 'completed' ||
+          status === 'closed'; // <-- ADDED
       });
 
       if (trackedReports.length === 0) {
@@ -2960,11 +2961,13 @@ function loadTrackingData() {
 
       // Step A: Assign mathematical scores so we can sort them easily
       trackedReports.forEach(report => {
-        // Status Score: Completed (3) > In Progress (2) > Dispatched (1)
+        // 🚀 FIX 2: Give 'Closed' a score of 0 so it drops to the absolute bottom
+        // Status Score: Completed (3) > In Progress (2) > Dispatched (1) > Closed (0)
         const status = String(report.status || '').toLowerCase().trim();
         if (status === 'completed') report.statusScore = 3;
         else if (status === 'in progress') report.statusScore = 2;
-        else report.statusScore = 1;
+        else if (status === 'dispatched to ceo') report.statusScore = 1;
+        else report.statusScore = 0; // <-- ADDED
 
         // Priority Score (Matches your official logic)
         const severity = String(report.severity || 'low').toLowerCase();
@@ -2981,7 +2984,7 @@ function loadTrackingData() {
 
       // Step B: Run the 3-Rule Sort (BULLETPROOF FIX)
       trackedReports.sort((a, b) => {
-        // Rule 1: Actionable Status First (Completed to the top)
+        // Rule 1: Actionable Status First (Completed to the top, Closed to bottom)
         if (b.statusScore !== a.statusScore) {
           return b.statusScore - a.statusScore;
         }
@@ -2992,9 +2995,7 @@ function loadTrackingData() {
         }
 
         // Rule 3: Tie-Breaker (Newest First)
-        // 🚀 THE FIX: Using ID to prevent 'NaN' date errors!
-        // The Admin wants the NEWEST submitted items at the top of their group,
-        // so we sort backwards (idB - idA)
+        // Using ID to prevent 'NaN' date errors!
         const idA = parseInt(a.id) || 0;
         const idB = parseInt(b.id) || 0;
         return idB - idA;
@@ -3021,11 +3022,15 @@ function loadTrackingData() {
         }
 
         let statusHtml = '';
+        // 🚀 FIX 3: Add UI styling for 'Closed' projects
         if (currentStatus === 'completed') {
           statusHtml = `<span class="status-badge validated" style="background-color: #d4edda; color: #155724;">Completed (Pending QA)</span>`;
           borderStyle = '4px solid #28a745';
         } else if (currentStatus === 'in progress') {
           statusHtml = `<span class="status-badge" style="background-color: #cce5ff; color: #004085;">In Progress</span>`;
+        } else if (currentStatus === 'closed') {
+          statusHtml = `<span class="status-badge" style="background-color: #e2e3e5; color: #6c757d;">✅ Officially Closed</span>`;
+          borderStyle = '4px solid #6c757d'; // Gray border
         } else {
           statusHtml = `<span class="status-badge pending" style="background-color: #e2e3e5; color: #383d41;">Dispatched to CEO</span>`;
         }
@@ -3033,6 +3038,12 @@ function loadTrackingData() {
         const row = document.createElement('tr');
         row.style.borderLeft = borderStyle;
         if (currentStatus === 'completed') row.style.backgroundColor = '#fafafa';
+
+        // 🎨 BONUS: Dim the entire row if it is closed so it looks archived!
+        if (currentStatus === 'closed') {
+          row.style.opacity = '0.6';
+          row.style.backgroundColor = '#f8f9fa';
+        }
 
         row.innerHTML = `
           <td><strong>${formatId}</strong></td>

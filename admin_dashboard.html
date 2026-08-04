@@ -368,33 +368,8 @@
               <th>Action</th>
             </tr>
             </thead>
-            <tbody>
-            <tr style="background-color: #fffafb; border-left: 4px solid #dc3545;">
-              <td>#PRJ-0842</td>
-              <td>Minuyan Proper</td>
-              <td>Minuyan Proper Rd.</td>
-              <td><span class="badge high">CRITICAL</span></td>
-              <td><span class="status-badge pending">Pending Dispatch</span></td>
-              <td><button class="btn-small track-btn">Track</button></td>
-            </tr>
-
-            <tr style="border-left: 4px solid #ffc107;">
-              <td>#PRJ-0843</td>
-              <td>San Mateo</td>
-              <td>Access Road B</td>
-              <td><span class="badge medium">MEDIUM</span></td>
-              <td><span class="status-badge pending">Pending Dispatch</span></td>
-              <td><button class="btn-small track-btn">Track</button></td>
-            </tr>
-
-            <tr style="border-left: 4px solid var(--accent-blue);">
-              <td>#PRJ-0839</td>
-              <td>Poblacion</td>
-              <td>Plaza Ring Road</td>
-              <td><span class="badge low">LOW</span></td>
-              <td><span class="status-badge" style="background-color: #cce5ff; color: #004085;">In Progress</span></td>
-              <td><button class="btn-small track-btn">Track</button></td>
-            </tr>
+            <!-- 🚀 CLEANED: Completely empty! JavaScript will inject the real rows here. -->
+            <tbody id="tracking-table-body">
             </tbody>
           </table>
         </div>
@@ -549,7 +524,7 @@
       <div class="modal-content">
 
         <div class="modal-header">
-          <h2>Track Project <span class="highlight">#PRJ-0839</span></h2>
+          <h2>Track Project <span id="track-modal-id" class="highlight">#PRJ-0000</span></h2>
           <div style="display: flex; gap: 15px; align-items: center;">
             <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;"><span class="icon">🖨️</span> Print</button>
             <button class="close-tracking-btn close-modal-btn">✕</button>
@@ -567,33 +542,32 @@
             </div>
 
             <div class="report-detail-grid">
-              <div><strong>Barangay:</strong> Poblacion</div>
-              <div><strong>City Road Name:</strong> Plaza Ring Road</div>
-              <div><strong>City Road ID:</strong> CR-1088</div>
-              <div><strong>Road Importance:</strong> Secondary</div>
-              <div><strong>Terrain Type:</strong> Flat</div>
-              <div><strong>Road Type:</strong> Asphalt</div>
-              <div><strong>Length (m):</strong> 800</div>
-              <div><strong>Width (m):</strong> 5.0</div>
-              <div><strong>Priority Level:</strong> <span class="badge low">LOW</span></div>
-              <div><strong>GPS Coordinates:</strong> 14.8122° N, 121.0411° E</div>
+              <div><strong>Barangay:</strong> <span id="track-modal-brgy">Loading...</span></div>
+              <div><strong>City Road Name:</strong> <span id="track-modal-road">Loading...</span></div>
+              <div><strong>City Road ID:</strong> <span id="track-modal-road-id">Loading...</span></div>
+              <div><strong>Road Importance:</strong> <span id="track-modal-importance">Loading...</span></div>
+              <div><strong>Terrain Type:</strong> <span id="track-modal-terrain">Loading...</span></div>
+              <div><strong>Road Type:</strong> <span id="track-modal-road-type">Loading...</span></div>
+              <div><strong>Length (m):</strong> <span id="track-modal-length">0</span></div>
+              <div><strong>Width (m):</strong> <span id="track-modal-width">0</span></div>
+              <div><strong>Priority Level:</strong> <span id="track-modal-severity"><span class="badge low">LOW</span></span></div>
+              <div><strong>GPS Coordinates:</strong> <span id="track-modal-gps">Loading...</span></div>
 
               <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 5px;">
                 <strong>Originally Submitted By:</strong>
-                <span id="tracking-modal-submitter-name" style="color: var(--primary-blue); font-weight: bold;">Kap. Juan Santos (Barangay Poblacion)</span>
+                <span id="track-modal-submitter" style="color: var(--primary-blue); font-weight: bold;">Loading...</span>
               </div>
             </div>
           </div>
 
           <div class="report-section">
             <h3 class="section-title" style="color: var(--accent-blue); text-transform: uppercase;">Damage Evidence</h3>
-            <div class="report-image-placeholder">
-              <span class="icon">📷</span>
-              <p>Original Damage Photo Provided by Barangay</p>
-            </div>
+
+            <img id="track-modal-image" src="" alt="Damage Photo" style="width: 100%; height: 250px; object-fit: cover; border-radius: 8px; background-color: #f0f0f0; display: none;">
+
             <div class="report-description" style="margin-top: 15px;">
               <strong>Damage Description:</strong>
-              <p>Surface cracking and minor potholes near the plaza entrance.</p>
+              <p id="track-modal-desc">Loading description...</p>
             </div>
           </div>
 
@@ -601,21 +575,43 @@
             <h3 class="section-title" style="color: #28a745; margin-bottom: 10px; text-transform: uppercase;">Project Resolution Evidence</h3>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <p style="font-size: 13px; margin: 0;"><strong>Current CEO Status:</strong> <span class="status-badge" style="background-color: #cce5ff; color: #004085;">In Progress</span></p>
-              <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Engineering crew is currently on-site.</p>
+              <p style="font-size: 13px; margin: 0;"><strong>Current CEO Status:</strong> <span id="track-modal-status" class="status-badge" style="background-color: #e2e3e5; color: #383d41;">Loading...</span></p>
+              <p id="track-modal-status-text" style="font-size: 13px; color: var(--text-muted); margin: 0;">Awaiting update from engineering crew.</p>
             </div>
 
-            <div class="report-image-placeholder" style="height: 150px; background-color: white; border: 2px dashed #28a745; color: #28a745;">
+            <div id="track-modal-proof-placeholder" class="report-image-placeholder" style="height: 150px; background-color: white; border: 2px dashed #28a745; color: #28a745;">
               <span class="icon">🚧</span>
               <p>Awaiting Completion Photo from Engineering</p>
             </div>
+
+            <div id="track-modal-resolution-data" style="display: none; margin-top: 15px;">
+              <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
+              <div style="margin-top: 5px; margin-bottom: 15px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">
+                <img id="track-modal-proof-image" src="" alt="Proof of Repair" style="max-height: 250px; border-radius: 4px; max-width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: none;">
+              </div>
+
+              <strong style="color: #166534; font-size: 13px;">CEO Remarks:</strong>
+              <p id="track-modal-proof-remarks" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #dcfce3; color: #374151; font-size: 13px; margin-top: 5px;">No remarks provided.</p>
+            </div>
           </div>
 
-          <div class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
-            <button class="btn-secondary close-tracking-btn">Close File</button>
-            <button class="btn-submit" disabled style="background-color: #ccc; cursor: not-allowed;">
+          <div id="tracking-primary-actions" class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
+            <button id="btn-rework-project" class="btn-submit hidden" style="background-color: #dc3545; border-color: #dc3545; transition: 0.3s;">
+              <span class="icon">❌</span> Require Rework
+            </button>
+            <button id="btn-approve-project" class="btn-submit" disabled style="background-color: #ccc; cursor: not-allowed; transition: 0.3s;">
               <span class="icon">✅</span> Approve & Close Project
             </button>
+          </div>
+
+          <div id="tracking-rework-form" class="hidden" style="margin-top: 20px; background-color: #fffafb; padding: 15px; border: 1px solid #f5c6cb; border-radius: 8px;">
+            <h4 style="color: #dc3545; margin-bottom: 10px;">Reason for Rework</h4>
+            <textarea id="rework-remarks-input" placeholder="Explain what the engineering crew missed or needs to fix..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; min-height: 80px; font-family: inherit; resize: vertical;"></textarea>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+              <button id="btn-cancel-rework" class="btn-secondary">Cancel</button>
+              <button id="btn-confirm-rework" class="btn-submit" style="background-color: #dc3545; border: none;">Submit to CEO</button>
+            </div>
           </div>
 
         </div>
@@ -808,9 +804,9 @@
 
       </div>
     </div>
-
-
   </div>
+
+
 
 </div>
 <div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 999999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">

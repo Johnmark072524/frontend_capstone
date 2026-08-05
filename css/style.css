@@ -1267,3 +1267,68 @@ body.login-page {
   visibility: visible !important;
   opacity: 1 !important;
 }
+
+/* ==========================================
+   📸 UNIVERSAL IMAGE THUMBNAILS (Upgraded Size)
+   ========================================== */
+.bd-item-image, .modal-image-container {
+  width: 160px;  /* 🚀 Increased from 100px */
+  height: 120px; /* 🚀 Increased from 100px (Creates a landscape photo shape) */
+  overflow: hidden;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Leave everything else below this exactly the same! */
+.bd-item-image img, .modal-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: zoom-in;
+  transition: transform 0.2s ease-in-out;
+}
+
+.bd-item-image img:hover, .modal-image-container img:hover {
+  transform: scale(1.1);
+}
+
+/* ==========================================
+   🔍 FULLSCREEN LIGHTBOX (BIG PICTURE)
+   ========================================== */
+#fullscreen-image-modal {
+  display: none;
+  position: fixed;
+  z-index: 99999; /* Always on top of everything */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9); /* Dark backdrop */
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+#fullscreen-modal-img {
+  max-width: 90vw; /* Won't overflow screen width */
+  max-height: 90vh; /* Won't overflow screen height */
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  object-fit: contain; /* Shows entire uncropped image */
+}
+
+.close-fullscreen-btn {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  color: white;
+  font-size: 50px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-fullscreen-btn:hover {
+  color: #dc3545; /* Turns red on hover */
+}

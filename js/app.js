@@ -87,6 +87,41 @@ window.loadSecureImage = function(imgElementId, imageName) {
 };
 
 // ==========================================
+// 🔍 GLOBAL FULLSCREEN IMAGE LIGHTBOX
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  // Automatically inject the Lightbox HTML into every dashboard
+  if (!document.getElementById("fullscreen-image-modal")) {
+    const modalHtml = `
+        <div id="fullscreen-image-modal">
+            <span class="close-fullscreen-btn" onclick="closeFullscreenImage()">&times;</span>
+            <img id="fullscreen-modal-img" src="" alt="Full Size">
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  }
+});
+
+// Function to open the big picture
+function openFullscreenImage(imgElement) {
+  const imgSrc = imgElement.src;
+
+  // Don't open if it's still the loading placeholder text
+  if (imgSrc.includes('placehold.co') || !imgSrc) return;
+
+  const modal = document.getElementById("fullscreen-image-modal");
+  const modalImg = document.getElementById("fullscreen-modal-img");
+
+  modalImg.src = imgSrc;
+  modal.style.display = "flex"; // Shows the modal
+}
+
+// Function to close the big picture
+function closeFullscreenImage() {
+  const modal = document.getElementById("fullscreen-image-modal");
+  modal.style.display = "none";
+}
+
+// ==========================================
 // GLOBAL MAP VARIABLES (Must remain empty at first!)
 // ==========================================
 let map;
@@ -2219,8 +2254,10 @@ function loadBarangayReports(barangayId) {
         let rowHtml = `
                 <div class="bd-list-item">
                   <div class="bd-item-image">
-                    <img id="brgy-preview-img-${report.id}" src="https://placehold.co/300x200/png?text=Loading..." alt="Report Image">
-                  </div>
+    <img id="brgy-preview-img-${report.id}"
+         src="https://placehold.co/300x200/png?text=Loading..."
+         alt="Report Image"
+         onclick="openFullscreenImage(this)"> </div>
                   <div class="bd-item-details">
                     <div>
                       <div class="bd-item-title">${report.cityRoadName || 'Unknown Road'} Inspection</div>

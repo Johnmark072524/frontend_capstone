@@ -1788,7 +1788,7 @@ function handleLogin() {
     });
 }
 // ==========================================
-// ADMIN DASHBOARD: LOAD ALL REPORTS
+// ADMIN DASHBOARD: LOAD ALL REPORTS (INBOX)
 // ==========================================
 function loadAdminReports() {
   // 🛡️ SAFETY CHECK: Only run this if we are actually on the Admin Dashboard!
@@ -1799,26 +1799,40 @@ function loadAdminReports() {
   const reportsTableBody = document.querySelector('.data-table tbody');
   if (!reportsTableBody) return;
 
-  // 🚀 FIXED: Using the new apiFetch wrapper to bypass Ngrok
   apiFetch(`/api/reports`)
     .then(reports => {
       reportsTableBody.innerHTML = '';
 
-      if (reports.length === 0) {
-        reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No road reports have been submitted yet.</td></tr>';
+      // ==========================================
+      // 🚀 SEPARATION OF CONCERNS: Filter out Tracking items!
+      // ==========================================
+      // We DO NOT want to see Dispatched, In Progress, Completed, or Closed here.
+      // Those belong in the Tracking Table!
+      const inboxReports = reports.filter(r => {
+        const s = String(r.status || '').toLowerCase();
+        return !s.includes('dispatch') &&
+          !s.includes('progress') &&
+          !s.includes('complet') &&
+          !s.includes('clos');
+      });
+
+      if (inboxReports.length === 0) {
+        reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No new reports in the inbox.</td></tr>';
         return;
       }
 
       // ==========================================
-      // 🚀 SMART PRIORITY SORTING
+      // 🚀 SMART PRIORITY SORTING (INDUSTRY STANDARD)
       // ==========================================
-      reports.sort((a, b) => {
-        // 1. Assign Priority Weights based on Status
+      inboxReports.sort((a, b) => {
+        // 1. Assign Priority Weights based on Status Lifecycle
         const getPriority = (status) => {
           const s = String(status || '').toLowerCase();
-          if (s.includes('pending')) return 1;    // Highest Priority (Top)
-          if (s.includes('validate') || s.includes('dispatch')) return 2; // Middle Priority
-          return 3; // Lowest Priority (Completed, Rejected, etc. go to bottom)
+
+          if (s.includes('resubmit')) return 1; // 🔥 TIER 1: Resubmissions (Absolute Top)
+          if (s.includes('pending')) return 2;  // 🟡 TIER 2: Regular new reports
+          if (s.includes('validate')) return 3; // 🟢 TIER 3: Validated (Waiting for dispatch)
+          return 4;                             // 🔴 TIER 4: Rejected (Drops to the bottom)
         };
 
         const priorityA = getPriority(a.status);
@@ -1826,10 +1840,10 @@ function loadAdminReports() {
 
         // 2. Sort by Priority Group First
         if (priorityA !== priorityB) {
-          return priorityA - priorityB; // 1 comes before 2, etc.
+          return priorityA - priorityB;
         }
 
-        // 3. 🧠 BULLETPROOF DATE TIE-BREAKER (Checks both date_submitted & dateSubmitted)
+        // 3. 🧠 BULLETPROOF DATE TIE-BREAKER
         const dateA = new Date(a.date_submitted || a.dateSubmitted || 0);
         const dateB = new Date(b.date_submitted || b.dateSubmitted || 0);
         return dateB - dateA; // Newest first
@@ -1838,13 +1852,11 @@ function loadAdminReports() {
       // ==========================================
       // BUILD TABLE ROWS
       // ==========================================
-      reports.forEach(report => {
+      inboxReports.forEach(report => {
         const formattedId = `#RPT-${String(report.id || 0).padStart(4, '0')}`;
         const roadId = report.cityRoadId || 'N/A';
         const roadName = report.cityRoadName || 'Unknown Road';
         const severity = report.severity || 'Unassessed';
-
-        // 🚀 Safely check both database field variants
         const dateSubmitted = report.date_submitted || report.dateSubmitted || 'N/A';
 
         const barangayDisplay = (report.barangay && report.barangay.barangayName)
@@ -1856,21 +1868,30 @@ function loadAdminReports() {
             severity.toLowerCase() === 'low' ? 'low' : 'secondary';
 
         const status = report.status || 'Pending';
+        const sLower = status.toLowerCase();
 
-        let statusHtml = (status === 'Pending' || status === 'Pending Validation')
-          ? `<span class="status-badge pending">Pending Validation</span>`
-          : `<span class="status-badge validated">${status}</span>`;
+        // 🚀 DYNAMIC BADGES BASED ON AUDIT TRAIL LOGIC
+        let statusHtml = '';
+        let buttonHtml = `<button class="btn-small validate-btn" onclick="reviewReport(${report.id})">Review</button>`;
 
-        let buttonHtml = (status === 'Pending' || status === 'Pending Validation')
-          ? `<button class="btn-small validate-btn" onclick="reviewReport(${report.id})">Review</button>`
-          : `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed; opacity: 0.7;">Done</button>`;
+        if (sLower.includes('resubmit')) {
+          statusHtml = `<span class="status-badge" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;">⚠️ Resubmitted</span>`;
+        } else if (sLower.includes('pending')) {
+          statusHtml = `<span class="status-badge pending">Pending Validation</span>`;
+        } else if (sLower.includes('reject')) {
+          statusHtml = `<span class="status-badge" style="background-color: #f8d7da; color: #721c24;">❌ Rejected</span>`;
+          buttonHtml = `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Archived</button>`;
+        } else {
+          statusHtml = `<span class="status-badge validated">${status}</span>`;
+          buttonHtml = `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Done</button>`;
+        }
 
         const row = document.createElement('tr');
 
-        // Optional UI Polish: Make the 'Done' rows slightly transparent so they fade into the background
-        if (status !== 'Pending' && status !== 'Pending Validation') {
-          row.style.opacity = '0.6';
-          row.style.backgroundColor = '#fafafa';
+        // 🎨 UI POLISH: Dim rejected and validated items so they don't distract the Admin
+        if (sLower.includes('reject') || sLower.includes('validate')) {
+          row.style.opacity = '0.5';
+          row.style.backgroundColor = '#f8f9fa';
         }
 
         row.innerHTML = `
@@ -1885,13 +1906,19 @@ function loadAdminReports() {
                 `;
         reportsTableBody.appendChild(row);
       });
+
+      // 🚀 FORCE TABLE SCROLL TO TOP ON LOAD
+      const tableContainer = document.querySelector('.table-container') || document.querySelector('.table-responsive');
+      if (tableContainer) tableContainer.scrollTop = 0;
+
     })
     .catch(error => {
       console.error("Error loading admin reports:", error);
-      reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red; padding: 20px;">Error loading reports from database.</td></tr>';
+      if(reportsTableBody) {
+        reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red; padding: 20px;">Error loading reports from database.</td></tr>';
+      }
     });
 }
-
 // ==========================================
 // ADMIN MODAL MAP VARIABLES
 // ==========================================
@@ -2133,29 +2160,62 @@ function loadBarangayReports(barangayId) {
         return;
       }
 
+      // ==========================================
+      // 🚀 BARANGAY SORTING: "ACTION REQUIRED" FIRST
+      // ==========================================
+      reports.sort((a, b) => {
+        const getPriority = (status) => {
+          const s = String(status || '').toLowerCase();
+
+          if (s.includes('reject')) return 1; // 🔴 TIER 1: Needs immediate editing! (Top)
+          if (s.includes('pending') || s.includes('resubmit')) return 2; // 🟡 TIER 2: Waiting for Admin
+          if (s.includes('validate') || s.includes('dispatch') || s.includes('progress')) return 3; // 🔵 TIER 3: Approved & active
+          return 4; // 🟢 TIER 4: Completed/Closed (Bottom)
+        };
+
+        const priorityA = getPriority(a.status);
+        const priorityB = getPriority(b.status);
+
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // Tie-breaker: Newest first
+        const dateA = new Date(a.date_submitted || a.dateSubmitted || 0);
+        const dateB = new Date(b.date_submitted || b.dateSubmitted || 0);
+        return dateB - dateA;
+      });
+
       let pending = 0, validated = 0, rejected = 0;
       let highSev = 0, medSev = 0, lowSev = 0;
 
-      // 🚀 BEST PRACTICE: Build a single HTML string instead of updating the DOM 50 times
+      // 🚀 BEST PRACTICE: Build a single HTML string
       let allRowsHtml = "";
 
       reports.forEach(report => {
-        if (report.status === "Pending") pending++;
-        else if (report.status === "Validated") validated++;
-        else if (report.status === "Rejected") rejected++;
+        // Safely count statuses even if the backend returns "Pending Validation"
+        const sLower = String(report.status || '').toLowerCase();
+        if (sLower.includes('pending') || sLower.includes('resubmit')) pending++;
+        else if (sLower.includes('validate') || sLower.includes('dispatch') || sLower.includes('progress')) validated++;
+        else if (sLower.includes('reject')) rejected++;
 
         if (report.severity === "High") highSev++;
         else if (report.severity === "Medium") medSev++;
         else if (report.severity === "Low") lowSev++;
 
         let badgeClass = "bd-badge-pending";
-        if (report.status === "Validated") badgeClass = "bd-badge-validated";
-        if (report.status === "Rejected") badgeClass = "bd-badge-rejected";
+        if (sLower.includes("validate") || sLower.includes("dispatch") || sLower.includes("progress")) badgeClass = "bd-badge-validated";
+        if (sLower.includes("reject")) badgeClass = "bd-badge-rejected";
 
-        let dateStr = new Date(report.dateSubmitted).toLocaleDateString();
+        // Handle Resubmitted UI specific to Barangay
+        let displayStatus = report.status;
+        if (sLower.includes("resubmit")) {
+          badgeClass = "bd-badge-pending"; // keep it looking like pending, but add a warning icon
+          displayStatus = "⚠️ Resubmitted";
+        }
 
-        // 🚀 THE FIX: We removed the old image logic. We now assign a UNIQUE ID to the image tag
-        // and put a "Loading..." placeholder in it temporarily.
+        let dateStr = new Date(report.date_submitted || report.dateSubmitted).toLocaleDateString();
+
         let rowHtml = `
                 <div class="bd-list-item">
                   <div class="bd-item-image">
@@ -2169,15 +2229,15 @@ function loadBarangayReports(barangayId) {
                         <span>📅 ${dateStr}</span>
                       </div>
                     </div>
-                    ${report.status === 'Rejected' && report.adminRemarks ? `
+                    ${sLower.includes('reject') && report.adminRemarks ? `
                     <div class="bd-feedback-box"><strong style="color: #dc3545;">Admin Note:</strong> ${report.adminRemarks}</div>
                     ` : `<p style="font-size: 13px; color: #666; margin-top: 5px;">${report.damageDescription || 'No damage reported.'}</p>`}
                   </div>
                  <div class="bd-item-actions">
-                  <div class="bd-status-badge ${badgeClass}">${report.status}</div>
+                  <div class="bd-status-badge ${badgeClass}">${displayStatus}</div>
 
-                  ${report.status === 'Rejected' ? `
-                    <button class="bd-btn-action" onclick="openEditModal(${report.id})">Edit & Resubmit</button>
+                  ${sLower.includes('reject') ? `
+                    <button class="bd-btn-action" style="background-color: #dc3545;" onclick="openEditModal(${report.id})">Edit & Resubmit</button>
                   ` : `
                     <button class="bd-btn-action" style="background-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>
                   `}
@@ -2190,8 +2250,7 @@ function loadBarangayReports(barangayId) {
       // 1. Inject all the HTML into the page at once
       listContainer.innerHTML = allRowsHtml;
 
-      // 🚀 2. THE FIX: Now that the images are actually on the screen, loop through the
-      // reports one more time and securely download the image blobs into their unique IDs!
+      // 🚀 2. Load secure images
       reports.forEach(report => {
         loadSecureImage(`brgy-preview-img-${report.id}`, report.damageImage);
       });

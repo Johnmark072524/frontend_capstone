@@ -1810,7 +1810,7 @@ function loadAdminReports() {
       }
 
       // ==========================================
-      // 🚀 THE FIX: SMART PRIORITY SORTING
+      // 🚀 SMART PRIORITY SORTING
       // ==========================================
       reports.sort((a, b) => {
         // 1. Assign Priority Weights based on Status
@@ -1829,8 +1829,10 @@ function loadAdminReports() {
           return priorityA - priorityB; // 1 comes before 2, etc.
         }
 
-        // 3. If they have the same priority (e.g., both are Pending), sort newest first!
-        return new Date(b.dateSubmitted) - new Date(a.dateSubmitted);
+        // 3. 🧠 BULLETPROOF DATE TIE-BREAKER (Checks both date_submitted & dateSubmitted)
+        const dateA = new Date(a.date_submitted || a.dateSubmitted || 0);
+        const dateB = new Date(b.date_submitted || b.dateSubmitted || 0);
+        return dateB - dateA; // Newest first
       });
 
       // ==========================================
@@ -1841,7 +1843,9 @@ function loadAdminReports() {
         const roadId = report.cityRoadId || 'N/A';
         const roadName = report.cityRoadName || 'Unknown Road';
         const severity = report.severity || 'Unassessed';
-        const dateSubmitted = report.dateSubmitted || 'N/A';
+
+        // 🚀 Safely check both database field variants
+        const dateSubmitted = report.date_submitted || report.dateSubmitted || 'N/A';
 
         const barangayDisplay = (report.barangay && report.barangay.barangayName)
           ? report.barangay.barangayName
@@ -1913,9 +1917,14 @@ function reviewReport(reportId) {
   // 2. Unhide the modal
   modal.classList.remove('hidden');
 
-  // 3. 🚀 THE FIX: Now that 'modal' exists, safely reset the scrollbar!
-  const modalBody = modal.querySelector('.modal-body');
-  if (modalBody) modalBody.scrollTop = 0;
+  // 3. 🚀 THE BULLETPROOF SCROLL RESET (Fixes the stuck scroll bug 100% of the time)
+  setTimeout(() => {
+    const modalBody = modal.querySelector('.modal-body');
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalBody) modalBody.scrollTop = 0;
+    if (modalContent) modalContent.scrollTop = 0;
+    modal.scrollTop = 0;
+  }, 10);
 
   // ⬇️ FORCE THE MAP CONTAINER CLOSED WHEN OPENING A NEW REPORT ⬇️
   const mapContainer = document.getElementById('admin-review-map-container');

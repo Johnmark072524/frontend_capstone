@@ -493,7 +493,9 @@
           <div class="report-section" style="border-bottom: none;">
             <h3 class="section-title">Damage Evidence</h3>
 
-            <img id="modal-damage-image" src="" alt="Damage Photo" style="max-width: 100%; border-radius: 8px; margin-bottom: 15px; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <div class="modal-image-container">
+              <img id="modal-damage-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
+            </div>
 
             <div class="report-description">
               <strong>Damage Description:</strong>
@@ -563,7 +565,9 @@
           <div class="report-section">
             <h3 class="section-title" style="color: var(--accent-blue); text-transform: uppercase;">Damage Evidence</h3>
 
-            <img id="track-modal-image" src="" alt="Damage Photo" style="width: 100%; height: 250px; object-fit: cover; border-radius: 8px; background-color: #f0f0f0; display: none;">
+            <div class="modal-image-container">
+              <img id="track-modal-image" src="" alt="Original Damage" onclick="openFullscreenImage(this)">
+            </div>
 
             <div class="report-description" style="margin-top: 15px;">
               <strong>Damage Description:</strong>
@@ -587,7 +591,9 @@
             <div id="track-modal-resolution-data" style="display: none; margin-top: 15px;">
               <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
               <div style="margin-top: 5px; margin-bottom: 15px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">
-                <img id="track-modal-proof-image" src="" alt="Proof of Repair" style="max-height: 250px; border-radius: 4px; max-width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: none;">
+                <div class="modal-image-container">
+                  <img id="track-modal-proof-image" src="" alt="Proof of Repair" onclick="openFullscreenImage(this)">
+                </div>
               </div>
 
               <strong style="color: #166534; font-size: 13px;">CEO Remarks:</strong>

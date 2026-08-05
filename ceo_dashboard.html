@@ -403,7 +403,9 @@
         <div class="report-section">
           <h3 class="section-title">Damage Evidence</h3>
           <div class="report-image-placeholder" id="ceo-modal-image-container" style="text-align: center;">
-            <img id="ceo-modal-image" src="" alt="Damage Photo" style="max-width: 100%; max-height: 300px; border-radius: 8px; display: none;" />
+            <div class="modal-image-container">
+              <img id="ceo-modal-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
+            </div>
             <div id="ceo-modal-image-placeholder-text">
               <span class="icon">📷</span>
               <p>Loading photo...</p>
@@ -467,7 +469,9 @@
           <div style="margin-bottom: 15px;">
             <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
             <div style="margin-top: 10px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">
-              <img id="ceo-modal-proof-image" src="" alt="Proof of Repair" style="max-height: 250px; border-radius: 4px; max-width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div class="modal-image-container">
+                <img id="ceo-modal-proof-image" src="" alt="Proof of Repair" onclick="openFullscreenImage(this)">
+              </div>
             </div>
           </div>
           <div>

@@ -393,7 +393,9 @@
 
       <div class="bd-report-section" style="border-bottom: none;">
         <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Damage Evidence</h3>
-        <img id="view-modal-img" class="bd-modal-img" src="" alt="Damage Image" style="height: auto; max-height: 300px;">
+        <div class="modal-image-container">
+          <img id="view-modal-img" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
+        </div>
         <p style="margin-top: 10px; font-size: 14px; line-height: 1.5;"><strong>Description:</strong> <span id="view-modal-desc"></span></p>
 
         <div id="view-modal-feedback" class="bd-feedback-box" style="display:none; margin-top:15px; background-color: #fff3cd; border-left-color: #ffc107;">
@@ -514,7 +516,9 @@
 
           <div style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa; margin-bottom: 15px;">
             <span style="display: block; font-weight: 600; margin-bottom: 10px; color: #333;">Upload New Photo (Optional)</span>
-            <img id="edit-modal-current-img" src="" alt="Current Damage" style="max-width: 100%; max-height: 150px; display: block; margin: 0 auto 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <div class="modal-image-container">
+              <img id="edit-modal-current-img" src="" alt="Current Photo" onclick="openFullscreenImage(this)">
+            </div>
             <input type="file" id="edit-modal-img" accept="image/*" style="display: none;">
             <div>
               <button type="button" class="bd-btn-action" onclick="document.getElementById('edit-modal-img').click()" style="background-color: #eef2f7; color: #333; border: 1px solid #cdd4dc; width: auto; padding: 8px 15px;">

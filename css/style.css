@@ -1271,13 +1271,24 @@ body.login-page {
 /* ==========================================
    📸 UNIVERSAL IMAGE THUMBNAILS (Upgraded Size)
    ========================================== */
-.bd-item-image, .modal-image-container {
-  width: 160px;  /* 🚀 Increased from 100px */
-  height: 120px; /* 🚀 Increased from 100px (Creates a landscape photo shape) */
+.bd-item-image {
+  width: 160px;
+  height: 120px;
   overflow: hidden;
   border-radius: 8px;
   flex-shrink: 0;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* 🚀 THE FIX: Separate the modal container and force it to the center! */
+.modal-image-container {
+  width: 160px;
+  height: 120px;
+  overflow: hidden;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  margin: 0 auto; /* 🚀 This is the magic line that pushes it to the middle! */
 }
 
 /* Leave everything else below this exactly the same! */
@@ -1311,11 +1322,11 @@ body.login-page {
 }
 
 #fullscreen-modal-img {
-  max-width: 90vw; /* Won't overflow screen width */
-  max-height: 90vh; /* Won't overflow screen height */
+  width: 90vw;   /* Force the box to be 90% of the screen width */
+  height: 90vh;  /* Force the box to be 90% of the screen height */
   border-radius: 8px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  object-fit: contain; /* Shows entire uncropped image */
+  object-fit: contain; /* Scales the picture UP to fit the massive box perfectly! */
 }
 
 .close-fullscreen-btn {

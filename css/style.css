@@ -221,12 +221,15 @@
 }
 
 .section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-main);
+  font-size: 16px; /* Slightly larger */
+  font-weight: 800;
+  color: var(--accent-blue); /* 🚀 Changed to your theme blue */
   margin-bottom: 25px;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 2px solid var(--accent-light); /* 🚀 Thicker, thematic line */
   padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between the emoji and the text */
 }
 
 .form-grid {
@@ -268,6 +271,8 @@
 .form-group select:focus,
 textarea:focus {
   border-color: var(--accent-blue);
+  box-shadow: 0 0 0 4px rgba(28, 16, 163, 0.15); /* 🚀 THE FIX: Adds the professional 'glow' */
+  outline: none;
 }
 
 .form-group-vertical {
@@ -1342,4 +1347,22 @@ body.login-page {
 
 .close-fullscreen-btn:hover {
   color: #dc3545; /* Turns red on hover */
+}
+
+/* 🚀 THE FIX: Premium Map Button Styling */
+#btn-define-map {
+  background: linear-gradient(135deg, #1c10a3, #4541B8); /* Vibrant gradient */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(28, 16, 163, 0.3); /* Adds a colored shadow */
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+#btn-define-map:hover {
+  transform: translateY(-2px); /* Makes it 'float' when hovered */
+  box-shadow: 0 6px 15px rgba(28, 16, 163, 0.4);
 }

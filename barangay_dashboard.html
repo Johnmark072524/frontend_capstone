@@ -47,9 +47,13 @@
       <ul>
         <li class="active" data-target="view-dashboard"><a href="#"><span class="icon">⊞</span> Dashboard</a></li>
         <li data-target="view-reports"><a href="#"><span class="icon">📄</span> Add Report</a></li>
+
+        <li data-target="view-barangay-map"><a href="#"><span class="icon">🗺️</span> Map View</a></li>
+
         <li data-target="view-settings"><a href="#"><span class="icon">⚙️</span> Settings</a></li>
       </ul>
     </nav>
+
   </aside>
 
   <div class="main-content">
@@ -137,7 +141,7 @@
 
           <form id="addReportForm" class="report-body" onsubmit="event.preventDefault();">
             <div class="form-section">
-              <h3 class="section-title">Road Details</h3>
+              <h3 class="section-title">🛣️ Road Details</h3>
               <div class="form-grid">
                 <div class="form-column">
                   <div class="form-group">
@@ -189,7 +193,7 @@
             </div>
 
             <div class="form-section">
-              <h3 class="section-title">Damage Information</h3>
+              <h3 class="section-title">⚠️ Damage Information</h3>
 
               <div class="form-grid" style="margin-bottom: 15px;">
                 <div class="form-column">
@@ -242,7 +246,9 @@
 
               <div class="form-group-inline" style="align-items: center;">
                 <span style="display: block; font-weight: 600; margin-right: 10px;">GPS Coordinates</span>
-                <button type="button" class="btn-action" id="btn-define-map"><span class="icon">📍</span> Define on Map</button>
+
+                <button type="button" id="btn-define-map"><span class="icon">📍</span> Define on Map</button>
+
                 <span id="coords-display" style="margin-left: 15px; font-size: 13px; color: #28a745; font-weight: bold;">Not Selected</span>
 
                 <input type="hidden" id="latitude" name="latitude">
@@ -254,8 +260,10 @@
               <button type="button" id="submit-report-btn" class="btn-submit" onclick="submitRoadReport()">Submit Report</button>
             </div>
           </form>
+        </div>
+      </div>
 
-        </div> </div> <div id="view-settings" class="content-section hidden">
+      <div id="view-settings" class="content-section hidden">
       <h2>Account Settings</h2>
       <p>Preferences and account details will go here.</p>
     </div>
@@ -317,6 +325,15 @@
 
           </div>
         </div>
+      </div>
+
+      <div id="view-barangay-map" class="content-section hidden">
+        <div class="header-container" style="margin-bottom: 20px;">
+          <h2>🗺️ Local Territory Map</h2>
+          <p>Live geospatial view of all active road condition reports within your jurisdiction.</p>
+        </div>
+
+        <div id="barangay-local-map" style="height: 70vh; width: 100%; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1;"></div>
       </div>
 
     </main>

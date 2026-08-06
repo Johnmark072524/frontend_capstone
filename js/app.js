@@ -3417,3 +3417,346 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ==========================================
+// 🗺️ ADMIN GLOBAL MAP: MULTIPLE MARKERS
+// ==========================================
+let adminGlobalMap = null;
+let globalMarkerLayer = null;
+
+// 1. Define Color-Coded Pins
+const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+window.loadAdminGlobalMap = function() {
+  const mapContainer = document.getElementById('admin-global-map');
+  if (!mapContainer) return;
+
+  // 🚀 1. Define the strict boundaries of San Jose Del Monte City
+  // Top Left (North West) to Bottom Right (South East)
+  const sjdmBounds = L.latLngBounds(
+    L.latLng(14.9000, 120.9500), // North West corner
+    L.latLng(14.7500, 121.1500)  // South East corner
+  );
+
+  // 2. Build the map if it hasn't been built yet
+  if (!adminGlobalMap) {
+    adminGlobalMap = L.map('admin-global-map', {
+      center: [14.8139, 121.0453], // Center of SJDM
+      zoom: 13,
+      minZoom: 12, // Prevents zooming out too far
+      maxBounds: sjdmBounds, // 🚀 Locks the camera to SJDM!
+      maxBoundsViscosity: 1.0 // Adds a "bouncy wall" effect if they try to drag away
+    });
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(adminGlobalMap);
+
+    // 🚀 Overlay the labels (Barangay names, roads, etc.) on top of the satellite imagery
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(adminGlobalMap);
+
+    globalMarkerLayer = L.layerGroup().addTo(adminGlobalMap);
+  } else {
+    // If the map already exists, reset the camera back to the center!
+    adminGlobalMap.setView([14.8139, 121.0453], 13);
+  }
+
+  // Force map to calculate its size so it doesn't show grey boxes
+  setTimeout(() => { adminGlobalMap.invalidateSize(); }, 300);
+
+  // 3. Fetch all reports and drop the pins!
+  apiFetch(`/api/reports`, { cache: 'no-store' })
+    .then(reports => {
+      globalMarkerLayer.clearLayers();
+
+      // Filter out the fixed roads so the map only shows active hazards!
+      const activeHazards = reports.filter(r => {
+        const s = String(r.status || '').toLowerCase();
+        return !s.includes('complet') && !s.includes('clos') && !s.includes('reject');
+      });
+
+      activeHazards.forEach(report => {
+        const lat = parseFloat(report.latitude);
+        const lng = parseFloat(report.longitude);
+
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
+        const severity = String(report.severity || 'Unassessed').toLowerCase();
+        let selectedIcon = pinGrey;
+
+        if (severity === 'high') selectedIcon = pinRed;
+        else if (severity === 'medium') selectedIcon = pinOrange;
+        else if (severity === 'low') selectedIcon = pinGreen;
+
+        // Build the interactive pop-up window
+        const popupHtml = `
+                    <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
+                        <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#RPT-${String(report.id).padStart(4, '0')}</h4>
+                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
+                        <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
+                            SEVERITY: ${severity.toUpperCase()}
+                        </span>
+
+                        <button class="btn-small validate-btn" style="width: 100%; margin-top: 5px;" onclick="reviewReport(${report.id})">
+                            Review Full Report
+                        </button>
+                    </div>
+                `;
+
+        L.marker([lat, lng], { icon: selectedIcon })
+          .bindPopup(popupHtml)
+          .addTo(globalMarkerLayer);
+      });
+    })
+    .catch(err => console.error("Error loading map data:", err));
+};
+
+// ==========================================
+// 🚀 THE MAP WATCHDOG (Connects to your sidebar button)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const adminMapSection = document.getElementById('view-map');
+  if (adminMapSection) {
+    const mapObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        // If the 'hidden' class is removed (meaning the user clicked the sidebar button)
+        if (mutation.attributeName === 'class' && !adminMapSection.classList.contains('hidden')) {
+          if (typeof loadAdminGlobalMap === 'function') loadAdminGlobalMap();
+        }
+      });
+    });
+    mapObserver.observe(adminMapSection, { attributes: true });
+  }
+});
+
+
+// ==========================================
+// 🗺️ CEO GLOBAL MAP: DISPATCHED PROJECTS
+// ==========================================
+let ceoGlobalMap = null;
+let ceoGlobalMarkerLayer = null;
+
+window.loadCEOGlobalMap = function() {
+  const mapContainer = document.getElementById('ceo-global-map');
+  if (!mapContainer) return;
+
+  // 🚀 1. Define the strict boundaries of San Jose Del Monte City
+  const sjdmBounds = L.latLngBounds(
+    L.latLng(14.9000, 120.9500), // North West corner
+    L.latLng(14.7500, 121.1500)  // South East corner
+  );
+
+  // 2. Build the map or reset the camera if it already exists
+  if (!ceoGlobalMap) {
+    ceoGlobalMap = L.map('ceo-global-map', {
+      center: [14.8139, 121.0453], // Center of SJDM
+      zoom: 13,
+      minZoom: 12, // 🚀 Prevents zooming out too far
+      maxBounds: sjdmBounds, // 🚀 Locks the camera to SJDM
+      maxBoundsViscosity: 1.0 // Adds the "bouncy wall" effect
+    });
+
+    // Base Satellite Layer
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(ceoGlobalMap);
+
+    // 🚀 Overlay the labels (Barangay names, roads, etc.)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(ceoGlobalMap);
+
+    ceoGlobalMarkerLayer = L.layerGroup().addTo(ceoGlobalMap);
+  } else {
+    // Reset camera if they revisit the tab
+    ceoGlobalMap.setView([14.8139, 121.0453], 13);
+  }
+
+  // Force map to calculate its size so it doesn't break
+  setTimeout(() => { ceoGlobalMap.invalidateSize(); }, 300);
+
+  // 3. Fetch all reports and filter for the CEO
+  apiFetch(`/api/reports`, { cache: 'no-store' })
+    .then(reports => {
+      ceoGlobalMarkerLayer.clearLayers();
+
+      // 🛡️ THE GATEKEEPER: Only show ACTIVE CEO Projects!
+      const activeCEOProjects = reports.filter(r => {
+        const s = String(r.status || '').toLowerCase();
+        return s === 'dispatched to ceo' || s === 'in progress';
+      });
+
+      activeCEOProjects.forEach(report => {
+        const lat = parseFloat(report.latitude);
+        const lng = parseFloat(report.longitude);
+
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
+        const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+        const severity = String(report.severity || 'Unassessed').toLowerCase();
+        let selectedIcon = pinGrey;
+
+        if (severity === 'high') selectedIcon = pinRed;
+        else if (severity === 'medium') selectedIcon = pinOrange;
+        else if (severity === 'low') selectedIcon = pinGreen;
+
+        // 🎨 CEO-Specific Pop-up Window
+        const popupHtml = `
+                    <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
+                        <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#PRJ-${String(report.id).padStart(4, '0')}</h4>
+                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
+                        <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
+                            SEVERITY: ${severity.toUpperCase()}
+                        </span>
+
+                        <button class="btn-small validate-btn" style="width: 100%; margin-top: 5px; background-color: #1e40af; border-color: #1e40af;" onclick="openCEOManageModal(${report.id})">
+                            Manage Project
+                        </button>
+                    </div>
+                `;
+
+        L.marker([lat, lng], { icon: selectedIcon })
+          .bindPopup(popupHtml)
+          .addTo(ceoGlobalMarkerLayer);
+      });
+    })
+    .catch(err => console.error("Error loading CEO map data:", err));
+};
+
+// ==========================================
+// 🚀 THE CEO MAP WATCHDOG
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const ceoMapSection = document.getElementById('view-ceo-map');
+  if (ceoMapSection) {
+    const ceoMapObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        // Trigger map refresh when the user clicks the Map tab
+        if (mutation.attributeName === 'class' && !ceoMapSection.classList.contains('hidden')) {
+          if (typeof loadCEOGlobalMap === 'function') loadCEOGlobalMap();
+        }
+      });
+    });
+    ceoMapObserver.observe(ceoMapSection, { attributes: true });
+  }
+});
+
+
+// ==========================================
+// 🗺️ BARANGAY LOCAL MAP: TERRITORY FILTERED
+// ==========================================
+let barangayLocalMap = null;
+let barangayMarkerLayer = null;
+
+window.loadBarangayLocalMap = function() {
+  const mapContainer = document.getElementById('barangay-local-map');
+  if (!mapContainer) return;
+
+  // 🔒 SECURITY CHECK: Get their specific Barangay ID
+  const loggedInBarangayId = sessionStorage.getItem("barangayId");
+  if (!loggedInBarangayId) {
+    console.error("Cannot load map: No Barangay ID found in session.");
+    return;
+  }
+
+  const sjdmBounds = L.latLngBounds(
+    L.latLng(14.9000, 120.9500),
+    L.latLng(14.7500, 121.1500)
+  );
+
+  if (!barangayLocalMap) {
+    barangayLocalMap = L.map('barangay-local-map', {
+      center: [14.8139, 121.0453],
+      zoom: 14, // 🚀 Zoomed in a bit closer since they are looking at one barangay
+      minZoom: 12,
+      maxBounds: sjdmBounds,
+      maxBoundsViscosity: 1.0
+    });
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(barangayLocalMap);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(barangayLocalMap);
+
+    barangayMarkerLayer = L.layerGroup().addTo(barangayLocalMap);
+  } else {
+    barangayLocalMap.setView([14.8139, 121.0453], 14);
+  }
+
+  setTimeout(() => { barangayLocalMap.invalidateSize(); }, 300);
+
+  // 🚀 THE FIX: Fetch ONLY reports belonging to this specific Barangay!
+  apiFetch(`/api/reports/barangay/${loggedInBarangayId}`, { cache: 'no-store' })
+    .then(reports => {
+      barangayMarkerLayer.clearLayers();
+
+      // Filter out finished projects to keep the map focused on active hazards
+      const activeLocalHazards = reports.filter(r => {
+        const s = String(r.status || '').toLowerCase();
+        return !s.includes('complet') && !s.includes('clos');
+      });
+
+      activeLocalHazards.forEach(report => {
+        const lat = parseFloat(report.latitude);
+        const lng = parseFloat(report.longitude);
+
+        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
+        const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
+        const severity = String(report.severity || 'Unassessed').toLowerCase();
+        const status = String(report.status || '').toLowerCase();
+        let selectedIcon = pinGrey;
+
+        if (severity === 'high') selectedIcon = pinRed;
+        else if (severity === 'medium') selectedIcon = pinOrange;
+        else if (severity === 'low') selectedIcon = pinGreen;
+
+        // 🎨 SMART BUTTON LOGIC: Changes depending on report status
+        let buttonHtml = `<button class="btn-small validate-btn" style="width: 100%; margin-top: 5px; background-color: #6c757d; border-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>`;
+
+        if (status.includes('reject')) {
+          buttonHtml = `<button class="btn-small validate-btn" style="width: 100%; margin-top: 5px; background-color: #dc3545; border-color: #dc3545;" onclick="openEditModal(${report.id})">Edit & Resubmit</button>`;
+        }
+
+        const popupHtml = `
+                    <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
+                        <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#RPT-${String(report.id).padStart(4, '0')}</h4>
+                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
+                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
+                        <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
+                            SEVERITY: ${severity.toUpperCase()}
+                        </span>
+                        ${buttonHtml}
+                    </div>
+                `;
+
+        L.marker([lat, lng], { icon: selectedIcon })
+          .bindPopup(popupHtml)
+          .addTo(barangayMarkerLayer);
+      });
+    })
+    .catch(err => console.error("Error loading local map data:", err));
+};
+
+// ==========================================
+// 🚀 THE BARANGAY MAP WATCHDOG
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const brgyMapSection = document.getElementById('view-barangay-map');
+  if (brgyMapSection) {
+    const brgyMapObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        // Trigger map refresh when the user clicks the Map tab
+        if (mutation.attributeName === 'class' && !brgyMapSection.classList.contains('hidden')) {
+          if (typeof loadBarangayLocalMap === 'function') loadBarangayLocalMap();
+        }
+      });
+    });
+    brgyMapObserver.observe(brgyMapSection, { attributes: true });
+  }
+});

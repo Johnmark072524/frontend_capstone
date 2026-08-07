@@ -1875,7 +1875,7 @@ function resetAddReportForm() {
 }
 
 // ==========================================
-// LOGIN LOGIC (Connected to Spring Boot)
+// LOGIN LOGIC (Connected to Spring Boot & Brute-Force Protected)
 // ==========================================
 function handleLogin() {
   // 1. Grab the HTML elements
@@ -1904,7 +1904,7 @@ function handleLogin() {
     loginBtn.style.opacity = "0.7";
   }
 
-  // 4. REAL AUTHENTICATION via Spring Boot
+  // 4. REAL AUTHENTICATION via Spring Boot (WITH SECURITY LOCKOUT)
   fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
@@ -1915,9 +1915,11 @@ function handleLogin() {
       password: password
     })
   })
-    .then(response => {
+    .then(async response => {
+      // 🚀 THE FIX: If the backend sends 401 (Wrong Password) or 429 (Locked Out)
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Invalid credentials');
       }
       return response.json();
     })
@@ -1927,7 +1929,7 @@ function handleLogin() {
       sessionStorage.setItem("username", data.username || "N/A");
       sessionStorage.setItem("userRole", data.role);
 
-      // 🚀 THE FIX: Save the new profile data into browser memory securely!
+      // Save the new profile data into browser memory securely
       sessionStorage.setItem("firstName", data.firstName || "");
       sessionStorage.setItem("middleName", data.middleName || "");
       sessionStorage.setItem("lastName", data.lastName || "");
@@ -1961,7 +1963,8 @@ function handleLogin() {
     })
     .catch(error => {
       console.error('Error:', error);
-      showToast("Invalid username or password.", "error");
+      // 🚀 THE FIX: Display the exact countdown or lockout message from Spring Boot
+      showToast(error.message, "error");
 
       if (loginBtn) {
         loginBtn.innerHTML = "Log in ➔";

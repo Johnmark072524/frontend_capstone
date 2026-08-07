@@ -39,6 +39,11 @@
 /* 4. SIDEBAR STYLING */
 .sidebar {
   width: 260px;
+
+  /* 🚀 THE FIX 1: Double-lock the width so large tables can NEVER squish the sidebar */
+  min-width: 260px;
+  flex-shrink: 0;
+
   background-color: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
@@ -48,24 +53,22 @@
   overflow-y: auto; /* Just in case your menu items get too long */
 }
 
-/* Logo Area Styling */
 /* ========================================== */
 /* SIDEBAR BRANDING & LOGO                    */
 /* ========================================== */
-
 .brand {
   text-align: center;
-  padding: 25px 15px 15px 15px; /* Adds nice breathing room around the logo */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05); /* Optional: adds a faint line under the logo */
+  padding: 25px 15px 15px 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   margin-bottom: 15px;
 }
 
 .brand-logo {
-  width: 100%;       /* Makes it responsive to the sidebar width */
-  max-width: 150px;  /* This is the magic number! Stops it from getting too huge */
-  height: auto;      /* Keeps the image proportions perfectly scaled */
+  width: 100%;
+  max-width: 150px;
+  height: auto;
   display: block;
-  margin: 0 auto;    /* Centers the logo perfectly */
+  margin: 0 auto;
 }
 
 .brand-subtitle {
@@ -108,11 +111,17 @@
   font-weight: 500;
   font-size: 14px;
   transition: all 0.2s ease;
+
+  /* 🚀 THE FIX 2: Stop long Admin text from wrapping to a new line and breaking the button height */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-menu a .icon {
   margin-right: 12px;
   font-size: 18px;
+  flex-shrink: 0; /* Ensures the icon doesn't get squished by long text */
 }
 
 .nav-menu li:hover a {
@@ -135,44 +144,63 @@
   overflow: hidden; /* 🚀 FIXED: Prevents content from pushing the header off screen */
 }
 
-/* 8. TOP HEADER STYLING */
+/* 8. TOP HEADER STYLING (LOCKED & CONSISTENT) */
 .top-header {
   background-color: transparent;
-  padding: 30px 40px;
+  padding: 20px 40px; /* Standardized padding */
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  /* 🚀 THE FIX 1: Lock the exact height so tables cannot squish it */
+  min-height: 85px;
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .top-header h1 {
   color: var(--text-main);
   font-size: 28px;
+  margin: 0;
+  white-space: nowrap; /* 🚀 THE FIX 2: Forbids the title from wrapping and breaking the row */
 }
 
 .header-profile-btn {
-  background-color: transparent;
+  background-color: white;
   border: 1px solid #eaeaea;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 0 20px;
+
+  /* 🚀 THE FIX 3: Ultimate Button Locks */
+  height: 45px;          /* Locks the exact height for every user */
+  white-space: nowrap;   /* Stops long names/roles from breaking into two lines */
+  flex-shrink: 0;        /* Forbids the browser from squishing the button width */
+
+  border-radius: 30px;
   color: var(--text-main);
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .header-profile-btn:hover {
   background-color: var(--accent-light);
   color: var(--accent-blue);
   border-color: var(--accent-light);
+  transform: translateY(-2px); /* Adds a premium "float" effect on hover */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
 
 .content-area {
   padding: 0 40px 40px 40px;
-  flex-grow: 1; /* Takes up all space under the top header */
-  overflow-y: auto; /* 🚀 THE MAGIC FIX: Only the reports/tables will scroll! */
+  flex-grow: 1;
+
+  /* 🚀 THE FIX 4: Change 'auto' to 'scroll' to stop the 15px layout shift! */
+  /* This forces the scrollbar track to stay visible on short pages so the width NEVER changes */
+  overflow-y: scroll;
 }
 
 /* --- 9. FORM STYLES (Add New Report) --- */
@@ -1365,4 +1393,51 @@ body.login-page {
 #btn-define-map:hover {
   transform: translateY(-2px); /* Makes it 'float' when hovered */
   box-shadow: 0 6px 15px rgba(28, 16, 163, 0.4);
+}
+
+/* ==========================================
+   🚀 PROFILE PAGE ENHANCEMENTS
+   ========================================== */
+.btn-back-dash {
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #475569;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+}
+
+.btn-back-dash:hover {
+  background: #f8fafc;
+  transform: translateY(-2px); /* Makes it float up slightly */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+.profile-tab-title {
+  margin-bottom: 25px;
+  color: var(--accent-blue);
+  border-bottom: 2px solid var(--accent-light);
+  padding-bottom: 10px;
+  font-weight: 800;
+}
+
+.profile-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.profile-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 4px rgba(28, 16, 163, 0.15); /* Adds the premium blue glow */
 }

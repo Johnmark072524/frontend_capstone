@@ -680,19 +680,130 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 9. MASTER PROFILE LOGIC
-  // ==========================================
+// 9. MASTER PROFILE LOGIC (DYNAMIC DATA)
+// ==========================================
+
+  function populateProfileData() {
+    // 1. Grab data securely from the browser's session storage
+    const firstName = sessionStorage.getItem('firstName') || 'Unknown';
+    const middleName = sessionStorage.getItem('middleName') || '';
+    const lastName = sessionStorage.getItem('lastName') || 'User';
+    const email = sessionStorage.getItem('email') || 'Not Provided';
+    const phone = sessionStorage.getItem('phoneNumber') || 'Not Provided';
+    const birthday = sessionStorage.getItem('birthday') || '';
+    const gender = sessionStorage.getItem('gender') || 'Not Specified';
+
+    const username = sessionStorage.getItem('username') || 'N/A';
+    const role = sessionStorage.getItem('role') || 'BARANGAY';
+    const barangayName = sessionStorage.getItem('barangayName') || 'Not Assigned';
+
+    // 2. Smart Name Builder (Handles missing middle names perfectly)
+    let fullName = `${firstName} ${lastName}`;
+    if (middleName.trim() !== '') {
+      fullName = `${firstName} ${middleName} ${lastName}`;
+    }
+
+    // 🚀 3. MAGIC AGE CALCULATOR
+    let displayAge = "N/A";
+    let displayBirthday = "Not Provided";
+
+    if (birthday && birthday.trim() !== '') {
+      displayBirthday = birthday; // Shows as YYYY-MM-DD
+      const birthDate = new Date(birthday);
+      const today = new Date();
+      let ageCalc = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+
+      // Subtracts a year if they haven't had their birthday yet this year!
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        ageCalc--;
+      }
+      displayAge = `${ageCalc} years old`;
+    }
+
+    // 4. Inject into the Sidebar
+    const sidebarNameEl = document.getElementById('sidebar-display-name');
+    if (sidebarNameEl) sidebarNameEl.textContent = fullName;
+
+    const sidebarRoleEl = document.getElementById('sidebar-display-role');
+    if (sidebarRoleEl) sidebarRoleEl.textContent = `Role: ${role}`;
+
+    // 5. Inject into the Official Profile Tab
+    const profileFullNameEl = document.getElementById('profile-full-name');
+    if (profileFullNameEl) profileFullNameEl.textContent = fullName;
+
+    const profileEmailEl = document.getElementById('profile-email');
+    if (profileEmailEl) profileEmailEl.textContent = email;
+
+    const profilePhoneEl = document.getElementById('profile-phone');
+    if (profilePhoneEl) profilePhoneEl.textContent = phone;
+
+    const profileBirthdayEl = document.getElementById('profile-birthday');
+    if (profileBirthdayEl) profileBirthdayEl.textContent = displayBirthday;
+
+    const profileAgeEl = document.getElementById('profile-age');
+    if (profileAgeEl) profileAgeEl.textContent = displayAge;
+
+    const profileGenderEl = document.getElementById('profile-gender');
+    if (profileGenderEl) profileGenderEl.textContent = gender;
+
+    const profileUsernameEl = document.getElementById('profile-username');
+    if (profileUsernameEl) profileUsernameEl.textContent = username;
+
+    const profileBarangayEl = document.getElementById('profile-barangay');
+    if (profileBarangayEl) profileBarangayEl.textContent = barangayName;
+
+    const profileRoleEl = document.getElementById('profile-role');
+    if (profileRoleEl) profileRoleEl.textContent = role;
+  }
+
+// --- PROFILE BUTTON TRIGGERS (WITH STATE RESET FIX) ---
   const profileBtn = document.querySelector('.header-profile-btn');
   const viewProfile = document.getElementById('view-profile');
 
   if (profileBtn && viewProfile) {
     profileBtn.addEventListener('click', () => {
-      contentSections.forEach(view => view.classList.add('hidden'));
+      // 1. Hide other sections and clear active states
+      if (typeof contentSections !== 'undefined') {
+        contentSections.forEach(view => view.classList.add('hidden'));
+      }
       document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
+
+      // 2. Show Profile and load data
       viewProfile.classList.remove('hidden');
+      populateProfileData();
+
+      // 🚀 THE FIX: Force the profile tabs back to their default state!
+      const profileMenuLinks = document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)');
+      const profileTabs = document.querySelectorAll('.profile-tab');
+
+      // Remove active/visible from all profile tabs
+      profileMenuLinks.forEach(l => l.classList.remove('active'));
+      profileTabs.forEach(t => t.classList.add('hidden'));
+
+      // Force "Official Details" to be the active tab
+      const defaultLink = document.querySelector('#profile-nav-menu li[data-target="tab-identity"]');
+      const defaultTab = document.getElementById('tab-identity');
+      if (defaultLink) defaultLink.classList.add('active');
+      if (defaultTab) defaultTab.classList.remove('hidden');
+
+      // 🚀 THE FIX: Clear the password form just in case they typed something before leaving
+      const formChangePassword = document.getElementById('form-change-password');
+      if (formChangePassword) {
+        formChangePassword.reset();
+        // Revert all password input types back to hidden 'password'
+        ['sec-current-pass', 'sec-new-pass', 'sec-confirm-pass'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.type = 'password';
+        });
+        // Revert icons back to eye
+        document.querySelectorAll('#form-change-password span').forEach(span => {
+          span.textContent = '👁️';
+        });
+      }
     });
   }
-
+// --- PROFILE TAB NAVIGATION ---
   const profileMenuLinks = document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)');
   const profileTabs = document.querySelectorAll('.profile-tab');
 
@@ -701,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
       link.addEventListener('click', () => {
         profileMenuLinks.forEach(l => l.classList.remove('active'));
         link.classList.add('active');
+
         profileTabs.forEach(tab => tab.classList.add('hidden'));
         const targetId = link.getAttribute('data-target');
         const targetTab = document.getElementById(targetId);
@@ -708,31 +820,40 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+// --- SECURE LOGOUT LOGIC (WITH CONFIRMATION) ---
   const logoutBtn = document.querySelector('.logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
+  const logoutConfirmModal = document.getElementById('logout-confirm-modal');
+  const btnConfirmLogout = document.getElementById('btn-confirm-logout');
+
+// 1. Show the confirmation modal when "Logout" is clicked in the sidebar
+  if (logoutBtn && logoutConfirmModal) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault(); // Prevent any default link behavior
+      logoutConfirmModal.classList.remove('hidden');
+    });
+  }
+
+// 2. Execute the actual secure logout if they click "Yes, Log Out"
+  if (btnConfirmLogout) {
+    btnConfirmLogout.addEventListener('click', () => {
       // 1. Wipe all sensitive data from the browser memory
       sessionStorage.clear();
 
-      // 2. Shred the history stack and return to login
+      // 2. Shred the history stack and replace the route so they can't click 'Back'
       window.location.replace('login.html');
     });
   }
 
-  // ==========================================
-  // BACK TO DASHBOARD BUTTON
-  // ==========================================
+// --- BACK TO DASHBOARD BUTTON ---
   const backToDashBtn = document.getElementById('btn-back-dashboard');
   if (backToDashBtn) {
     backToDashBtn.addEventListener('click', () => {
-      // 1. Hide the profile view
       if (viewProfile) viewProfile.classList.add('hidden');
 
-      // 2. Show the main dashboard view (Make sure the ID matches your dashboard!)
       const mainDashboard = document.getElementById('view-dashboard') || document.getElementById('view-admin-dashboard');
       if (mainDashboard) mainDashboard.classList.remove('hidden');
 
-      // 3. Re-highlight the "Dashboard" button in the left sidebar
       document.querySelectorAll('.nav-menu li').forEach(li => {
         const target = li.getAttribute('data-target');
         if (target === 'view-dashboard' || target === 'view-admin-dashboard') {
@@ -922,12 +1043,13 @@ window.loadCEODashboardData = function() {
         const hasRework = (report.adminRemarks && report.adminRemarks.trim() !== '');
 
         // --- STEP 1: CEO WORKFLOW STATUS (4 Tiers) ---
+        // 🚀 THE FIX: Swapped the scores so In Progress (3) beats Dispatched (2)!
         if (status === 'in progress' && hasRework) {
           report.statusScore = 4; // URGENT: Bounced back by Admin for Rework! (TOP)
-        } else if (status === 'dispatched to ceo') {
-          report.statusScore = 3; // NEW: Needs to be scheduled
         } else if (status === 'in progress') {
-          report.statusScore = 2; // ACTIVE: Currently being worked on normally
+          report.statusScore = 3; // ACTIVE: Currently being worked on normally (High Priority)
+        } else if (status === 'dispatched to ceo') {
+          report.statusScore = 2; // NEW: Needs to be scheduled (Medium Priority)
         } else {
           report.statusScore = 1; // COMPLETED: Waiting for Admin QA (BOTTOM)
         }
@@ -1181,7 +1303,14 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-damage-area').innerText = damageArea > 0 ? `${damageArea.toFixed(1)} sq.m` : '0 sq.m';
 
       document.getElementById('ceo-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}°, ${report.longitude}°` : 'No GPS data';
-      document.getElementById('ceo-modal-submitter-name').innerText = report.reportedBy || 'Barangay Official';
+      let ceoSubmitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
+      if (report.user && report.user.firstName && report.user.lastName) {
+        ceoSubmitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
+      } else if (report.reportedBy) {
+        ceoSubmitterText = report.reportedBy;
+      }
+      const ceoSubmitterEl = document.getElementById('ceo-modal-submitter-name');
+      if (ceoSubmitterEl) ceoSubmitterEl.innerText = ceoSubmitterText;
       document.getElementById('ceo-modal-description').innerText = report.damageDescription || 'No description provided.';
 
       // 4. Priority Badge
@@ -1587,9 +1716,16 @@ function executeFinalSubmission() {
   }
 
   const formData = new FormData();
+
   const loggedInBarangayId = sessionStorage.getItem("barangayId");
   if (loggedInBarangayId) {
     formData.append("barangayId", loggedInBarangayId);
+  }
+
+  // 🚀 THE FIX: Send the specific User ID so the server knows EXACTLY who submitted it!
+  const loggedInUserId = sessionStorage.getItem("userId");
+  if (loggedInUserId) {
+    formData.append("userId", loggedInUserId);
   }
 
   // ==============================================================
@@ -1788,15 +1924,27 @@ function handleLogin() {
     .then(data => {
       // SUCCESS! Save the REAL user data
       sessionStorage.setItem("userId", data.userId);
-      sessionStorage.setItem("userRole", data.role); // 🚀 NEW: Save their role!
+      sessionStorage.setItem("username", data.username || "N/A");
+      sessionStorage.setItem("userRole", data.role);
+
+      // 🚀 THE FIX: Save the new profile data into browser memory securely!
+      sessionStorage.setItem("firstName", data.firstName || "");
+      sessionStorage.setItem("middleName", data.middleName || "");
+      sessionStorage.setItem("lastName", data.lastName || "");
+      sessionStorage.setItem("email", data.email || "");
+      sessionStorage.setItem("phoneNumber", data.phoneNumber || "");
+      sessionStorage.setItem("birthday", data.birthday || "");
+      sessionStorage.setItem("gender", data.gender || "");
+      sessionStorage.setItem("profilePicture", data.profilePicture || "no_image.jpg");
 
       if (data.barangayId) {
         sessionStorage.setItem("barangayId", data.barangayId);
+        sessionStorage.setItem("barangayName", data.barangayName);
       }
 
       showToast("Login Successful!", "success");
 
-      // 5. 🚀 THE FIX: SECURE DYNAMIC ROUTING (Shreds History)
+      // 5. SECURE DYNAMIC ROUTING (Shreds History)
       setTimeout(() => {
         const userRole = String(data.role).toLowerCase();
 
@@ -2020,6 +2168,21 @@ function reviewReport(reportId) {
       document.getElementById('modal-date').textContent = report.dateSubmitted || 'N/A';
       document.getElementById('modal-gps').textContent = `${report.latitude || 0}° N, ${report.longitude || 0}° E`;
       document.getElementById('modal-barangay').textContent = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
+
+      // ========================================================
+      // 🚀 THE FIX: Inject the Real Submitter Name here!
+      // ========================================================
+      let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
+      if (report.user && report.user.firstName && report.user.lastName) {
+        submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
+      } else if (report.reportedBy) {
+        submitterText = report.reportedBy;
+      }
+
+      // Make sure 'modal-report-by' is the ID in your admin_dashboard.html!
+      const reportByEl = document.getElementById('modal-report-by');
+      if (reportByEl) reportByEl.textContent = submitterText;
+      // ========================================================
 
       document.getElementById('modal-road-name').textContent = report.cityRoadName || 'N/A';
       document.getElementById('modal-road-id').textContent = report.cityRoadId || 'N/A';
@@ -3219,7 +3382,15 @@ function openTrackingModal(reportId) {
       setText('track-modal-gps', `${report.latitude || '0'}° N, ${report.longitude || '0'}° E`);
       setText('track-modal-desc', report.damageDescription || 'No description provided.');
 
-      const submitterText = report.reportedBy ? report.reportedBy : `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
+      // 🚀 THE FIX: Look for the real user object first. If it exists, use their full name!
+      let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`; // Fallback
+
+      if (report.user && report.user.firstName && report.user.lastName) {
+        submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
+      } else if (report.reportedBy) {
+        submitterText = report.reportedBy; // Legacy fallback
+      }
+
       setText('track-modal-submitter', submitterText);
 
       const sevBox = document.getElementById('track-modal-severity');
@@ -3424,18 +3595,17 @@ document.addEventListener('DOMContentLoaded', () => {
 let adminGlobalMap = null;
 let globalMarkerLayer = null;
 
-// 1. Define Color-Coded Pins
-const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-
 window.loadAdminGlobalMap = function() {
   const mapContainer = document.getElementById('admin-global-map');
   if (!mapContainer) return;
 
+  // 🚀 THE FIX: The pins are now safely INSIDE the function!
+  const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+  const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+  const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+  const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
   // 🚀 1. Define the strict boundaries of San Jose Del Monte City
-  // Top Left (North West) to Bottom Right (South East)
   const sjdmBounds = L.latLngBounds(
     L.latLng(14.9000, 120.9500), // North West corner
     L.latLng(14.7500, 121.1500)  // South East corner
@@ -3453,7 +3623,7 @@ window.loadAdminGlobalMap = function() {
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(adminGlobalMap);
 
-    // 🚀 Overlay the labels (Barangay names, roads, etc.) on top of the satellite imagery
+    // Overlay the labels (Barangay names, roads, etc.) on top of the satellite imagery
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(adminGlobalMap);
 
     globalMarkerLayer = L.layerGroup().addTo(adminGlobalMap);
@@ -3760,3 +3930,351 @@ document.addEventListener("DOMContentLoaded", () => {
     brgyMapObserver.observe(brgyMapSection, { attributes: true });
   }
 });
+
+// ==========================================
+// 10. EDIT PROFILE MODAL LOGIC (FIXED)
+// ==========================================
+
+const btnEditProfile = document.getElementById('btn-edit-profile');
+const editProfileModal = document.getElementById('edit-profile-modal');
+const formEditProfile = document.getElementById('form-edit-profile');
+const phoneInput = document.getElementById('edit-prof-phone');
+
+// 1. Strict Phone Validation
+if (phoneInput) {
+  phoneInput.addEventListener('input', function (e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+    if (this.value.length > 11) {
+      this.value = this.value.slice(0, 11);
+    }
+  });
+}
+
+// 2. Helper Function: Safely Close and Clear the Modal
+function closeAndClearEditModal() {
+  if (editProfileModal) {
+    editProfileModal.classList.add('hidden');
+  }
+  if (formEditProfile) {
+    formEditProfile.reset(); // 🚀 THE FIX: Wipes all fields completely clean!
+  }
+}
+
+// 3. Open Modal and Pre-fill Fresh Data
+if (btnEditProfile && editProfileModal) {
+  btnEditProfile.removeAttribute('onclick');
+
+  btnEditProfile.addEventListener('click', () => {
+    // Clear any old garbage first
+    if (formEditProfile) formEditProfile.reset();
+
+    editProfileModal.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // 🚀 THE FIX: Ensures modal is at the top of the screen
+
+    // Pre-fill Locked Records
+    document.getElementById('edit-prof-first').value = sessionStorage.getItem('firstName') || '';
+    document.getElementById('edit-prof-middle').value = sessionStorage.getItem('middleName') || '';
+    document.getElementById('edit-prof-last').value = sessionStorage.getItem('lastName') || '';
+    document.getElementById('edit-prof-role').value = sessionStorage.getItem('role') || '';
+    document.getElementById('edit-prof-brgy').value = sessionStorage.getItem('barangayName') || '';
+
+    // Pre-fill Editable Details
+    document.getElementById('edit-prof-phone').value = sessionStorage.getItem('phoneNumber') || '';
+    document.getElementById('edit-prof-email').value = sessionStorage.getItem('email') || '';
+    document.getElementById('edit-prof-birthday').value = sessionStorage.getItem('birthday') || '';
+
+    const genderVal = sessionStorage.getItem('gender');
+    if (genderVal) document.getElementById('edit-prof-gender').value = genderVal;
+  });
+}
+
+// 4. Wire the Cancel / Close buttons to use the new clear function
+const closeEditBtns = document.querySelectorAll('#edit-profile-modal .close-modal-btn, #edit-profile-modal button[type="button"]');
+closeEditBtns.forEach(btn => {
+  btn.addEventListener('click', closeAndClearEditModal);
+});
+
+// 5. Handle the Save Button
+if (formEditProfile) {
+  formEditProfile.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const userId = sessionStorage.getItem('userId');
+    if (!userId) {
+      showToast("Session expired. Please log in again.", "error");
+      return;
+    }
+
+    const phoneVal = phoneInput ? phoneInput.value : '';
+    if (phoneVal && phoneVal.length < 11) {
+      showToast("Phone number must be exactly 11 digits.", "error");
+      return;
+    }
+
+    const updatedData = {
+      phoneNumber: phoneVal,
+      email: document.getElementById('edit-prof-email').value,
+      birthday: document.getElementById('edit-prof-birthday').value,
+      gender: document.getElementById('edit-prof-gender').value
+    };
+
+    const submitBtn = formEditProfile.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = "Saving... ⏳";
+    submitBtn.disabled = true;
+
+    fetch(`${API_BASE_URL}/api/users/${userId}/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedData)
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Failed to update profile");
+
+        // Update browser memory
+        sessionStorage.setItem('phoneNumber', updatedData.phoneNumber);
+        sessionStorage.setItem('email', updatedData.email);
+        sessionStorage.setItem('birthday', updatedData.birthday);
+        sessionStorage.setItem('gender', updatedData.gender);
+
+        // 🚀 THE FIX: Instantly Force Update the UI Elements (Bypasses the ReferenceError)
+        const pPhone = document.getElementById('profile-phone');
+        if (pPhone) pPhone.textContent = updatedData.phoneNumber;
+
+        const pEmail = document.getElementById('profile-email');
+        if (pEmail) pEmail.textContent = updatedData.email;
+
+        const pGender = document.getElementById('profile-gender');
+        if (pGender) pGender.textContent = updatedData.gender;
+
+        const pBirthday = document.getElementById('profile-birthday');
+        if (pBirthday) pBirthday.textContent = updatedData.birthday;
+
+        // Recalculate Age instantly
+        if (updatedData.birthday) {
+          const birthDate = new Date(updatedData.birthday);
+          const today = new Date();
+          let ageCalc = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) ageCalc--;
+
+          const pAge = document.getElementById('profile-age');
+          if (pAge) pAge.textContent = `${ageCalc} years old`;
+        }
+
+        closeAndClearEditModal();
+        showToast("Profile updated successfully!", "success");
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast("Failed to save profile changes.", "error");
+      })
+      .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      });
+  });
+}
+
+// ==========================================
+// 11. PROFILE PICTURE LOGIC
+// ==========================================
+const profilePicUpload = document.getElementById('profile-pic-upload');
+const mainAvatar = document.getElementById('main-profile-avatar');
+
+// 1. Helper to visually update the Avatar circle
+function updateAvatarDisplay(imageName) {
+  if (!mainAvatar) return;
+
+  if (!imageName || imageName === 'no_image.jpg' || imageName === 'null') {
+    mainAvatar.innerHTML = '🏛️';
+    mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #1e40af, #3b82f6)';
+    return;
+  }
+
+  const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
+
+  // Uses your Ngrok security bypass to load the image cleanly
+  fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+    .then(res => res.blob())
+    .then(blob => {
+      const objectURL = URL.createObjectURL(blob);
+      mainAvatar.innerHTML = ''; // Hide the emoji
+      mainAvatar.style.backgroundImage = `url(${objectURL})`;
+      mainAvatar.style.backgroundSize = 'cover';
+      mainAvatar.style.backgroundPosition = 'center';
+    })
+    .catch(err => console.error("Failed to load avatar:", err));
+}
+
+// 2. The Upload Logic (Triggered when they pick a photo)
+if (profilePicUpload) {
+  profilePicUpload.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Strict 5MB file size limit to protect your server
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Please choose an image smaller than 5MB", "error");
+      this.value = '';
+      return;
+    }
+
+    const userId = sessionStorage.getItem('userId');
+    if (!userId) return;
+
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
+    showToast("Uploading new profile picture... ⏳", "info");
+
+    // Send to the new Spring Boot endpoint
+    fetch(`${API_BASE_URL}/api/users/${userId}/profile-picture`, {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Upload failed");
+        return response.json();
+      })
+      .then(data => {
+        showToast("Profile picture updated successfully!", "success");
+        // Save the new filename to browser memory and instantly update the UI
+        sessionStorage.setItem('profilePicture', data.profilePicture);
+        updateAvatarDisplay(data.profilePicture);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast("Failed to upload picture.", "error");
+      });
+  });
+}
+
+// 3. The View Button Logic (Wire this to the 'View' button in your HTML)
+function openProfilePicViewer() {
+  const imageName = sessionStorage.getItem('profilePicture');
+  if (!imageName || imageName === 'no_image.jpg' || imageName === 'null') {
+    showToast("No custom profile picture uploaded.", "info");
+    return;
+  }
+
+  const modal = document.getElementById('view-profile-pic-modal');
+  const fullImg = document.getElementById('full-size-profile-pic');
+
+  const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
+
+  // Fetch and display full size
+  fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+    .then(res => res.blob())
+    .then(blob => {
+      fullImg.src = URL.createObjectURL(blob);
+      modal.classList.remove('hidden');
+    });
+}
+
+// Ensure the "View" button calls the function
+const viewPicBtn = document.querySelector('button[onclick*="View Picture"]');
+if (viewPicBtn) {
+  viewPicBtn.setAttribute('onclick', 'openProfilePicViewer()');
+}
+
+// Ensure the avatar updates every time the profile modal is opened
+// (Add this to your existing populateProfileData function if you want it to run on load!)
+updateAvatarDisplay(sessionStorage.getItem('profilePicture'));
+
+
+// ==========================================
+// 12. SECURITY & PASSWORD LOGIC (ENHANCED)
+// ==========================================
+
+// 🚀 Helper: Interactive Password Field Eye Toggle
+window.togglePasswordVisibility = function(inputId, iconElement) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  if (input.type === "password") {
+    input.type = "text";
+    iconElement.textContent = "🙈"; // Change icon to blind monkey / hidden state
+  } else {
+    input.type = "password";
+    iconElement.textContent = "👁️"; // Back to eye
+  }
+};
+
+const formChangePassword = document.getElementById('form-change-password');
+
+if (formChangePassword) {
+  formChangePassword.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const currentPass = document.getElementById('sec-current-pass').value;
+    const newPass = document.getElementById('sec-new-pass').value;
+    const confirmPass = document.getElementById('sec-confirm-pass').value;
+    const submitBtn = document.getElementById('btn-submit-password');
+
+    // 1. Check if passwords match
+    if (newPass !== confirmPass) {
+      showToast("New passwords do not match!", "error");
+      return;
+    }
+
+    // 2. Strict Enterprise Complexity Regex:
+    // Min 8 chars, 1 Uppercase, 1 Number, 1 Special Character (@$!%*?&#)
+    const strictPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
+    if (!strictPasswordRegex.test(newPass)) {
+      showToast("Password must be 8+ characters, with 1 uppercase letter, 1 number, and 1 special character (@$!%*?&#).", "error");
+      return;
+    }
+
+    const userId = sessionStorage.getItem('userId');
+    if (!userId) {
+      showToast("Session expired. Please log in again.", "error");
+      return;
+    }
+
+    // Button Loading State
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = "Verifying & Saving... ⏳";
+    submitBtn.disabled = true;
+
+    // 3. Send Request to Spring Boot Backend
+    fetch(`${API_BASE_URL}/api/users/${userId}/password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: currentPass,
+        newPassword: newPass
+      })
+    })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to update password.");
+        }
+        return data;
+      })
+      .then(data => {
+        showToast("Password successfully updated! 🔒", "success");
+        formChangePassword.reset(); // Reset form fields
+
+        // Revert all password input types back to hidden 'password'
+        ['sec-current-pass', 'sec-new-pass', 'sec-confirm-pass'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.type = 'password';
+        });
+        // Revert icons back to eye
+        document.querySelectorAll('#form-change-password span').forEach(span => {
+          span.textContent = '👁️';
+        });
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast(error.message, "error");
+      })
+      .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      });
+  });
+}

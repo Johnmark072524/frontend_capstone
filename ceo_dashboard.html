@@ -378,11 +378,33 @@
             <p id="ceo-modal-proof-remarks" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #dcfce3; color: #374151; font-size: 13px; margin-top: 5px;">No remarks provided.</p>
           </div>
         </div>
+
+
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ========================================== -->
+<!-- LOGOUT CONFIRMATION MODAL -->
+<!-- ========================================== -->
+<div id="logout-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">
+  <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px; border-radius: 12px; background: white; border: 1px solid #cbd5e1;">
+    <div style="font-size: 45px; margin-bottom: 15px;">👋</div>
+    <h3 style="margin: 0 0 10px 0; font-size: 20px; color: #1e293b;">Ready to leave?</h3>
+    <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Are you sure you want to log out of your account?</p>
+
+    <div style="display: flex; justify-content: center; gap: 15px;">
+      <!-- Cancel Button -->
+      <button type="button" onclick="document.getElementById('logout-confirm-modal').classList.add('hidden')" style="padding: 10px 20px; border-radius: 6px; border: 1px solid #94a3b8; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: 0.2s;">Cancel</button>
+
+      <!-- Confirm Logout Button -->
+      <button type="button" id="btn-confirm-logout" style="padding: 10px 20px; border-radius: 6px; border: none; background: #dc3545; color: white; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);">Yes, Log Out</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 999999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
   <span id="toast-icon" style="font-size: 20px;"></span>
   <span id="toast-message" style="font-weight: bold;"></span>

@@ -679,83 +679,119 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtns.forEach(btn => btn.addEventListener('click', () => addRoadModal.classList.add('hidden')));
   }
 
-  // ==========================================
-// 9. MASTER PROFILE LOGIC (DYNAMIC DATA)
+// ==========================================
+// 9. MASTER PROFILE LOGIC (CRASH-PROOF VERSION)
 // ==========================================
 
-  function populateProfileData() {
-    // 1. Grab data securely from the browser's session storage
-    const firstName = sessionStorage.getItem('firstName') || 'Unknown';
-    const middleName = sessionStorage.getItem('middleName') || '';
-    const lastName = sessionStorage.getItem('lastName') || 'User';
-    const email = sessionStorage.getItem('email') || 'Not Provided';
-    const phone = sessionStorage.getItem('phoneNumber') || 'Not Provided';
-    const birthday = sessionStorage.getItem('birthday') || '';
-    const gender = sessionStorage.getItem('gender') || 'Not Specified';
+  window.populateProfileData = function() {
+    try {
+      // 1. Grab data securely and PREVENT "null" string crashes
+      const getSafeStr = (key, fallback) => {
+        const val = sessionStorage.getItem(key);
+        return (val && val !== 'null' && val.trim() !== '') ? val : fallback;
+      };
 
-    const username = sessionStorage.getItem('username') || 'N/A';
-    const role = sessionStorage.getItem('role') || 'BARANGAY';
-    const barangayName = sessionStorage.getItem('barangayName') || 'Not Assigned';
+      const firstName = getSafeStr('firstName', 'Unknown');
+      const middleName = getSafeStr('middleName', '');
+      const lastName = getSafeStr('lastName', 'User');
+      const email = getSafeStr('email', 'Not Provided');
+      const phone = getSafeStr('phoneNumber', 'Not Provided');
+      const birthday = getSafeStr('birthday', '');
+      const gender = getSafeStr('gender', 'Not Specified');
 
-    // 2. Smart Name Builder (Handles missing middle names perfectly)
-    let fullName = `${firstName} ${lastName}`;
-    if (middleName.trim() !== '') {
-      fullName = `${firstName} ${middleName} ${lastName}`;
-    }
+      const username = getSafeStr('username', 'N/A');
+      const role = getSafeStr('userRole', 'BARANGAY');
+      const barangayName = getSafeStr('barangayName', 'Not Assigned');
 
-    // 🚀 3. MAGIC AGE CALCULATOR
-    let displayAge = "N/A";
-    let displayBirthday = "Not Provided";
+      // 2. Smart Name Builder
+      let fullName = middleName ? `${firstName} ${middleName} ${lastName}` : `${firstName} ${lastName}`;
 
-    if (birthday && birthday.trim() !== '') {
-      displayBirthday = birthday; // Shows as YYYY-MM-DD
-      const birthDate = new Date(birthday);
-      const today = new Date();
-      let ageCalc = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
+      // 3. SAFE AGE CALCULATOR
+      let displayAge = "N/A";
+      let displayBirthday = "Not Provided";
 
-      // Subtracts a year if they haven't had their birthday yet this year!
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        ageCalc--;
+      if (birthday) {
+        displayBirthday = birthday;
+        const birthDate = new Date(birthday);
+        if (!isNaN(birthDate.getTime())) { // Ensure date is valid before doing math
+          const today = new Date();
+          let ageCalc = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            ageCalc--;
+          }
+          displayAge = `${ageCalc} years old`;
+        }
       }
-      displayAge = `${ageCalc} years old`;
+
+      // 🚀 4. SMART ROLE FORMATTER (Cleans up the text for the UI)
+      let displayRole = "Barangay Official";
+      const userRoleLower = String(role).toLowerCase();
+
+      if (userRoleLower.includes('admin') || userRoleLower.includes('cpdo')) {
+        displayRole = "CPDO Admin";
+      } else if (userRoleLower.includes('ceo') || userRoleLower.includes('engineer')) {
+        displayRole = "City Engineer";
+      }
+
+      // 5. Inject into the Sidebars / Top Headers safely
+      const setElText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+      };
+
+      setElText('sidebar-display-name', fullName);
+      setElText('sidebar-display-role', displayRole);
+
+      setElText('side-profile-name', fullName);
+      setElText('side-profile-role', displayRole);
+      setElText('side-profile-brgy', barangayName);
+
+      setElText('header-display-name', fullName);
+      setElText('header-display-role', displayRole); // 🚀 INJECTS ROLE INTO TOP HEADER
+
+      // 6. Inject into the Official Profile Tab
+      setElText('profile-full-name', fullName);
+      setElText('profile-email', email);
+      setElText('profile-phone', phone);
+      setElText('profile-birthday', displayBirthday);
+      setElText('profile-age', displayAge);
+      setElText('profile-gender', gender);
+      setElText('profile-username', username);
+      setElText('profile-role', displayRole);
+
+      // 7. DYNAMIC DEPARTMENT ROUTING
+      const profileBarangayEl = document.getElementById('profile-barangay');
+      if (profileBarangayEl) {
+        if (userRoleLower.includes('admin') || userRoleLower.includes('cpdo')) {
+          profileBarangayEl.textContent = 'City Planning and Development Office';
+        } else if (userRoleLower.includes('ceo') || userRoleLower.includes('engineer')) {
+          profileBarangayEl.textContent = 'City Engineering Office';
+        } else {
+          profileBarangayEl.textContent = barangayName;
+        }
+      }
+    } catch (error) {
+      console.error("🚨 Profile Population Crashed:", error);
     }
+  };
 
-    // 4. Inject into the Sidebar
-    const sidebarNameEl = document.getElementById('sidebar-display-name');
-    if (sidebarNameEl) sidebarNameEl.textContent = fullName;
+// ==========================================
+// 🚀 AUTO-LOAD PROFILE HEADER GLOBALLY
+// ==========================================
+// Run this instantly when the dashboard opens, before anyone clicks anything!
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof window.populateProfileData === 'function') {
+      window.populateProfileData();
+    }
+  });
 
-    const sidebarRoleEl = document.getElementById('sidebar-display-role');
-    if (sidebarRoleEl) sidebarRoleEl.textContent = `Role: ${role}`;
-
-    // 5. Inject into the Official Profile Tab
-    const profileFullNameEl = document.getElementById('profile-full-name');
-    if (profileFullNameEl) profileFullNameEl.textContent = fullName;
-
-    const profileEmailEl = document.getElementById('profile-email');
-    if (profileEmailEl) profileEmailEl.textContent = email;
-
-    const profilePhoneEl = document.getElementById('profile-phone');
-    if (profilePhoneEl) profilePhoneEl.textContent = phone;
-
-    const profileBirthdayEl = document.getElementById('profile-birthday');
-    if (profileBirthdayEl) profileBirthdayEl.textContent = displayBirthday;
-
-    const profileAgeEl = document.getElementById('profile-age');
-    if (profileAgeEl) profileAgeEl.textContent = displayAge;
-
-    const profileGenderEl = document.getElementById('profile-gender');
-    if (profileGenderEl) profileGenderEl.textContent = gender;
-
-    const profileUsernameEl = document.getElementById('profile-username');
-    if (profileUsernameEl) profileUsernameEl.textContent = username;
-
-    const profileBarangayEl = document.getElementById('profile-barangay');
-    if (profileBarangayEl) profileBarangayEl.textContent = barangayName;
-
-    const profileRoleEl = document.getElementById('profile-role');
-    if (profileRoleEl) profileRoleEl.textContent = role;
-  }
+// 🚀 FALLBACK: FORCE THE SCRIPT TO RUN (Bypasses missing DOMContentLoaded triggers)
+  setTimeout(() => {
+    if (typeof window.populateProfileData === 'function') {
+      window.populateProfileData();
+    }
+  }, 300);
 
 // --- PROFILE BUTTON TRIGGERS (WITH STATE RESET FIX) ---
   const profileBtn = document.querySelector('.header-profile-btn');
@@ -771,9 +807,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 2. Show Profile and load data
       viewProfile.classList.remove('hidden');
-      populateProfileData();
+      window.populateProfileData();
 
-      // 🚀 THE FIX: Force the profile tabs back to their default state!
+      // Force the profile tabs back to their default state!
       const profileMenuLinks = document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)');
       const profileTabs = document.querySelectorAll('.profile-tab');
 
@@ -787,22 +823,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (defaultLink) defaultLink.classList.add('active');
       if (defaultTab) defaultTab.classList.remove('hidden');
 
-      // 🚀 THE FIX: Clear the password form just in case they typed something before leaving
+      // Clear the password form just in case they typed something before leaving
       const formChangePassword = document.getElementById('form-change-password');
       if (formChangePassword) {
         formChangePassword.reset();
-        // Revert all password input types back to hidden 'password'
         ['sec-current-pass', 'sec-new-pass', 'sec-confirm-pass'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.type = 'password';
         });
-        // Revert icons back to eye
         document.querySelectorAll('#form-change-password span').forEach(span => {
           span.textContent = '👁️';
         });
       }
     });
   }
+
 // --- PROFILE TAB NAVIGATION ---
   const profileMenuLinks = document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)');
   const profileTabs = document.querySelectorAll('.profile-tab');
@@ -821,26 +856,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-// --- SECURE LOGOUT LOGIC (WITH CONFIRMATION) ---
+// --- SECURE LOGOUT LOGIC (WITH CONFIRMATION MODAL) ---
   const logoutBtn = document.querySelector('.logout-btn');
   const logoutConfirmModal = document.getElementById('logout-confirm-modal');
   const btnConfirmLogout = document.getElementById('btn-confirm-logout');
 
-// 1. Show the confirmation modal when "Logout" is clicked in the sidebar
   if (logoutBtn && logoutConfirmModal) {
     logoutBtn.addEventListener('click', (e) => {
-      e.preventDefault(); // Prevent any default link behavior
+      e.preventDefault();
       logoutConfirmModal.classList.remove('hidden');
     });
   }
 
-// 2. Execute the actual secure logout if they click "Yes, Log Out"
   if (btnConfirmLogout) {
     btnConfirmLogout.addEventListener('click', () => {
-      // 1. Wipe all sensitive data from the browser memory
       sessionStorage.clear();
-
-      // 2. Shred the history stack and replace the route so they can't click 'Back'
       window.location.replace('login.html');
     });
   }
@@ -864,6 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
 
   // ==========================================
 // 10. OFFICIAL REPORT LOGIC (CEO PRIORITY LIST)
@@ -1927,7 +1958,7 @@ function handleLogin() {
       // SUCCESS! Save the REAL user data
       sessionStorage.setItem("userId", data.userId);
       sessionStorage.setItem("username", data.username || "N/A");
-      sessionStorage.setItem("userRole", data.role);
+      sessionStorage.setItem("userRole", data.role); // 🚀 FIXED: Saved as userRole
 
       // Save the new profile data into browser memory securely
       sessionStorage.setItem("firstName", data.firstName || "");
@@ -1939,10 +1970,11 @@ function handleLogin() {
       sessionStorage.setItem("gender", data.gender || "");
       sessionStorage.setItem("profilePicture", data.profilePicture || "no_image.jpg");
 
+      // Set the Barangay ID if they have one, otherwise default to City Hall
       if (data.barangayId) {
         sessionStorage.setItem("barangayId", data.barangayId);
-        sessionStorage.setItem("barangayName", data.barangayName);
       }
+      sessionStorage.setItem("barangayName", data.barangayName || "City Hall Central");
 
       showToast("Login Successful!", "success");
 
@@ -4281,3 +4313,5 @@ if (formChangePassword) {
       });
   });
 }
+
+

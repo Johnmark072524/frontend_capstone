@@ -47,28 +47,54 @@
 
       <button class="header-profile-btn" style="background: #fff7ed; border: 1px solid #fed7aa; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #c2410c; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
         <span class="icon" style="background: linear-gradient(135deg, #e67e22, #d35400); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(211,84,0,0.4);">👷</span>
-        <span style="font-size: 14px;">City Engineering Office</span>
+
+        <!-- 🚀 2-LINE STACKED TEXT -->
+        <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
+          <span id="header-display-name" style="font-size: 14px; font-weight: 700; color: #c2410c;">Loading...</span>
+          <span id="header-display-role" style="font-size: 11px; font-weight: 600; color: #64748b;">Loading...</span>
+        </div>
       </button>
     </header>
 
     <main class="content-area">
 
+      <!-- ========================================== -->
+      <!-- 👷 CEO PROFILE VIEW -->
+      <!-- ========================================== -->
       <div id="view-profile" class="content-section hidden">
 
         <div class="section-header-flex" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0;">Engineering Office Settings</h2>
-          <button id="btn-back-dashboard" style="background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s;">
+          <div>
+            <h2 style="margin: 0; font-size: 24px; color: var(--text-main);">Engineering Office Settings</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Manage your CEO account details and security settings.</p>
+          </div>
+          <button id="btn-back-dashboard" style="background: white; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s;">
             <span style="font-size: 14px;">⬅️</span> Back to Dashboard
           </button>
         </div>
 
         <div class="profile-split-container">
 
+          <!-- LEFT SIDEBAR -->
           <div class="profile-sidebar">
             <div class="profile-header-mini">
-              <div class="profile-avatar-mini" style="background: linear-gradient(135deg, #e67e22, #d35400);">👷</div>
-              <h4 style="margin: 0; color: #d35400;">Engr. Roberto Santos</h4>
-              <p style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-muted);">City Engineer</p>
+
+              <!-- 🚀 Interactive Profile Picture Container -->
+              <div class="profile-avatar-wrapper" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 15px;">
+                <div class="profile-avatar-mini" id="main-profile-avatar" style="background: linear-gradient(135deg, #e67e22, #d35400); width: 80px; height: 80px; font-size: 35px; margin-bottom: 8px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white;">👷</div>
+
+                <!-- View & Change Buttons -->
+                <div style="display: flex; gap: 8px;">
+                  <button onclick="document.getElementById('view-profile-pic-modal').classList.remove('hidden')" style="font-size: 11px; padding: 4px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer; color: #475569; font-weight: 600;">👁️ View</button>
+                  <label style="font-size: 11px; padding: 4px 10px; border: none; background: #d35400; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                    📷 Change <input type="file" hidden id="profile-pic-upload" accept="image/*">
+                  </label>
+                </div>
+              </div>
+
+              <!-- 🚀 Real Name Injected Here -->
+              <h4 id="side-profile-name" style="margin: 0; color: #d35400; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading...</h4>
+              <p id="side-profile-role" style="margin: 5px 0 0 0; font-size: 13px; font-weight: bold; color: var(--text-muted);">Loading...</p>
             </div>
 
             <ul class="profile-nav" id="profile-nav-menu">
@@ -81,36 +107,186 @@
             </ul>
           </div>
 
+          <!-- RIGHT CONTENT -->
           <div class="profile-content">
 
+            <!-- TAB 1: IDENTITY -->
             <div id="tab-identity" class="profile-tab active">
-              <h3 style="margin-bottom: 25px; color: #d35400; border-bottom: 2px solid #eee; padding-bottom: 10px;">Engineering Profile</h3>
-              <div class="profile-detail-row"><strong>Department:</strong> <span>City Engineering Office (CEO)</span></div>
-              <div class="profile-detail-row"><strong>Role:</strong> <span>Lead City Engineer</span></div>
-              <div class="profile-detail-row"><strong>Official Email:</strong> <span>engineer@sjdm.gov.ph</span></div>
-              <div class="profile-detail-row"><strong>License Number:</strong> <span>CE-7489210</span></div>
-              <div class="profile-detail-row" style="border-bottom: none;"><strong>Account Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                <h3 class="profile-tab-title" style="margin: 0; color: #d35400; border: none; padding: 0;">👷 Engineering Profile</h3>
+                <!-- 🚀 Edit Button -->
+                <button id="btn-edit-profile" onclick="document.getElementById('edit-profile-modal').classList.remove('hidden')" style="background: #fff3ec; border: 1px solid #fbd8c4; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #d35400; font-size: 13px; transition: 0.2s;">
+                  ✏️ Edit Information
+                </button>
+              </div>
+
+              <div class="profile-detail-row"><strong>Full Name:</strong> <span id="profile-full-name">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Official Email:</strong> <span id="profile-email">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Phone Number:</strong> <span id="profile-phone">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Date of Birth:</strong> <span id="profile-birthday">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Age:</strong> <span id="profile-age">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Gender:</strong> <span id="profile-gender">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Username:</strong> <span id="profile-username">Loading...</span></div>
+              <div class="profile-detail-row"><strong>Department:</strong> <span id="profile-barangay">City Engineering Office</span></div>
+              <div class="profile-detail-row"><strong>System Role:</strong> <span id="profile-role">Loading...</span></div>
+              <div class="profile-detail-row" style="border-bottom: none;"><strong>Account Status:</strong> <span class="status-badge validated" style="color: #28a745; font-weight: bold;">Active</span></div>
             </div>
 
+            <!-- TAB 2: SECURITY -->
             <div id="tab-security" class="profile-tab hidden">
-              <h3 style="margin-bottom: 25px; color: #d35400; border-bottom: 2px solid #eee; padding-bottom: 10px;">Change Password</h3>
-              <form>
+              <h3 class="profile-tab-title" style="color: #d35400;">🔒 Change Password</h3>
+              <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Ensure your account remains secure by using a strong password.</p>
+
+              <form id="form-change-password" onsubmit="event.preventDefault();">
                 <div class="form-group-vertical" style="margin-bottom: 15px;">
-                  <label>Current Password</label>
-                  <input type="password" required>
+                  <label style="display:block; margin-bottom:5px; font-size: 13px; color: #333; font-weight: 600;">Current Password</label>
+                  <div style="position: relative; width: 100%;">
+                    <input type="password" id="sec-current-pass" required class="profile-input" placeholder="Enter current password" style="width: 100%; padding: 8px 35px 8px 8px; border-radius: 4px; border: 1px solid #cbd5e1; box-sizing: border-box;">
+                    <span onclick="togglePasswordVisibility('sec-current-pass', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 14px;">👁️</span>
+                  </div>
                 </div>
+
                 <div class="form-group-vertical" style="margin-bottom: 15px;">
-                  <label>New Password</label>
-                  <input type="password" required>
+                  <label style="display:block; margin-bottom:5px; font-size: 13px; color: #333; font-weight: 600;">New Password</label>
+                  <div style="position: relative; width: 100%;">
+                    <input type="password" id="sec-new-pass" required class="profile-input" placeholder="Enter new password" style="width: 100%; padding: 8px 35px 8px 8px; border-radius: 4px; border: 1px solid #cbd5e1; box-sizing: border-box;">
+                    <span onclick="togglePasswordVisibility('sec-new-pass', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 14px;">👁️</span>
+                  </div>
+                  <p style="margin: 5px 0 0 0; font-size: 11px; color: #64748b;">
+                    🔒 Must be at least 8 characters long, contain 1 uppercase letter, 1 number, and 1 special character (@$!%*?&).
+                  </p>
                 </div>
+
                 <div class="form-group-vertical" style="margin-bottom: 25px;">
-                  <label>Confirm New Password</label>
-                  <input type="password" required>
+                  <label style="display:block; margin-bottom:5px; font-size: 13px; color: #333; font-weight: 600;">Confirm New Password</label>
+                  <div style="position: relative; width: 100%;">
+                    <input type="password" id="sec-confirm-pass" required class="profile-input" placeholder="Confirm new password" style="width: 100%; padding: 8px 35px 8px 8px; border-radius: 4px; border: 1px solid #cbd5e1; box-sizing: border-box;">
+                    <span onclick="togglePasswordVisibility('sec-confirm-pass', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 14px;">👁️</span>
+                  </div>
                 </div>
-                <button type="submit" class="btn-submit" style="background-color: #d35400; border: none; padding: 10px 20px;">Update Password</button>
+
+                <button type="submit" id="btn-submit-password" class="btn-submit" style="width: 100%; padding: 10px; background: #d35400; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Update Password</button>
               </form>
             </div>
 
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- ✏️ EDIT PROFILE INFORMATION MODAL -->
+      <!-- ========================================== -->
+      <div id="edit-profile-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 700px;">
+
+          <div class="modal-header">
+            <h2 style="margin: 0; font-size: 18px;">✏️ Edit Profile Information</h2>
+            <button class="close-modal-btn" onclick="document.getElementById('edit-profile-modal').classList.add('hidden')" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+          </div>
+
+          <div class="modal-body" style="padding: 20px;">
+            <form id="form-edit-profile" onsubmit="event.preventDefault(); submitProfileEdit();">
+
+              <!-- SECTION 1: LOCKED OFFICIAL RECORDS -->
+              <div class="report-section" style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+                <h3 class="section-title" style="margin: 0 0 15px 0; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">🔒 Official Government Records (Read-Only)</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #475569;">First Name</label>
+                    <input type="text" id="edit-prof-first" class="profile-input" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; background-color: #e2e8f0; cursor: not-allowed; color: #64748b;">
+                  </div>
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #475569;">Middle Name</label>
+                    <input type="text" id="edit-prof-middle" class="profile-input" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; background-color: #e2e8f0; cursor: not-allowed; color: #64748b;">
+                  </div>
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #475569;">Last Name</label>
+                    <input type="text" id="edit-prof-last" class="profile-input" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; background-color: #e2e8f0; cursor: not-allowed; color: #64748b;">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #475569;">System Role</label>
+                    <input type="text" id="edit-prof-role" class="profile-input" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; background-color: #e2e8f0; cursor: not-allowed; color: #64748b;">
+                  </div>
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #475569;">Department</label>
+                    <input type="text" id="edit-prof-brgy" class="profile-input" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; background-color: #e2e8f0; cursor: not-allowed; color: #64748b;">
+                  </div>
+                </div>
+              </div>
+
+              <!-- SECTION 2: EDITABLE PERSONAL DETAILS -->
+              <div class="report-section" style="padding: 15px; border: 1px solid #cbd5e1; border-radius: 8px; background: white;">
+                <h3 class="section-title" style="margin: 0 0 15px 0; font-size: 13px; color: #d35400; text-transform: uppercase; letter-spacing: 0.5px;">📝 Personal Details</h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #333;">Phone Number</label>
+                    <input type="tel" id="edit-prof-phone" class="profile-input" placeholder="e.g. 09123456789" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                  </div>
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #333;">Official Email</label>
+                    <input type="email" id="edit-prof-email" class="profile-input" placeholder="e.g. ceo@sjdm.gov.ph" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                  </div>
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #333;">Date of Birth</label>
+                    <input type="date" id="edit-prof-birthday" class="profile-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                  </div>
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: #333;">Gender</label>
+                    <select id="edit-prof-gender" class="profile-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; background: white;">
+                      <option value="" disabled selected>Select Gender...</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MODAL ACTIONS -->
+              <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
+                <button type="button" onclick="document.getElementById('edit-profile-modal').classList.add('hidden')" style="padding: 8px 16px; border-radius: 4px; border: 1px solid #94a3b8; background: white; cursor: pointer; font-weight: 600; color: #475569;">Cancel</button>
+                <button type="submit" style="padding: 8px 20px; border-radius: 4px; background: #d35400; color: white; border: none; cursor: pointer; font-weight: 600;">💾 Save Changes</button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 🖼️ VIEW PROFILE PICTURE MODAL -->
+      <!-- ========================================== -->
+      <div id="view-profile-pic-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 500px; text-align: center; background: #1e293b; padding: 15px; border-radius: 12px; border: 1px solid #334155;">
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+            <button onclick="document.getElementById('view-profile-pic-modal').classList.add('hidden')" style="background: none; border: none; font-size: 24px; color: #cbd5e1; cursor: pointer; transition: 0.2s;">✕</button>
+          </div>
+          <img id="full-size-profile-pic" src="" alt="Profile Picture" style="max-width: 100%; max-height: 70vh; border-radius: 8px; object-fit: contain; background: #0f172a;">
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 🚪 LOGOUT CONFIRMATION MODAL -->
+      <!-- ========================================== -->
+      <div id="logout-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px; border-radius: 12px; background: white; border: 1px solid #cbd5e1;">
+          <div style="font-size: 45px; margin-bottom: 15px;">👋</div>
+          <h3 style="margin: 0 0 10px 0; font-size: 20px; color: #1e293b;">Ready to leave?</h3>
+          <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Are you sure you want to log out of your account?</p>
+
+          <div style="display: flex; justify-content: center; gap: 15px;">
+            <!-- Cancel Button -->
+            <button type="button" onclick="document.getElementById('logout-confirm-modal').classList.add('hidden')" style="padding: 10px 20px; border-radius: 6px; border: 1px solid #94a3b8; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: 0.2s;">Cancel</button>
+
+            <!-- Confirm Logout Button -->
+            <button type="button" id="btn-confirm-logout" style="padding: 10px 20px; border-radius: 6px; border: none; background: #dc3545; color: white; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);">Yes, Log Out</button>
           </div>
         </div>
       </div>
@@ -389,24 +565,6 @@
   </div>
 </div>
 
-<!-- ========================================== -->
-<!-- LOGOUT CONFIRMATION MODAL -->
-<!-- ========================================== -->
-<div id="logout-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">
-  <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px; border-radius: 12px; background: white; border: 1px solid #cbd5e1;">
-    <div style="font-size: 45px; margin-bottom: 15px;">👋</div>
-    <h3 style="margin: 0 0 10px 0; font-size: 20px; color: #1e293b;">Ready to leave?</h3>
-    <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Are you sure you want to log out of your account?</p>
-
-    <div style="display: flex; justify-content: center; gap: 15px;">
-      <!-- Cancel Button -->
-      <button type="button" onclick="document.getElementById('logout-confirm-modal').classList.add('hidden')" style="padding: 10px 20px; border-radius: 6px; border: 1px solid #94a3b8; background: white; color: #475569; font-weight: 600; cursor: pointer; transition: 0.2s;">Cancel</button>
-
-      <!-- Confirm Logout Button -->
-      <button type="button" id="btn-confirm-logout" style="padding: 10px 20px; border-radius: 6px; border: none; background: #dc3545; color: white; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);">Yes, Log Out</button>
-    </div>
-  </div>
-</div>
 
 <div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 999999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
   <span id="toast-icon" style="font-size: 20px;"></span>

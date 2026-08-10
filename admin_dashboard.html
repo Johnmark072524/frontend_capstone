@@ -31,7 +31,7 @@
         <li data-target="view-reports"><a href="#"><span class="icon">📄</span> Reports </a></li>
         <li data-target="view-tracking"><a href="#"><span class="icon">🚧</span> Repair Tracking</a></li>
         <li data-target="view-map"><a href="#"><span class="icon">🗺️</span> Map View</a></li>
-        <li><a href="#"><span class="icon">👥</span> User Management</a></li>
+        <li data-target="view-user-management"><a href="#"><span class="icon">👥</span> User Management</a></li>
         <li data-target="view-barangay"><a href="#"><span class="icon">🏢</span> Barangay Management</a></li>
         <li><a href="#"><span class="icon">🗄️</span> Archive</a></li>
         <li><a href="#"><span class="icon">⏱️</span> Activity Log</a></li>
@@ -222,6 +222,8 @@
 
         </div>
       </div>
+
+
 
       <!-- ========================================== -->
       <!-- 👤 ADMIN PROFILE VIEW -->
@@ -481,6 +483,114 @@
 
       </div>
 
+      <!-- ========================================== -->
+      <!-- 👥 USER MANAGEMENT VIEW -->
+      <!-- ========================================== -->
+      <div id="view-user-management" class="content-section hidden">
+
+        <div class="section-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+          <div>
+            <h2 style="margin: 0; font-size: 24px; color: #1e293b;">👥 User Management</h2>
+            <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Provision and manage accounts for Barangay Officials.</p>
+          </div>
+
+          <button id="btn-open-add-user" style="background: #1e40af; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(30,64,175,0.2); transition: 0.2s;">
+            <span class="icon">➕</span> Add New Official
+          </button>
+        </div>
+
+        <!-- THE OFFICIALS DATA TABLE -->
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; overflow: hidden;">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th>Official Name</th>
+              <th>Username</th>
+              <th>Jurisdiction (Barangay)</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+            </thead>
+            <tbody id="user-management-tbody">
+            <!-- Javascript will inject the accounts here -->
+            <tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">Loading officials from database...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- ➕ ADD NEW OFFICIAL MODAL -->
+      <!-- ========================================== -->
+      <div id="add-user-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 500px;">
+
+          <div class="modal-header">
+            <h2 style="margin: 0; font-size: 18px;">➕ Provision New Account</h2>
+            <button class="close-modal-btn" onclick="document.getElementById('add-user-modal').classList.add('hidden')" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+          </div>
+
+          <div class="modal-body" style="padding: 20px;">
+            <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 20px;">Create a securely generated account for a newly appointed Barangay Official.</p>
+
+            <form id="form-add-user">
+              <!-- 3-Column Grid for Names -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group-vertical">
+                  <label style="font-size: 12px; font-weight: 600; color: #333;">First Name <span style="color:red;">*</span></label>
+                  <input type="text" id="add-user-first" required class="profile-input" placeholder="e.g. Juan">
+                </div>
+                <div class="form-group-vertical">
+                  <label style="font-size: 12px; font-weight: 600; color: #333;">Middle Name</label>
+                  <input type="text" id="add-user-middle" class="profile-input" placeholder="e.g. M.">
+                </div>
+                <div class="form-group-vertical">
+                  <label style="font-size: 12px; font-weight: 600; color: #333;">Last Name <span style="color:red;">*</span></label>
+                  <input type="text" id="add-user-last" required class="profile-input" placeholder="e.g. Dela Cruz">
+                </div>
+              </div>
+
+              <!-- 2-Column Grid for Email and Jurisdiction -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group-vertical">
+                  <label style="font-size: 12px; font-weight: 600; color: #333;">Official Email <span style="color:red;">*</span></label>
+                  <input type="email" id="add-user-email" required class="profile-input" placeholder="e.g. official@gmail.com">
+                </div>
+                <div class="form-group-vertical">
+                  <label style="font-size: 12px; font-weight: 600; color: #333;">Jurisdiction <span style="color:red;">*</span></label>
+                  <select id="add-user-barangay" required class="profile-input" style="background: white;">
+                    <option value="" disabled selected>Loading Barangays...</option>
+                    <!-- Javascript will load the 62 barangays here -->
+                  </select>
+                </div>
+              </div>
+
+              <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #1e40af;">🔑 Auto-Generated Credentials</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                  <div>
+                    <label style="font-size: 11px; font-weight: 600; color: #64748b;">System Username</label>
+                    <input type="text" id="add-user-username" disabled class="profile-input" style="background: #e2e8f0; color: #333; font-weight: bold;">
+                  </div>
+                  <div>
+                    <label style="font-size: 11px; font-weight: 600; color: #64748b;">Temporary Password</label>
+                    <input type="text" id="add-user-password" disabled class="profile-input" style="background: #e2e8f0; color: #333; font-weight: bold;" value="RoadWise2026!">
+                  </div>
+                </div>
+                <p style="font-size: 11px; color: #64748b; margin: 10px 0 0 0;"><i>Note: Hand these credentials to the official. They will be forced to change the password upon first login.</i></p>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="document.getElementById('add-user-modal').classList.add('hidden')" style="padding: 8px 16px; border-radius: 4px; border: 1px solid #94a3b8; background: white; cursor: pointer; font-weight: 600; color: #475569;">Cancel</button>
+                <button type="submit" style="padding: 8px 20px; border-radius: 4px; background: #1e40af; color: white; border: none; cursor: pointer; font-weight: 600;">💾 Provision Account</button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+
       <div id="view-tracking" class="content-section hidden">
 
         <div class="section-header-flex">
@@ -599,6 +709,107 @@
       </div>
 
     </main>
+
+    <!-- ========================================== -->
+    <!-- ⚙️ MANAGE OFFICIAL MODAL -->
+    <!-- ========================================== -->
+    <div id="manage-user-modal" class="modal-overlay hidden">
+      <div class="modal-content" style="max-width: 550px;">
+
+        <div class="modal-header">
+          <h2 style="margin: 0; font-size: 18px;">⚙️ Manage Official Account</h2>
+          <button class="close-modal-btn" onclick="document.getElementById('manage-user-modal').classList.add('hidden')" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px;">
+
+          <!-- Hidden ID field so JavaScript knows exactly which user in the database we are editing -->
+          <input type="hidden" id="manage-user-id">
+
+          <form id="form-manage-user">
+
+            <!-- 3-Column Grid for Names -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div class="form-group-vertical">
+                <label style="font-size: 12px; font-weight: 600; color: #333;">First Name <span style="color:red;">*</span></label>
+                <input type="text" id="manage-user-first" required class="profile-input">
+              </div>
+              <div class="form-group-vertical">
+                <label style="font-size: 12px; font-weight: 600; color: #333;">Middle Name</label>
+                <input type="text" id="manage-user-middle" class="profile-input">
+              </div>
+              <div class="form-group-vertical">
+                <label style="font-size: 12px; font-weight: 600; color: #333;">Last Name <span style="color:red;">*</span></label>
+                <input type="text" id="manage-user-last" required class="profile-input">
+              </div>
+            </div>
+
+            <!-- 2-Column Grid for Email and Jurisdiction -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div class="form-group-vertical">
+                <label style="font-size: 12px; font-weight: 600; color: #333;">Official Email <span style="color:red;">*</span></label>
+                <input type="email" id="manage-user-email" required class="profile-input">
+              </div>
+              <div class="form-group-vertical">
+                <label style="font-size: 12px; font-weight: 600; color: #333;">Jurisdiction <span style="color:red;">*</span></label>
+                <select id="manage-user-barangay" required class="profile-input" style="background: white;">
+                  <option value="" disabled>Loading Barangays...</option>
+                  <!-- JavaScript will automatically copy the 62 barangays into here! -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Account Status Dropdown (The Deactivation Switch) -->
+            <div class="form-group-vertical" style="margin-bottom: 25px;">
+              <label style="font-size: 12px; font-weight: 600; color: #333;">System Access Status <span style="color:red;">*</span></label>
+              <select id="manage-user-status" required class="profile-input" style="background: #f8fafc; font-weight: bold; color: #334155;">
+                <option value="Active">🟢 Active (Full Access)</option>
+                <option value="Suspended">🟠 Suspended (Temporary Lock)</option>
+                <option value="Deactivated">🔴 Deactivated (Term Ended)</option>
+              </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 25px;">
+              <button type="submit" style="padding: 10px 20px; border-radius: 6px; background: #1e40af; color: white; border: none; cursor: pointer; font-weight: 600; width: 100%; transition: 0.2s;">
+                💾 Save Profile Changes
+              </button>
+            </div>
+          </form>
+
+          <!-- 🚨 DANGER ZONE: EMERGENCY PASSWORD RESET -->
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h4 style="margin: 0 0 5px 0; color: #b91c1c; font-size: 14px;">🚨 Emergency Password Reset</h4>
+                <p style="margin: 0; font-size: 11px; color: #7f1d1d;">Reset this account's password to the default <strong>RoadWise2026!</strong></p>
+              </div>
+              <button id="btn-emergency-reset" type="button" style="background: white; border: 1px solid #dc2626; color: #dc2626; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; transition: 0.2s;">
+                Reset Password
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 🚨 EMERGENCY RESET CONFIRM MODAL -->
+    <!-- ========================================== -->
+    <div id="reset-confirm-modal" class="modal-overlay hidden" style="z-index: 10001;">
+      <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px 20px;">
+
+        <div style="font-size: 40px; margin-bottom: 15px;">🚨</div>
+        <h3 style="margin: 0 0 10px 0; color: #b91c1c;">Emergency Reset</h3>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Are you sure you want to reset this official's password to <strong>RoadWise2026!</strong>? This will permanently overwrite their private password.</p>
+
+        <div style="display: flex; justify-content: center; gap: 10px;">
+          <button onclick="document.getElementById('reset-confirm-modal').classList.add('hidden')" style="padding: 10px 20px; border-radius: 6px; background: #f1f5f9; color: #475569; border: none; cursor: pointer; font-weight: bold; transition: 0.2s;">Cancel</button>
+          <button id="btn-confirm-reset" style="padding: 10px 20px; border-radius: 6px; background: #dc2626; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s;">Yes, Reset Password</button>
+        </div>
+
+      </div>
+    </div>
 
     <div id="review-modal" class="modal-overlay hidden">
       <div class="modal-content">

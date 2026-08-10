@@ -4314,4 +4314,430 @@ if (formChangePassword) {
   });
 }
 
+// ==========================================
+// ⚙️ SYSTEM SETTINGS LOGIC (Dark Mode & CSV)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+
+  // 1. 🌙 DARK MODE ENGINE
+  const darkModeToggle = document.getElementById('toggle-dark-mode');
+
+  // Check browser memory on load
+  if (localStorage.getItem('roadwise_dark_mode') === 'enabled') {
+    document.body.classList.add('dark-mode');
+    if (darkModeToggle) darkModeToggle.checked = true;
+  }
+
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('roadwise_dark_mode', 'enabled');
+      } else {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('roadwise_dark_mode', 'disabled');
+      }
+    });
+  }
+
+  // 2. 📊 CSV EXPORT ENGINE (Barangay Local Backup)
+  const btnExportCsv = document.getElementById('btn-export-csv');
+  if (btnExportCsv) {
+    btnExportCsv.addEventListener('click', () => {
+      const barangayId = sessionStorage.getItem("barangayId");
+      if (!barangayId) {
+        if(typeof showToast === 'function') showToast("Error: Barangay ID not found.", "error");
+        return;
+      }
+
+      btnExportCsv.innerHTML = "⏳ Generating...";
+
+      // Fetch the exact reports for this barangay
+      apiFetch(`/api/reports/barangay/${barangayId}`)
+        .then(reports => {
+          if (!reports || reports.length === 0) {
+            if(typeof showToast === 'function') showToast("No reports available to export.", "error");
+            btnExportCsv.innerHTML = `<span class="icon">📊</span> Download CSV`;
+            return;
+          }
+
+          // Generate CSV Headers
+          let csvContent = "Report ID,Road Name,Road Type,Terrain,Width (m),Length (m),Damage Type,Severity,Status,Date Submitted\n";
+
+          // Generate CSV Rows
+          reports.forEach(r => {
+            const id = `RPT-${String(r.id).padStart(4, '0')}`;
+            // Wrap text in quotes to prevent commas in descriptions from breaking the Excel columns
+            const roadName = `"${r.cityRoadName || 'N/A'}"`;
+            const roadType = `"${r.roadType || 'N/A'}"`;
+            const terrain = `"${r.terrainType || 'N/A'}"`;
+            const width = r.width || 0;
+            const length = r.length || 0;
+            const damageType = `"${r.damageType || 'None'}"`;
+            const severity = `"${r.severity || 'Unassessed'}"`;
+            const status = `"${r.status || 'Pending'}"`;
+            const dateStr = r.dateSubmitted || r.date_submitted;
+            const date = dateStr ? `"${new Date(dateStr).toLocaleDateString()}"` : `"N/A"`;
+
+            csvContent += `${id},${roadName},${roadType},${terrain},${width},${length},${damageType},${severity},${status},${date}\n`;
+          });
+
+          // Trigger the physical download in the browser
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const link = document.createElement("a");
+          const url = URL.createObjectURL(blob);
+          link.setAttribute("href", url);
+          link.setAttribute("download", `Barangay_${barangayId}_Road_Inventory_Backup.csv`);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          if(typeof showToast === 'function') showToast("CSV Backup Downloaded Successfully!", "success");
+          btnExportCsv.innerHTML = `<span class="icon">📊</span> Download CSV`;
+        })
+        .catch(err => {
+          console.error("CSV Export Error:", err);
+          if(typeof showToast === 'function') showToast("Failed to generate CSV backup.", "error");
+          btnExportCsv.innerHTML = `<span class="icon">📊</span> Download CSV`;
+        });
+    });
+  }
+
+  // 3. ⬅️ BACK BUTTON FOR SETTINGS TAB
+  const settingsBackBtn = document.getElementById('btn-settings-back-dashboard');
+  if (settingsBackBtn) {
+    settingsBackBtn.addEventListener('click', () => {
+      document.getElementById('view-settings').classList.add('hidden');
+      const dashboardView = document.getElementById('view-dashboard');
+      if (dashboardView) dashboardView.classList.remove('hidden');
+
+      // Fix Sidebar Highlight
+      document.querySelectorAll('.nav-menu li').forEach(li => {
+        const target = li.getAttribute('data-target');
+        if (target === 'view-dashboard') li.classList.add('active');
+        else li.classList.remove('active');
+      });
+    });
+  }
+});
+
+
+// ==========================================
+// 👥 USER MANAGEMENT DATA FETCHER
+// ==========================================
+window.loadUserManagementTable = function() {
+  const tbody = document.getElementById('user-management-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">Loading officials from database...</td></tr>';
+
+  apiFetch(`/api/users/officials`)
+    .then(users => {
+      if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">No Barangay Officials found. Provision a new account above!</td></tr>';
+        return;
+      }
+
+      let html = '';
+      users.forEach(user => {
+        // Safely grab the barangay name if it exists
+        const brgyName = user.barangay ? (user.barangay.barangayName || `Barangay ID: ${user.barangay.id}`) : '<span style="color:red;">Unassigned</span>';
+
+        // 🚀 FIX: Handle all 3 Account Statuses perfectly!
+        let statusBadge = '';
+        if (user.status === 'Deactivated') {
+          statusBadge = '<span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">🔴 Deactivated</span>';
+        } else if (user.status === 'Suspended') {
+          statusBadge = '<span style="background: #ffedd5; color: #c2410c; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">🟠 Suspended</span>';
+        } else {
+          // Defaults to Active if blank or active
+          statusBadge = '<span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">🟢 Active</span>';
+        }
+
+        html += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; transition: 0.2s;">
+                        <td style="padding: 15px 20px; font-size: 14px; color: #0f172a; font-weight: 600;">
+                            ${user.firstName || 'N/A'} ${user.lastName || 'N/A'}
+                        </td>
+                        <td style="padding: 15px 20px; font-size: 14px; color: #64748b; font-family: monospace;">
+                            ${user.username || 'N/A'}
+                        </td>
+                        <td style="padding: 15px 20px; font-size: 14px; color: #475569;">
+                            🏛️ ${brgyName}
+                        </td>
+                        <td style="padding: 15px 20px;">
+                            ${statusBadge}
+                        </td>
+                        <td style="padding: 15px 20px; text-align: right;">
+                           <button class="btn-small" onclick="openManageOfficialModal(${user.id})">⚙️ Manage</button>
+                        </td>
+                    </tr>
+                `;
+      });
+      tbody.innerHTML = html;
+    })
+    .catch(err => {
+      console.error("Error loading officials:", err);
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #dc2626;">Failed to load officials from server.</td></tr>';
+    });
+};
+
+// Listen for clicks on the sidebar to load the table dynamically!
+document.addEventListener("DOMContentLoaded", () => {
+  const navItems = document.querySelectorAll('.nav-menu li');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const target = item.getAttribute('data-target');
+      if (target === 'view-user-management') {
+        loadUserManagementTable();
+      }
+    });
+  });
+});
+
+// ==========================================
+// 🏢 LOAD BARANGAYS FOR USER MANAGEMENT
+// ==========================================
+window.loadBarangayDropdownForAdmin = function() {
+  const brgySelect = document.getElementById('add-user-barangay');
+  if (!brgySelect) return;
+
+  apiFetch(`/api/barangays`)
+    .then(barangays => {
+      let optionsHtml = '<option value="" disabled selected>Select Barangay Jurisdiction...</option>';
+
+      // Sort barangays alphabetically
+      barangays.sort((a, b) => a.barangayName.localeCompare(b.barangayName));
+
+      barangays.forEach(brgy => {
+        optionsHtml += `<option value="${brgy.id}">${brgy.barangayName}</option>`;
+      });
+
+      brgySelect.innerHTML = optionsHtml;
+    })
+    .catch(err => {
+      console.error("Error loading barangays:", err);
+      brgySelect.innerHTML = '<option value="" disabled>Error loading barangays</option>';
+    });
+};
+
+// Make sure it loads when the Admin clicks the User Management tab!
+document.addEventListener("DOMContentLoaded", () => {
+  const navItems = document.querySelectorAll('.nav-menu li');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const target = item.getAttribute('data-target');
+      if (target === 'view-user-management') {
+        loadBarangayDropdownForAdmin(); // 🚀 Fetch the dropdown data!
+      }
+    });
+  });
+});
+// ==========================================
+// 👥 USER MANAGEMENT LOGIC (Add & Save Official)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const btnOpenAddUser = document.getElementById('btn-open-add-user');
+  const addUserModal = document.getElementById('add-user-modal');
+  const formAddUser = document.getElementById('form-add-user');
+
+  // 1. OPEN MODAL & AUTO-GENERATE USERNAME
+  if (btnOpenAddUser && addUserModal) {
+    btnOpenAddUser.addEventListener('click', () => {
+      addUserModal.classList.remove('hidden');
+
+      const firstInput = document.getElementById('add-user-first');
+      const lastInput = document.getElementById('add-user-last');
+      const userOutput = document.getElementById('add-user-username');
+
+      const updateUsername = () => {
+        const first = firstInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const last = lastInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (first || last) {
+          userOutput.value = `${first}.${last}`;
+        } else {
+          userOutput.value = '';
+        }
+      };
+
+      firstInput.addEventListener('input', updateUsername);
+      lastInput.addEventListener('input', updateUsername);
+    });
+  }
+
+  // 2. SUBMIT NEW OFFICIAL TO DATABASE
+  if (formAddUser) {
+    formAddUser.addEventListener('submit', (e) => {
+      e.preventDefault(); // Stop the page from reloading
+
+      const submitBtn = formAddUser.querySelector('button[type="submit"]');
+      submitBtn.innerHTML = "⏳ Saving...";
+      submitBtn.disabled = true;
+
+      // Package the data from the form
+      const payload = {
+        firstName: document.getElementById('add-user-first').value.trim(),
+        middleName: document.getElementById('add-user-middle').value.trim(), // 🚀 NEW
+        lastName: document.getElementById('add-user-last').value.trim(),
+        email: document.getElementById('add-user-email').value.trim(),       // 🚀 NEW
+        username: document.getElementById('add-user-username').value.trim(),
+        password: document.getElementById('add-user-password').value,
+        role: "BARANGAY",
+        status: "Active",
+        barangayId: document.getElementById('add-user-barangay').value
+      };
+
+      // Send to Spring Boot Backend
+      apiFetch(`/api/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(response => {
+          if (typeof showToast === 'function') showToast("Official account successfully provisioned!", "success");
+          addUserModal.classList.add('hidden');
+          formAddUser.reset();
+
+          // Refresh the table so the Admin instantly sees the new user!
+          if (typeof loadUserManagementTable === 'function') {
+            loadUserManagementTable();
+          }
+        })
+        .catch(error => {
+          console.error("Error creating user:", error);
+          if (typeof showToast === 'function') showToast("Failed to create account. Username might already exist.", "error");
+        })
+        .finally(() => {
+          submitBtn.innerHTML = "💾 Provision Account";
+          submitBtn.disabled = false;
+        });
+    });
+  }
+});
+
+// ==========================================
+// ⚙️ MANAGE OFFICIAL LOGIC (Edit, Suspend, Reset)
+// ==========================================
+
+// 1. OPEN MODAL & FETCH DATA
+window.openManageOfficialModal = function(userId) {
+  const modal = document.getElementById('manage-user-modal');
+  if (!modal) return;
+
+  document.getElementById('manage-user-id').value = userId;
+
+  // First, load the barangays into the dropdown
+  apiFetch(`/api/barangays`).then(barangays => {
+    let optionsHtml = '<option value="" disabled>Select Barangay...</option>';
+    barangays.sort((a, b) => a.barangayName.localeCompare(b.barangayName)).forEach(b => {
+      optionsHtml += `<option value="${b.id}">${b.barangayName}</option>`;
+    });
+    document.getElementById('manage-user-barangay').innerHTML = optionsHtml;
+
+    // Next, fetch the specific user's current data
+    return apiFetch(`/api/users/${userId}`);
+  })
+    .then(user => {
+      document.getElementById('manage-user-first').value = user.firstName || '';
+      document.getElementById('manage-user-middle').value = user.middleName || '';
+      document.getElementById('manage-user-last').value = user.lastName || '';
+      document.getElementById('manage-user-email').value = user.email || '';
+      document.getElementById('manage-user-status').value = user.status || 'Active';
+
+      if (user.barangay) {
+        document.getElementById('manage-user-barangay').value = user.barangay.id;
+      }
+
+      modal.classList.remove('hidden');
+    })
+    .catch(err => {
+      console.error("Error loading user details:", err);
+      if (typeof showToast === 'function') showToast("Failed to load official's data.", "error");
+    });
+};
+
+// 2. SUBMIT PROFILE/STATUS CHANGES
+document.addEventListener("DOMContentLoaded", () => {
+  const formManageUser = document.getElementById('form-manage-user');
+
+  if (formManageUser) {
+    formManageUser.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const submitBtn = formManageUser.querySelector('button[type="submit"]');
+      submitBtn.innerHTML = "⏳ Saving Changes...";
+      submitBtn.disabled = true;
+
+      const userId = document.getElementById('manage-user-id').value;
+      const payload = {
+        firstName: document.getElementById('manage-user-first').value.trim(),
+        middleName: document.getElementById('manage-user-middle').value.trim(),
+        lastName: document.getElementById('manage-user-last').value.trim(),
+        email: document.getElementById('manage-user-email').value.trim(),
+        barangayId: document.getElementById('manage-user-barangay').value,
+        status: document.getElementById('manage-user-status').value
+      };
+
+      apiFetch(`/api/users/${userId}/manage`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(response => {
+          if (typeof showToast === 'function') showToast("Official's record successfully updated!", "success");
+          document.getElementById('manage-user-modal').classList.add('hidden');
+          if (typeof loadUserManagementTable === 'function') loadUserManagementTable();
+        })
+        .catch(err => {
+          console.error("Error updating user:", err);
+          if (typeof showToast === 'function') showToast("Failed to update record.", "error");
+        })
+        .finally(() => {
+          submitBtn.innerHTML = "💾 Save Profile Changes";
+          submitBtn.disabled = false;
+        });
+    });
+  }
+
+  // 3. 🚨 EMERGENCY PASSWORD RESET (Custom Modal & Toast UI)
+  const btnEmergencyReset = document.getElementById('btn-emergency-reset');
+  const resetConfirmModal = document.getElementById('reset-confirm-modal');
+  const btnConfirmReset = document.getElementById('btn-confirm-reset');
+
+  if (btnEmergencyReset && resetConfirmModal) {
+    // Open the custom warning modal instead of the 1990s confirm() popup
+    btnEmergencyReset.addEventListener('click', () => {
+      resetConfirmModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnConfirmReset) {
+    // Execute the database reset ONLY when they click "Yes" inside the custom modal
+    btnConfirmReset.addEventListener('click', () => {
+      const userId = document.getElementById('manage-user-id').value;
+
+      btnConfirmReset.innerHTML = "⏳ Resetting...";
+      btnConfirmReset.disabled = true;
+
+      apiFetch(`/api/users/${userId}/emergency-reset`, {
+        method: 'PUT'
+      })
+        .then(response => {
+          resetConfirmModal.classList.add('hidden'); // Hide the modal smoothly
+          if (typeof showToast === 'function') showToast("Password successfully reset to default!", "success");
+        })
+        .catch(err => {
+          console.error("Error resetting password:", err);
+          resetConfirmModal.classList.add('hidden');
+          if (typeof showToast === 'function') showToast("Failed to reset password.", "error");
+        })
+        .finally(() => {
+          btnConfirmReset.innerHTML = "Yes, Reset Password";
+          btnConfirmReset.disabled = false;
+        });
+    });
+  }
+});
+
 

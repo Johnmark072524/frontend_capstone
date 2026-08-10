@@ -53,6 +53,42 @@
   overflow-y: auto; /* Just in case your menu items get too long */
 }
 
+/* ==========================================
+   📊 UNIVERSAL DATA TABLE STYLES
+========================================== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  background: white;
+}
+
+.data-table thead {
+  background-color: #f8fafc; /* The exact light gray from your image */
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.data-table th {
+  padding: 16px 20px;
+  color: #64748b; /* The muted slate text color */
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-right: 2px solid white; /* Creates that subtle separator between columns */
+}
+
+.data-table th:last-child {
+  border-right: none;
+}
+
+.data-table td {
+  padding: 15px 20px;
+  font-size: 14px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
 /* ========================================== */
 /* SIDEBAR BRANDING & LOGO                    */
 /* ========================================== */
@@ -1441,3 +1477,47 @@ body.login-page {
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 4px rgba(28, 16, 163, 0.15); /* Adds the premium blue glow */
 }
+
+
+/* ==========================================
+   ⚙️ SETTINGS VIEW STYLES
+========================================== */
+.settings-grid { display: flex; flex-direction: column; gap: 20px; max-width: 800px; }
+.settings-card { background: white; border-radius: 12px; padding: 25px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+.settings-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+.settings-card-header h3 { margin: 0; color: #1e293b; font-size: 16px; font-weight: 700; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; }
+.settings-info h4 { margin: 0 0 5px 0; color: #334155; font-size: 15px; font-weight: 600; }
+.settings-info p { margin: 0; color: #64748b; font-size: 13px; max-width: 450px; line-height: 1.5; }
+
+/* Modern Toggle Switch */
+.toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #28a745; }
+input:checked + .slider:before { transform: translateX(24px); }
+
+/* Export CSV Button */
+.btn-export { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; font-size: 13px; }
+.btn-export:hover { background: #dcfce7; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+/* ==========================================
+   🌙 DARK MODE SYSTEM OVERRIDES
+========================================== */
+body.dark-mode { background-color: #0f172a; color: #f8fafc; }
+body.dark-mode .sidebar { background-color: #1e293b; border-right: 1px solid #334155; }
+body.dark-mode .sidebar .nav-menu li a, body.dark-mode .sidebar .nav-menu li .icon { color: #cbd5e1; }
+body.dark-mode .sidebar .nav-menu li:hover { background-color: #334155; }
+body.dark-mode .top-header, body.dark-mode .content-area { background-color: #0f172a !important; border-bottom-color: #334155 !important; }
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4 { color: #f8fafc !important; }
+body.dark-mode p, body.dark-mode span { color: #94a3b8; }
+
+/* Apply Dark Mode to the Cards */
+body.dark-mode .bd-progress-card, body.dark-mode .bd-metric-card, body.dark-mode .bd-chart-container, body.dark-mode .bd-controls, body.dark-mode .bd-list-item, body.dark-mode .settings-card, body.dark-mode .profile-card, body.dark-mode .report-card { background: #1e293b; border-color: #334155; }
+body.dark-mode .bd-progress-title, body.dark-mode .bd-metric-card .bd-value, body.dark-mode .bd-item-title, body.dark-mode .settings-info h4 { color: #f8fafc; }
+body.dark-mode .settings-card-header { border-bottom-color: #334155; }
+
+/* Inputs and Selects in Dark Mode */
+body.dark-mode .bd-search-bar, body.dark-mode .bd-status-select, body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background: #0f172a; border-color: #334155; color: #f8fafc; }
+body.dark-mode .bd-search-bar:focus, body.dark-mode input:focus { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.2); }

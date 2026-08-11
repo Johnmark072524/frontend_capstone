@@ -2047,15 +2047,145 @@ function handleVerifyMfa() {
     });
 }
 
+
 // ==========================================
-// UI HELPER: GO BACK TO LOGIN SCREEN
+// FORGOT PASSWORD: SHOW SCREEN
+// ==========================================
+function showForgotPassword() {
+  document.getElementById("login-step-1").style.display = "none";
+  document.getElementById("login-step-2").style.display = "none";
+  document.getElementById("forgot-step-1").style.display = "block";
+}
+
+// ==========================================
+// FORGOT PASSWORD: SEND OTP TO EMAIL
+// ==========================================
+function handleForgotPasswordRequest() {
+  // 🚀 UPDATED: Grab Email instead of Username
+  const email = document.getElementById("reset-email").value.trim();
+
+  if (!email) {
+    showToast("Please enter your registered email address.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("request-reset-btn");
+  btn.innerHTML = "Sending... ⏳";
+  btn.disabled = true;
+
+  fetch(`${API_BASE_URL}/api/auth/forgot-password/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email }) // 🚀 Send email to backend
+  })
+    .then(async response => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to request reset.');
+      }
+      return response.json();
+    })
+    .then(data => {
+      sessionStorage.setItem("resetUserId", data.userId);
+      showToast(data.message, "success");
+
+      document.getElementById("forgot-step-1").style.display = "none";
+      document.getElementById("forgot-step-2").style.display = "block";
+
+      btn.innerHTML = "Send Code ➔";
+      btn.disabled = false;
+    })
+    .catch(error => {
+      showToast(error.message, "error");
+      btn.innerHTML = "Send Code ➔";
+      btn.disabled = false;
+    });
+}
+
+// ==========================================
+// FORGOT PASSWORD: VERIFY OTP & SAVE PASSWORD
+// ==========================================
+function handlePasswordReset() {
+  const otp = document.getElementById("reset-code").value.trim();
+  const newPassword = document.getElementById("new-password").value.trim();
+  const confirmPassword = document.getElementById("confirm-new-password").value.trim();
+  const userId = sessionStorage.getItem("resetUserId");
+
+  if (!otp || otp.length !== 6) {
+    showToast("Please enter the 6-digit code.", "error");
+    return;
+  }
+
+  if (!newPassword || !confirmPassword) {
+    showToast("Please enter and confirm your new password.", "error");
+    return;
+  }
+
+  // 🚀 NEW: STRICT ENTERPRISE PASSWORD REGEX
+  const strictPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+  if (!strictPasswordRegex.test(newPassword)) {
+    showToast("Password must be 8+ characters, with 1 uppercase letter, 1 number, and 1 special character.", "error");
+    return;
+  }
+
+  // PASSWORD MATCH VALIDATION
+  if (newPassword !== confirmPassword) {
+    showToast("Passwords do not match!", "error");
+    return;
+  }
+
+  const btn = document.getElementById("submit-reset-btn");
+  btn.innerHTML = "Resetting... ⏳";
+  btn.disabled = true;
+
+  fetch(`${API_BASE_URL}/api/auth/forgot-password/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: userId, otp: otp, newPassword: newPassword })
+  })
+    .then(async response => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to reset password.');
+      }
+      return response.json();
+    })
+    .then(data => {
+      showToast(data.message, "success");
+      backToLogin();
+      btn.innerHTML = "Confirm & Reset ➔";
+      btn.disabled = false;
+    })
+    .catch(error => {
+      showToast(error.message, "error");
+      btn.innerHTML = "Confirm & Reset ➔";
+      btn.disabled = false;
+    });
+}
+// ==========================================
+// UI HELPER: GO BACK TO LOGIN SCREEN (UPDATED)
 // ==========================================
 function backToLogin() {
+  // Hide all secondary steps
   document.getElementById("login-step-2").style.display = "none";
+  document.getElementById("forgot-step-1").style.display = "none";
+  document.getElementById("forgot-step-2").style.display = "none";
+
+  // Show primary login
   document.getElementById("login-step-1").style.display = "block";
-  document.getElementById("mfa-code").value = "";
+
+  // Wipe inputs clean for security
+  if (document.getElementById("mfa-code")) document.getElementById("mfa-code").value = "";
+  if (document.getElementById("reset-email")) document.getElementById("reset-email").value = ""; // 🚀 FIXED
+  if (document.getElementById("reset-code")) document.getElementById("reset-code").value = "";
+  if (document.getElementById("new-password")) document.getElementById("new-password").value = "";
+  if (document.getElementById("confirm-new-password")) document.getElementById("confirm-new-password").value = ""; // 🚀 FIXED
+
+  // Wipe temporary memory
   sessionStorage.removeItem("tempUserId");
+  sessionStorage.removeItem("resetUserId");
 }
+
 // ==========================================
 // ADMIN DASHBOARD: LOAD ALL REPORTS (INBOX)
 // ==========================================

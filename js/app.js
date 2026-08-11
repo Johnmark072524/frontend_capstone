@@ -1906,28 +1906,22 @@ function resetAddReportForm() {
 }
 
 // ==========================================
-// LOGIN LOGIC (Connected to Spring Boot & Brute-Force Protected)
+// STEP 1: INITIATE LOGIN & REQUEST MFA CODE
 // ==========================================
 function handleLogin() {
-  // 1. Grab the HTML elements
   const usernameInput = document.getElementById("username");
   const passwordInput = document.getElementById("password");
 
-  if (!usernameInput || !passwordInput) {
-    console.error("Could not find the username or password inputs.");
-    return;
-  }
+  if (!usernameInput || !passwordInput) return;
 
   const username = usernameInput.value;
   const password = passwordInput.value;
 
-  // 2. Security Check: Are the fields empty?
   if (!username || !password) {
     showToast("Please enter both your Official ID and password.", "error");
     return;
   }
 
-  // 3. Button Loading State
   const loginBtn = document.getElementById("login-btn");
   if (loginBtn) {
     loginBtn.innerHTML = "Authenticating... ⏳";
@@ -1935,19 +1929,12 @@ function handleLogin() {
     loginBtn.style.opacity = "0.7";
   }
 
-  // 4. REAL AUTHENTICATION via Spring Boot (WITH SECURITY LOCKOUT)
   fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      username: username,
-      password: password
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: username, password: password })
   })
     .then(async response => {
-      // 🚀 THE FIX: If the backend sends 401 (Wrong Password) or 429 (Locked Out)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Invalid credentials');
@@ -1955,12 +1942,73 @@ function handleLogin() {
       return response.json();
     })
     .then(data => {
-      // SUCCESS! Save the REAL user data
+      // 🚀 MFA TRIGGER: If backend says MFA is required, slide to Step 2
+      if (data.mfaRequired) {
+        // Temporarily store the ID so we can verify it in Step 2
+        sessionStorage.setItem("tempUserId", data.userId);
+
+        // Hide login, show MFA
+        document.getElementById("login-step-1").style.display = "none";
+        document.getElementById("login-step-2").style.display = "block";
+
+        showToast(data.message, "success");
+
+        // Reset the login button for next time
+        if (loginBtn) {
+          loginBtn.innerHTML = "Log in ➔";
+          loginBtn.disabled = false;
+          loginBtn.style.opacity = "1";
+        }
+      }
+    })
+    .catch(error => {
+      showToast(error.message, "error");
+      if (loginBtn) {
+        loginBtn.innerHTML = "Log in ➔";
+        loginBtn.disabled = false;
+        loginBtn.style.opacity = "1";
+      }
+    });
+}
+
+// ==========================================
+// STEP 2: VERIFY 6-DIGIT CODE & GRANT ACCESS
+// ==========================================
+function handleVerifyMfa() {
+  const otpInput = document.getElementById("mfa-code").value.trim();
+  const tempUserId = sessionStorage.getItem("tempUserId");
+
+  if (!otpInput || otpInput.length !== 6) {
+    showToast("Please enter a valid 6-digit code.", "error");
+    return;
+  }
+
+  const verifyBtn = document.getElementById("verify-btn");
+  if (verifyBtn) {
+    verifyBtn.innerHTML = "Verifying... ⏳";
+    verifyBtn.disabled = true;
+    verifyBtn.style.opacity = "0.7";
+  }
+
+  fetch(`${API_BASE_URL}/api/auth/verify-mfa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: tempUserId, otp: otpInput })
+  })
+    .then(async response => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Invalid verification code');
+      }
+      return response.json();
+    })
+    .then(data => {
+      // 🚀 SUCCESS! Cleanup temp data and save real session data
+      sessionStorage.removeItem("tempUserId");
+
       sessionStorage.setItem("userId", data.userId);
       sessionStorage.setItem("username", data.username || "N/A");
-      sessionStorage.setItem("userRole", data.role); // 🚀 FIXED: Saved as userRole
-
-      // Save the new profile data into browser memory securely
+      sessionStorage.setItem("userRole", data.role);
       sessionStorage.setItem("firstName", data.firstName || "");
       sessionStorage.setItem("middleName", data.middleName || "");
       sessionStorage.setItem("lastName", data.lastName || "");
@@ -1970,40 +2018,43 @@ function handleLogin() {
       sessionStorage.setItem("gender", data.gender || "");
       sessionStorage.setItem("profilePicture", data.profilePicture || "no_image.jpg");
 
-      // Set the Barangay ID if they have one, otherwise default to City Hall
       if (data.barangayId) {
         sessionStorage.setItem("barangayId", data.barangayId);
       }
       sessionStorage.setItem("barangayName", data.barangayName || "City Hall Central");
 
-      showToast("Login Successful!", "success");
+      showToast("Access Granted!", "success");
 
-      // 5. SECURE DYNAMIC ROUTING (Shreds History)
+      // Secure Dynamic Routing
       setTimeout(() => {
         const userRole = String(data.role).toLowerCase();
-
         if (userRole.includes("admin") || userRole.includes("cpdo")) {
           window.location.replace("admin_dashboard.html");
-        }
-        else if (userRole.includes("ceo") || userRole.includes("engineer")) {
+        } else if (userRole.includes("ceo") || userRole.includes("engineer")) {
           window.location.replace("ceo_dashboard.html");
-        }
-        else {
+        } else {
           window.location.replace("barangay_dashboard.html");
         }
       }, 1000);
     })
     .catch(error => {
-      console.error('Error:', error);
-      // 🚀 THE FIX: Display the exact countdown or lockout message from Spring Boot
       showToast(error.message, "error");
-
-      if (loginBtn) {
-        loginBtn.innerHTML = "Log in ➔";
-        loginBtn.disabled = false;
-        loginBtn.style.opacity = "1";
+      if (verifyBtn) {
+        verifyBtn.innerHTML = "Verify Code ➔";
+        verifyBtn.disabled = false;
+        verifyBtn.style.opacity = "1";
       }
     });
+}
+
+// ==========================================
+// UI HELPER: GO BACK TO LOGIN SCREEN
+// ==========================================
+function backToLogin() {
+  document.getElementById("login-step-2").style.display = "none";
+  document.getElementById("login-step-1").style.display = "block";
+  document.getElementById("mfa-code").value = "";
+  sessionStorage.removeItem("tempUserId");
 }
 // ==========================================
 // ADMIN DASHBOARD: LOAD ALL REPORTS (INBOX)

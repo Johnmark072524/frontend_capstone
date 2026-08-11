@@ -19,25 +19,49 @@
 
     <form id="form-login">
 
-      <div class="form-group input-icon-wrapper">
-        <span class="input-icon">👤</span>
-        <input type="text" id="username" name="username" placeholder="Official ID / Email" required>
+      <!-- ========================================== -->
+      <!-- STEP 1: CREDENTIALS (USERNAME & PASSWORD)  -->
+      <!-- ========================================== -->
+      <div id="login-step-1">
+        <div class="form-group input-icon-wrapper">
+          <span class="input-icon">👤</span>
+          <input type="text" id="username" name="username" placeholder="Official ID / Email" required>
+        </div>
+
+        <div class="form-group input-icon-wrapper">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+          <span class="input-icon-right" id="togglePassword" style="cursor: pointer;">👁️</span>
+        </div>
+
+        <div class="form-options">
+          <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" name="remember"> Remember me
+          </label>
+          <a href="#">FORGOT PASSWORD?</a>
+        </div>
+
+        <button type="button" id="login-btn" class="btn-login" onclick="handleLogin()">Log in ➔</button>
       </div>
 
-      <div class="form-group input-icon-wrapper">
-        <span class="input-icon">🔒</span>
-        <input type="password" id="password" name="password" placeholder="••••••••" required>
-        <span class="input-icon-right" id="togglePassword" style="cursor: pointer;">👁️</span>
-      </div>
+      <!-- ========================================== -->
+      <!-- STEP 2: MFA VERIFICATION (HIDDEN BY DEFAULT)-->
+      <!-- ========================================== -->
+      <div id="login-step-2" style="display: none; text-align: center;">
+        <h3 style="margin-bottom: 5px; color: #1e293b;">2-Step Verification</h3>
+        <p style="color: #64748b; margin-bottom: 25px; font-size: 13px;">Please enter the 6-digit code sent to your official email.</p>
 
-      <div class="form-options">
-        <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; color: var(--text-muted); cursor: pointer;">
-          <input type="checkbox" name="remember"> Remember me
-        </label>
-        <a href="#">FORGOT PASSWORD?</a>
-      </div>
+        <div class="form-group">
+          <!-- Styled specifically for a 6-digit OTP -->
+          <input type="text" id="mfa-code" placeholder="• • • • • •" maxlength="6" style="text-align: center; font-size: 24px; letter-spacing: 12px; font-weight: bold;" required>
+        </div>
 
-      <button type="button" id="login-btn" class="btn-login" onclick="handleLogin()">Log in ➔</button>
+        <button type="button" id="verify-btn" class="btn-login" onclick="handleVerifyMfa()">Verify Code ➔</button>
+
+        <div class="form-options" style="justify-content: center; margin-top: 20px;">
+          <a href="#" onclick="backToLogin()" style="color: #64748b; text-decoration: none; font-weight: 600;">← Back to Login</a>
+        </div>
+      </div>
 
     </form>
 

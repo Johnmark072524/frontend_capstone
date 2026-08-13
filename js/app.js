@@ -30,6 +30,62 @@
   }
 })();
 
+// ==========================================
+// 🔍 REUSABLE GLOBAL TABLE SEARCH ENGINE
+// ==========================================
+/**
+ * Searches any table by matching input value against table row text.
+ * @param {string} inputId - ID of the input field
+ * @param {string} tbodyId - ID of the table body (tbody)
+ */
+window.executeGlobalSearch = function(inputId, tbodyId) {
+  const inputEl = document.getElementById(inputId);
+  if (!inputEl) return;
+
+  const searchTerm = inputEl.value.toLowerCase().trim();
+  const tableRows = document.querySelectorAll(`#${tbodyId} tr`);
+
+  tableRows.forEach(row => {
+    // Skip empty state or loading state rows (usually single-cell rows)
+    if (row.cells.length < 2) return;
+
+    // Grab all text within the row for smart full-row matching
+    const rowText = row.textContent.toLowerCase();
+
+    if (rowText.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+};
+
+// ==========================================
+// 🚀 ATTACH SEARCH LISTENERS
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Load notifications immediately when the dashboard boots up
+  loadNotifications();
+
+  // 1. Barangay Table Search Listener (Live Typing)
+  const brgyInput = document.getElementById('search-barangay-input');
+  if (brgyInput) {
+    brgyInput.addEventListener('input', () => {
+      executeGlobalSearch('search-barangay-input', 'barangay-table-body');
+    });
+  }
+
+  // 2. User Management Table Search Listener (Live Typing)
+  const userInput = document.getElementById('search-user-input');
+  if (userInput) {
+    userInput.addEventListener('input', () => {
+      executeGlobalSearch('search-user-input', 'user-management-tbody');
+    });
+  }
+
+});
+
 // A reusable function for all your API calls
 async function apiFetch(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -119,6 +175,12 @@ function openFullscreenImage(imgElement) {
 function closeFullscreenImage() {
   const modal = document.getElementById("fullscreen-image-modal");
   modal.style.display = "none";
+}
+
+const addRoadModal = document.getElementById('add-road-modal');
+if (addRoadModal) {
+  document.body.appendChild(addRoadModal);
+  addRoadModal.style.zIndex = "99999"; // Force absolute maximum z-index
 }
 
 // ==========================================
@@ -419,7 +481,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchView(targetId) {
     if (!targetId) return;
 
-    // 1. Update UI Classes
+    // 1. Force close modals
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+      modal.classList.add('hidden');
+    });
+
+    // 2. Update UI Classes
     navLinks.forEach(nav => nav.classList.remove('active'));
     contentSections.forEach(section => section.classList.add('hidden'));
 
@@ -427,13 +494,54 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeLink) activeLink.classList.add('active');
 
     const targetSection = document.getElementById(targetId);
-    if (targetSection) targetSection.classList.remove('hidden');
+    if (targetSection) {
+      targetSection.classList.remove('hidden');
 
-    // 2. 🚀 SMART DATA LOADING: Only fetch if we are on the CEO page
+      // ==========================================
+      // 🚀 NEW: CLEAR ALL SEARCH BARS AND RESET TABLES
+      // ==========================================
+      document.querySelectorAll('.search-bar input').forEach(input => {
+        input.value = ''; // Erase the typed text
+      });
+      document.querySelectorAll('table tbody tr').forEach(row => {
+        row.style.display = ''; // Un-hide any rows hidden by previous searches
+      });
+
+      // ==========================================
+      // 🚀 THE BRUTE-FORCE SCROLL RESET
+      // ==========================================
+      // 1. Reset the main window (just in case)
+      window.scrollTo(0, 0);
+
+      // 2. Reset the main section wrapper
+      targetSection.scrollTop = 0;
+
+      // 3. Reset EVERY scrollable container inside this section (like table wrappers!)
+      targetSection.querySelectorAll('div').forEach(div => {
+        div.scrollTop = 0;
+      });
+      // ==========================================
+    }
+
+    // 3. SMART DATA LOADING: CEO Dashboard
     const isCEODashboard = window.location.pathname.toLowerCase().includes("ceo");
     if (isCEODashboard && (targetId === 'view-dashboard' || targetId === 'view-repair')) {
       if (typeof window.loadCEODashboardData === 'function') {
         window.loadCEODashboardData();
+      }
+    }
+
+    // 4. SMART DATA LOADING: Admin Pages
+    if (targetId === 'view-barangay-management') {
+      if (typeof window.loadBarangayManagement === 'function') {
+        window.loadBarangayManagement();
+      }
+    } else if (targetId === 'view-user-management') {
+      if (typeof window.loadBarangayDropdownForAdmin === 'function') {
+        window.loadBarangayDropdownForAdmin();
+      }
+      if (typeof window.loadUserManagement === 'function') {
+        window.loadUserManagement();
       }
     }
   }
@@ -650,34 +758,55 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 8. ADD/MANAGE BARANGAY/ROAD MODALS
-  // ==========================================
-  const btnAddBarangay = document.getElementById('btn-add-barangay');
-  const addBrgyModal = document.getElementById('add-brgy-modal');
-  if (addBrgyModal && btnAddBarangay) {
-    const closeBtns = document.querySelectorAll('.close-add-brgy-btn');
-    btnAddBarangay.addEventListener('click', () => addBrgyModal.classList.remove('hidden'));
-    closeBtns.forEach(btn => btn.addEventListener('click', () => addBrgyModal.classList.add('hidden')));
+// 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE & MODALS
+// ==========================================
+  function loadBarangayManagement() {
+    const tableBody = document.getElementById('barangay-table-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 15px;">Loading Barangays... <span class="icon">⏳</span></td></tr>';
+
+    // 🚀 Phase 2 Backend Endpoint (We will build this in Java next)
+    apiFetch('/api/barangays/dashboard-summary')
+      .then(data => {
+        tableBody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 15px;">No barangays found in the system.</td></tr>';
+          return;
+        }
+
+        data.forEach(brgy => {
+          // 🚀 Smart Badge Logic
+          let badgeHtml = `<span class="badge" style="background-color: #e9ecef; color: #6c757d;">0 Active</span>`;
+          if (brgy.activeReportCount >= 5) {
+            badgeHtml = `<span class="badge high">${brgy.activeReportCount} Active</span>`; // Red
+          } else if (brgy.activeReportCount > 0) {
+            badgeHtml = `<span class="badge medium">${brgy.activeReportCount} Active</span>`; // Orange
+          }
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+          <td><strong>${brgy.name}</strong></td>
+          <td>${brgy.contactName || 'Unassigned'}</td>
+          <td>${brgy.roadCount || 0} Roads</td>
+          <td>${badgeHtml}</td>
+          <td>
+            <button class="btn-small manage-brgy-btn"
+              onclick="openManageBarangayModal(${brgy.id}, '${brgy.name}', '${brgy.contactName || 'Unassigned'}', '${brgy.contactNumber || ''}', '${brgy.email || ''}', '${brgy.district || ''}')">
+              Manage Barangay
+            </button>
+          </td>
+        `;
+          tableBody.appendChild(row);
+        });
+      })
+      .catch(err => {
+        console.error('Error loading barangays:', err);
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red; padding: 15px;">Failed to load database.</td></tr>';
+      });
   }
 
-  const manageBrgyBtns = document.querySelectorAll('.manage-brgy-btn');
-  const barangayModal = document.getElementById('barangay-modal');
-  if (barangayModal) {
-    const closeBtns = document.querySelectorAll('.close-brgy-btn');
-    manageBrgyBtns.forEach(btn => btn.addEventListener('click', () => barangayModal.classList.remove('hidden')));
-    closeBtns.forEach(btn => btn.addEventListener('click', () => barangayModal.classList.add('hidden')));
-  }
-
-  const addRoadBtns = document.querySelectorAll('.add-road-btn');
-  const addRoadModal = document.getElementById('add-road-modal');
-  if (addRoadModal) {
-    const closeBtns = document.querySelectorAll('.close-add-road-btn');
-    addRoadBtns.forEach(btn => btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      addRoadModal.classList.remove('hidden');
-    }));
-    closeBtns.forEach(btn => btn.addEventListener('click', () => addRoadModal.classList.add('hidden')));
-  }
 
 // ==========================================
 // 9. MASTER PROFILE LOGIC (CRASH-PROOF VERSION)
@@ -4623,9 +4752,9 @@ window.loadUserManagementTable = function() {
       let html = '';
       users.forEach(user => {
         // Safely grab the barangay name if it exists
-        const brgyName = user.barangay ? (user.barangay.barangayName || `Barangay ID: ${user.barangay.id}`) : '<span style="color:red;">Unassigned</span>';
+        const brgyName = user.barangay ? (user.barangay.barangayName || `Barangay ID: ${user.barangay.id}`) : '<span style="color:red;">Pending Assignment</span>';
 
-        // 🚀 FIX: Handle all 3 Account Statuses perfectly!
+        // 🚀 Handle all 3 Account Statuses perfectly!
         let statusBadge = '';
         if (user.status === 'Deactivated') {
           statusBadge = '<span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">🔴 Deactivated</span>';
@@ -4638,20 +4767,31 @@ window.loadUserManagementTable = function() {
 
         html += `
                     <tr style="border-bottom: 1px solid #e2e8f0; transition: 0.2s;">
-                        <td style="padding: 15px 20px; font-size: 14px; color: #0f172a; font-weight: 600;">
-                            ${user.firstName || 'N/A'} ${user.lastName || 'N/A'}
+
+                        <!-- 🚀 FIX: ADDED STRONG TAG AND DARKER FONT FOR CONSISTENCY -->
+                        <td style="padding: 15px 20px; font-size: 14px; color: #333;">
+                            <strong>${user.firstName || 'N/A'} ${user.lastName || 'N/A'}</strong>
                         </td>
-                        <td style="padding: 15px 20px; font-size: 14px; color: #64748b; font-family: monospace;">
+
+                        <!-- 🚀 FIX: NORMALIZED FONT COLOR FOR READABILITY -->
+                        <td style="padding: 15px 20px; font-size: 14px; color: #495057;">
                             ${user.username || 'N/A'}
                         </td>
-                        <td style="padding: 15px 20px; font-size: 14px; color: #475569;">
-                            🏛️ ${brgyName}
+
+                        <td style="padding: 15px 20px; font-size: 14px; color: #495057;">
+                            <span style="color: #6c757d; margin-right: 5px;">🏛️</span> ${brgyName}
                         </td>
-                        <td style="padding: 15px 20px;">
+
+                        <td style="padding: 15px 20px; text-align: center;">
                             ${statusBadge}
                         </td>
+
+                        <!-- 🚀 FIX: STANDARDIZED ACTION BUTTON DESIGN -->
                         <td style="padding: 15px 20px; text-align: right;">
-                           <button class="btn-small" onclick="openManageOfficialModal(${user.id})">⚙️ Manage</button>
+                           <button class="btn-small manage-user-btn" onclick="openManageOfficialModal(${user.id})"
+                                   style="background-color: #1a0ca3; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">
+                             ⚙️ Manage
+                           </button>
                         </td>
                     </tr>
                 `;
@@ -4922,3 +5062,604 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+
+// ==========================================
+// 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE
+// ==========================================
+window.loadBarangayManagement = function() {
+
+  const tableBody = document.getElementById('barangay-table-body');
+  if (!tableBody) return;
+
+  tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 15px;">Loading Barangays... <span class="icon">⏳</span></td></tr>';
+
+  apiFetch('/api/barangays/dashboard-summary')
+    .then(data => {
+      tableBody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 15px;">No barangays found in the system.</td></tr>';
+        return;
+      }
+
+      data.forEach((brgy, index) => {
+        let badgeHtml = `<span class="badge" style="background-color: #e9ecef; color: #6c757d;">0 Active</span>`;
+        if (brgy.activeReportCount >= 5) {
+          badgeHtml = `<span class="badge high">${brgy.activeReportCount} Active</span>`;
+        } else if (brgy.activeReportCount > 0) {
+          badgeHtml = `<span class="badge medium">${brgy.activeReportCount} Active</span>`;
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="text-align: center; font-weight: bold; color: #6c757d;">${index + 1}</td>
+          <td><strong>${brgy.name}</strong></td>
+          <td>${brgy.contactName || 'Unassigned'}</td>
+          <td>${brgy.roadCount || 0} Roads</td>
+          <td>${badgeHtml}</td>
+          <td>
+            <!-- 🚀 CLEANED: Now we only pass the ID. The modal fetches the rest! -->
+            <button class="btn-small manage-brgy-btn" onclick="openManageBarangayModal(${brgy.id})">
+              Manage Barangay
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error('Error loading barangays:', err);
+      tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red; padding: 15px;">Failed to load database.</td></tr>';
+    });
+};
+
+// ==========================================
+// BARANGAY MANAGEMENT: OPEN MODAL & FETCH DATA
+// ==========================================
+let currentManageBarangayId = null;
+
+window.openManageBarangayModal = function(id) {
+  currentManageBarangayId = id;
+  const modal = document.getElementById('barangay-modal');
+  if (!modal) return;
+
+  // Crash-proof helper
+  const safeSetText = (elementId, text) => {
+    const el = document.getElementById(elementId);
+    if (el) el.innerText = text;
+  };
+
+  // Set temporary loading text
+  safeSetText('manage-brgy-name', "Loading...");
+  safeSetText('manage-brgy-kapitan', "Loading...");
+  safeSetText('manage-brgy-contact', "Loading...");
+  safeSetText('manage-brgy-email', "Loading...");
+
+  const roadsBody = document.getElementById('manage-brgy-roads-body');
+  if (roadsBody) {
+    roadsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 15px;">Loading roads... ⏳</td></tr>';
+  }
+
+  // Show modal instantly
+  modal.classList.remove('hidden');
+
+  // 🚀 FETCH 1: THE BARANGAY INFO FIRST
+  apiFetch(`/api/barangays/${id}`)
+    .then(brgy => {
+      // 🚀 THE PROBE: This will print the exact database response to your F12 Console!
+      console.log("RAW BARANGAY DATA FROM DB:", brgy);
+
+      safeSetText('manage-brgy-name', brgy.barangayName || "Unknown");
+      safeSetText('manage-brgy-kapitan', brgy.brgyCaptain || 'Unassigned');
+      safeSetText('manage-brgy-contact', brgy.contactNumber || 'N/A');
+      safeSetText('manage-brgy-email', brgy.emailAddress || 'N/A');
+    })
+    .catch(err => {
+      console.error("Error fetching barangay info:", err);
+      safeSetText('manage-brgy-name', "Error Fetching Data");
+      safeSetText('manage-brgy-kapitan', "Error");
+    });
+
+  // 🚀 FETCH 2: THE CITY ROADS
+  apiFetch(`/api/roads/barangay/${id}`)
+    .then(roads => {
+      if (!roadsBody) return;
+      roadsBody.innerHTML = '';
+
+      if (roads.length === 0) {
+        roadsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 15px; color: #6c757d;">No city roads registered to this jurisdiction yet.</td></tr>';
+        return;
+      }
+
+      roads.forEach(road => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+  <td style="padding: 10px; font-size: 12px;">${road.roadId || 'N/A'}</td>
+  <td style="padding: 10px; font-size: 12px;"><strong>${road.roadName || 'Unnamed Road'}</strong></td>
+  <td style="padding: 10px; font-size: 12px;">${road.roadImportance || 'Unknown'}</td>
+  <td style="padding: 10px; text-align: right;">
+
+    <!-- 🚀 THE ENHANCED EDIT BUTTON -->
+    <button class="btn-edit-road" onclick="openEditRoadModal(${road.id})"
+            style="background-color: #f8fafc; color: #3b82f6; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+      <span style="font-size: 14px;">✏️</span> Edit
+    </button>
+
+  </td>
+`;
+        roadsBody.appendChild(row);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading roads:", err);
+      if (roadsBody) {
+        roadsBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red; padding: 15px;">Failed to load roads.</td></tr>';
+      }
+    });
+};
+
+// ==========================================
+// BARANGAY MANAGEMENT: EVENT LISTENERS
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+
+  // 🚀 THE FIX: Tell the table to load its data automatically when the page opens!
+  if (document.getElementById('barangay-table-body')) {
+    loadBarangayManagement();
+  }
+
+  // Open Add Barangay Modal
+  const btnAddBarangay = document.getElementById('btn-add-barangay');
+  const addBrgyModal = document.getElementById('add-brgy-modal');
+  if (addBrgyModal && btnAddBarangay) {
+    const closeBtns = addBrgyModal.querySelectorAll('.close-add-brgy-btn');
+    btnAddBarangay.addEventListener('click', () => addBrgyModal.classList.remove('hidden'));
+    closeBtns.forEach(btn => btn.addEventListener('click', () => addBrgyModal.classList.add('hidden')));
+  }
+
+  // Close Manage Barangay Modal
+  const barangayModal = document.getElementById('barangay-modal');
+  if (barangayModal) {
+    const closeBtns = barangayModal.querySelectorAll('.close-brgy-btn');
+    closeBtns.forEach(btn => btn.addEventListener('click', () => barangayModal.classList.add('hidden')));
+  }
+
+  // Open "Add Road" Modal from inside Manage Modal
+  const btnOpenAddRoad = document.getElementById('btn-open-add-road');
+  const addRoadModal = document.getElementById('add-road-modal');
+  if (btnOpenAddRoad && addRoadModal) {
+    btnOpenAddRoad.addEventListener('click', (e) => {
+      e.preventDefault();
+      addRoadModal.classList.remove('hidden');
+    });
+
+    const closeAddRoadBtns = addRoadModal.querySelectorAll('.close-add-road-btn');
+    closeAddRoadBtns.forEach(btn => btn.addEventListener('click', () => addRoadModal.classList.add('hidden')));
+  }
+});
+
+
+// ==========================================
+// BARANGAY MANAGEMENT: ADD NEW BARANGAY
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const formAddBarangay = document.getElementById('form-add-barangay');
+
+  if (formAddBarangay) {
+    formAddBarangay.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = "⏳ Saving...";
+      submitBtn.disabled = true;
+
+      // Build the JSON payload matching your Barangay.java model
+      const payload = {
+        barangayName: document.getElementById('add-brgy-name').value.trim()
+      };
+
+      // Send to the Java backend
+      fetch(`${API_BASE_URL}/api/barangays`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(async res => {
+          // 🚀 NEW: If the backend throws our 400 Bad Request error, catch the text!
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || "Failed to save Barangay");
+          }
+          return res.json();
+        })
+        .then(() => {
+          showToast("Barangay successfully registered!", "success");
+
+          // Hide modal and clear form
+          document.getElementById('add-brgy-modal').classList.add('hidden');
+          formAddBarangay.reset();
+
+          // 🚀 INSTANT REFRESH: Reload the main table so the new Barangay appears!
+          if (typeof loadBarangayManagement === 'function') {
+            loadBarangayManagement();
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          // 🚀 NEW: Show the EXACT error message from Java in the Toast!
+          showToast(err.message, "error");
+        })
+        .finally(() => {
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        });
+    });
+  }
+});
+
+// ==========================================
+// BARANGAY MANAGEMENT: ADD CITY ROAD
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const formAddCityRoad = document.getElementById('form-add-city-road');
+
+  if (formAddCityRoad) {
+    formAddCityRoad.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // Ensure we have an active Barangay ID from the Manage Modal
+      if (!currentManageBarangayId) {
+        showToast("Error: No Barangay selected.", "error");
+        return;
+      }
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = "⏳ Saving...";
+      submitBtn.disabled = true;
+
+      // 🚀 We DO NOT send the Road ID. The Backend handles it!
+      const payload = {
+        roadName: document.getElementById('add-road-name').value.trim(),
+        roadImportance: document.getElementById('add-road-importance').value,
+        roadType: document.getElementById('add-road-type').value,
+        terrainType: document.getElementById('add-road-terrain').value,
+        barangay: { id: currentManageBarangayId }
+      };
+
+      fetch(`${API_BASE_URL}/api/roads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(async res => {
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || "Failed to save city road.");
+          }
+          return res.json();
+        })
+        .then(() => {
+          showToast("City Road successfully registered!", "success");
+
+          // Hide modal and reset form
+          document.getElementById('add-road-modal').classList.add('hidden');
+          formAddCityRoad.reset();
+
+          // 🚀 Refresh the open Barangay Modal to show the new road!
+          openManageBarangayModal(currentManageBarangayId);
+        })
+        .catch(err => {
+          console.error(err);
+          showToast(err.message, "error");
+        })
+        .finally(() => {
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        });
+    });
+  }
+});
+
+
+// ==========================================
+// ✏️ EDIT CITY ROAD LOGIC
+// ==========================================
+
+// 1. FUNCTION TO OPEN AND POPULATE THE MODAL
+window.openEditRoadModal = function(roadId) {
+  // Fetch the specific road details from your Java backend
+  apiFetch(`/api/roads/${roadId}`)
+    .then(road => {
+      // Secretly store the database ID so we know which road to update
+      document.getElementById('edit-db-id').value = road.id;
+
+      // Populate the visible fields
+      document.getElementById('edit-road-sequence-id').value = road.roadId || 'N/A';
+      document.getElementById('edit-road-name').value = road.roadName;
+      document.getElementById('edit-road-importance').value = road.roadImportance;
+      document.getElementById('edit-road-type').value = road.roadType;
+      document.getElementById('edit-road-terrain').value = road.terrainType;
+
+      // ==========================================
+      // 🚀 THE FIX: TELEPORT AND FORCE Z-INDEX
+      // ==========================================
+      const modal = document.getElementById('edit-road-modal');
+
+      // 1. Rip it out and paste it at the root of the document body
+      document.body.appendChild(modal);
+
+      // 2. Force it to be the absolute highest layer mathematically possible
+      modal.style.zIndex = "99999";
+
+      // 3. Show it!
+      modal.classList.remove('hidden');
+    })
+    .catch(err => {
+      console.error("Failed to fetch road details", err);
+      showToast("Error: Failed to load road details.", "error");
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // 2. CLOSE MODAL BUTTONS
+  document.querySelectorAll('.close-edit-road-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('edit-road-modal').classList.add('hidden');
+    });
+  });
+
+  // 3. SUBMIT UPDATED DATA
+  const formEditRoad = document.getElementById('form-edit-city-road');
+  if (formEditRoad) {
+    formEditRoad.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const dbId = document.getElementById('edit-db-id').value;
+
+      // Note: We do NOT send the road sequence ID! It is locked.
+      const payload = {
+        roadName: document.getElementById('edit-road-name').value.trim(),
+        roadImportance: document.getElementById('edit-road-importance').value,
+        roadType: document.getElementById('edit-road-type').value,
+        terrainType: document.getElementById('edit-road-terrain').value,
+        barangay: { id: currentManageBarangayId } // Attaches it to the current Barangay
+      };
+
+      const submitBtn = this.querySelector('.btn-submit');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = "⏳ Saving...";
+      submitBtn.disabled = true;
+
+      // Send the PUT request to update the road
+      fetch(`${API_BASE_URL}/api/roads/${dbId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(async res => {
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || "Failed to update city road.");
+          }
+          return res.json();
+        })
+        .then(() => {
+          showToast("City Road successfully updated!", "success");
+
+          // Hide modal and reset form
+          document.getElementById('edit-road-modal').classList.add('hidden');
+          formEditRoad.reset();
+
+          // 🚀 Refresh the Manage Barangay table instantly to show the changes!
+          if (typeof openManageBarangayModal === 'function') {
+            openManageBarangayModal(currentManageBarangayId);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showToast(err.message, "error");
+        })
+        .finally(() => {
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        });
+    });
+  }
+});
+
+
+// ==========================================
+// ✏️ RENAME BARANGAY LOGIC
+// ==========================================
+
+window.openRenameBarangayModal = function() {
+  // Grab the current name from the header and put it in the input box
+  const currentName = document.getElementById('manage-brgy-name').textContent;
+  document.getElementById('rename-brgy-input').value = currentName;
+
+  // Teleport trick to avoid CSS traps
+  const modal = document.getElementById('rename-brgy-modal');
+  document.body.appendChild(modal);
+  modal.classList.remove('hidden');
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const formRename = document.getElementById('form-rename-barangay');
+
+  if (formRename) {
+    formRename.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const newName = document.getElementById('rename-brgy-input').value.trim();
+      const submitBtn = this.querySelector('.btn-submit');
+      const originalText = submitBtn.innerHTML;
+
+      submitBtn.innerHTML = "⏳ Saving...";
+      submitBtn.disabled = true;
+
+      const payload = { barangayName: newName };
+
+      // currentManageBarangayId is the global variable tracking which Manage modal is open
+      fetch(`${API_BASE_URL}/api/barangays/${currentManageBarangayId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(async res => {
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText || "Failed to rename Barangay.");
+          }
+          return res.json();
+        })
+        .then(() => {
+          showToast("Barangay successfully renamed!", "success");
+
+          // 1. Close the tiny rename modal
+          document.getElementById('rename-brgy-modal').classList.add('hidden');
+
+          // 2. Instantly update the text on the Manage Modal header
+          document.getElementById('manage-brgy-name').textContent = newName;
+
+          // 3. Refresh the main background table so it reflects there too
+          if (typeof window.loadBarangayManagement === 'function') {
+            window.loadBarangayManagement();
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showToast(err.message, "error");
+        })
+        .finally(() => {
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        });
+    });
+  }
+});
+
+// ==========================================
+// 🔔 NOTIFICATION BELL UI LOGIC
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const bellBtn = document.getElementById('btn-notification');
+  const dropdown = document.getElementById('notification-dropdown');
+
+  if (bellBtn && dropdown) {
+    // 1. Toggle dropdown when clicking the bell
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevents the document click listener below from instantly closing it
+      dropdown.classList.toggle('hidden');
+    });
+
+    // 2. Close dropdown if the user clicks anywhere else on the screen
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+  }
+});
+
+// ==========================================
+// 🔔 PHASE 3: NOTIFICATION DATA INTEGRATION
+// ==========================================
+
+// 🚀 IMPORTANT: Replace this with your actual logged-in user's ID variable!
+const currentUserId = 1;
+
+// 1. HELPER: Format dates to "Time Ago" (e.g., "5 minutes ago")
+function timeAgo(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.round(diffMs / 60000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} minutes ago`;
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) return `${diffHrs} hours ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return 'Yesterday';
+  return `${diffDays} days ago`;
+}
+
+// 2. CORE FUNCTION: Fetch and display all notifications
+window.loadNotifications = function() {
+  if (!currentUserId) return;
+
+  // A. Fetch Unread Count for the Red Badge
+  apiFetch(`/api/notifications/user/${currentUserId}/unread-count`)
+    .then(count => {
+      const badge = document.getElementById('notification-badge');
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'flex'; // Show badge
+      } else {
+        badge.style.display = 'none'; // Hide badge if 0
+      }
+    })
+    .catch(err => console.error("Failed to load badge count:", err));
+
+  // B. Fetch Notification List for the Dropdown
+  apiFetch(`/api/notifications/user/${currentUserId}`)
+    .then(notifications => {
+      const listContainer = document.getElementById('notification-list');
+
+      if (!notifications || notifications.length === 0) {
+        listContainer.innerHTML = '<div style="padding: 30px 20px; text-align: center; color: #94a3b8; font-size: 13px;">You have no notifications.</div>';
+        return;
+      }
+
+      let html = '';
+      notifications.forEach(notif => {
+        // Styling changes based on whether it is read or unread
+        const bgClass = notif.read ? 'background: #ffffff;' : 'background: #eff6ff;';
+        const weightClass = notif.read ? 'font-weight: 600;' : 'font-weight: 700;';
+        const dotHtml = notif.read ? '' : '<span style="height: 8px; width: 8px; background: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 4px; box-shadow: 0 0 5px rgba(59,130,246,0.5);"></span>';
+
+        html += `
+                <div onclick="markNotificationAsRead(${notif.id})" style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; ${bgClass} transition: background 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                        <div style="font-size: 13.5px; color: #1e293b; ${weightClass}">${notif.title}</div>
+                        ${dotHtml}
+                    </div>
+                    <div style="font-size: 12.5px; color: #475569; line-height: 1.4;">${notif.message}</div>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">${timeAgo(notif.createdAt)}</div>
+                </div>
+                `;
+      });
+      listContainer.innerHTML = html;
+    })
+    .catch(err => console.error("Failed to load notifications:", err));
+};
+
+// 3. ACTION: Mark a single notification as read when clicked
+window.markNotificationAsRead = function(notifId) {
+  fetch(`${API_BASE_URL}/api/notifications/${notifId}/read`, { method: 'PUT' })
+    .then(res => {
+      if (res.ok) loadNotifications(); // Instantly refresh the UI!
+    })
+    .catch(err => console.error("Error marking as read:", err));
+};
+
+// 4. ACTION: Mark ALL notifications as read
+window.markAllAsRead = function() {
+  if (!currentUserId) return;
+
+  const markAllBtn = document.getElementById('btn-mark-all-read');
+  if (markAllBtn) markAllBtn.innerText = "Marking...";
+
+  fetch(`${API_BASE_URL}/api/notifications/user/${currentUserId}/read-all`, { method: 'PUT' })
+    .then(res => {
+      if (res.ok) loadNotifications(); // Instantly refresh the UI!
+    })
+    .catch(err => console.error("Error marking all as read:", err))
+    .finally(() => {
+      if (markAllBtn) markAllBtn.innerText = "Mark all as read";
+    });
+};

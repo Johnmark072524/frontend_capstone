@@ -44,19 +44,82 @@
   <div class="main-content">
 
     <header class="top-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03); height: 75px; z-index: 10; position: relative; border-bottom: none;">
+
+      <!-- LEFT SIDE: Title -->
       <div>
         <h1 style="margin: 0; font-size: 22px; color: #1e293b; font-weight: 700; letter-spacing: -0.5px;">CPDO Command Center</h1>
       </div>
 
-      <button class="header-profile-btn" style="background: #f0f4ff; border: 1px solid #d6e4ff; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #1a0ca3; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
-        <span id="header-avatar-icon" class="icon" style="background: linear-gradient(135deg, #1a0ca3, #4361ee); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(26,12,163,0.4);">👤</span>
+      <!-- 🚀 RIGHT SIDE: Grouped Bell & Profile -->
+      <div style="display: flex; align-items: center; gap: 25px;">
 
-        <!-- 🚀 2-LINE STACKED TEXT -->
-        <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
-          <span id="header-display-name" style="font-size: 14px; font-weight: 700; color: #1a0ca3;">Loading...</span>
-          <span id="header-display-role" style="font-size: 11px; font-weight: 600; color: #64748b;">Loading...</span>
+        <!-- ========================================== -->
+        <!-- 🔔 NOTIFICATION BELL SYSTEM -->
+        <!-- ========================================== -->
+        <div class="notification-wrapper" style="position: relative; display: inline-block;">
+
+          <!-- The Bell Icon & Red Badge -->
+          <button id="btn-notification" style="background: none; border: none; font-size: 22px; cursor: pointer; position: relative; padding: 5px; transition: 0.2s; outline: none;">
+            🔔
+            <!-- The Red Unread Badge -->
+            <span id="notification-badge" style="position: absolute; top: 0px; right: -2px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; height: 16px; width: 16px; display: flex; justify-content: center; align-items: center; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">2</span>
+          </button>
+
+          <!-- The Dropdown Menu (Hidden by default) -->
+          <div id="notification-dropdown" class="hidden" style="position: absolute; right: 0; top: 45px; width: 340px; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 9999; overflow: hidden;">
+
+            <!-- Dropdown Header -->
+            <div style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+              <h4 style="margin: 0; font-size: 15px; color: #0f172a; font-weight: 700;">Notifications</h4>
+
+              <!-- 🚀 Added the ID and the onclick function here! -->
+              <button id="btn-mark-all-read" onclick="markAllAsRead()" style="background: none; border: none; font-size: 12px; color: #3b82f6; cursor: pointer; font-weight: 600; padding: 0; transition: 0.2s;">
+                Mark all as read
+              </button>
+            </div>
+
+            <!-- Notification List -->
+            <div id="notification-list" style="max-height: 320px; overflow-y: auto;">
+
+              <!-- Fake Unread Notification (Light blue background) -->
+              <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: #eff6ff; transition: 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                  <div style="font-size: 13.5px; color: #1e293b; font-weight: 700;">New City Road Added</div>
+                  <span style="height: 8px; width: 8px; background: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 4px;"></span>
+                </div>
+                <div style="font-size: 12.5px; color: #475569; line-height: 1.4;">Admin has added "Assumption St." to your jurisdiction.</div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">5 minutes ago</div>
+              </div>
+
+              <!-- Fake Read Notification (White background) -->
+              <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: #ffffff; transition: 0.2s;">
+                <div style="font-size: 13.5px; color: #1e293b; font-weight: 600; margin-bottom: 4px;">Account Provisioned</div>
+                <div style="font-size: 12.5px; color: #64748b; line-height: 1.4;">Welcome to RoadWise! Your official account is now active.</div>
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">1 day ago</div>
+              </div>
+
+            </div>
+
+            <!-- Dropdown Footer -->
+            <div style="padding: 12px; text-align: center; border-top: 1px solid #e2e8f0; background: #f8fafc;">
+              <a href="#" style="font-size: 13px; color: #64748b; text-decoration: none; font-weight: 600; transition: 0.2s;">View all activity</a>
+            </div>
+
+          </div>
         </div>
-      </button>
+        <!-- ========================================== -->
+
+        <!-- PROFILE BUTTON -->
+        <button class="header-profile-btn" style="background: #f0f4ff; border: 1px solid #d6e4ff; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #1a0ca3; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
+          <span id="header-avatar-icon" class="icon" style="background: linear-gradient(135deg, #1a0ca3, #4361ee); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(26,12,163,0.4);">👤</span>
+
+          <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
+            <span id="header-display-name" style="font-size: 14px; font-weight: 700; color: #1a0ca3;">Loading...</span>
+            <span id="header-display-role" style="font-size: 11px; font-weight: 600; color: #64748b;">Loading...</span>
+          </div>
+        </button>
+
+      </div>
     </header>
 
     <main class="content-area">
@@ -489,26 +552,37 @@
       <div id="view-user-management" class="content-section hidden">
 
         <div class="section-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+          <!-- LEFT SIDE: Title & Subtitle -->
           <div>
             <h2 style="margin: 0; font-size: 24px; color: #1e293b;">👥 User Management</h2>
             <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Provision and manage accounts for Barangay Officials.</p>
           </div>
 
-          <button id="btn-open-add-user" style="background: #1e40af; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(30,64,175,0.2); transition: 0.2s;">
-            <span class="icon">➕</span> Add New Official
-          </button>
+          <!-- 🚀 RIGHT SIDE: Grouped Button & Search Bar -->
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <button id="btn-open-add-user" style="background: #1e40af; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(30,64,175,0.2); transition: 0.2s;">
+              <span class="icon">➕</span> Add New Official
+            </button>
+
+            <div class="search-bar" style="margin: 0; display: flex; gap: 8px;">
+              <input type="text" id="search-user-input" placeholder="Search name, username, or barangay...">
+              <button class="btn-action" type="button" onclick="executeGlobalSearch('search-user-input', 'user-management-tbody')">Search</button>
+            </div>
+          </div>
         </div>
 
         <!-- THE OFFICIALS DATA TABLE -->
         <div style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; overflow: hidden;">
-          <table class="data-table">
-            <thead>
+
+          <!-- 🚀 FIX: APPLIED CONSISTENT TABLE & HEADER STYLES -->
+          <table class="data-table" style="width: 100%; border-collapse: collapse;">
+            <thead style="background-color: #f8f9fa; border-bottom: 1px solid #eaeaea;">
             <tr>
-              <th>Official Name</th>
-              <th>Username</th>
-              <th>Jurisdiction (Barangay)</th>
-              <th>Status</th>
-              <th style="text-align: right;">Actions</th>
+              <th style="padding: 12px 20px; font-size: 11px; color: #555; text-transform: uppercase; text-align: left;">Official Name</th>
+              <th style="padding: 12px 20px; font-size: 11px; color: #555; text-transform: uppercase; text-align: left;">Username</th>
+              <th style="padding: 12px 20px; font-size: 11px; color: #555; text-transform: uppercase; text-align: left;">Jurisdiction (Barangay)</th>
+              <th style="padding: 12px 20px; font-size: 11px; color: #555; text-transform: uppercase; text-align: center;">Status</th>
+              <th style="padding: 12px 20px; font-size: 11px; text-align: right;">Actions</th>
             </tr>
             </thead>
             <tbody id="user-management-tbody">
@@ -643,6 +717,9 @@
 
       </div>
 
+      <!-- ========================================== -->
+      <!-- BARANGAY INFRASTRUCTURE MANAGEMENT TAB -->
+      <!-- ========================================== -->
       <div id="view-barangay" class="content-section hidden">
 
         <div class="section-header-flex">
@@ -654,50 +731,92 @@
             </button>
 
             <div class="search-bar">
-              <input type="text" placeholder="Search SJDM Barangay...">
-              <button class="btn-action">Search</button>
+              <input type="text" id="search-barangay-input" placeholder="Search SJDM Barangay...">
+              <button class="btn-action" type="button"
+                      onclick="executeGlobalSearch('search-barangay-input', 'barangay-table-body')">
+                Search
+              </button>
             </div>
           </div>
         </div>
-
         <div class="table-container">
           <table class="data-table">
             <thead>
             <tr>
+              <th style="width: 40px; text-align: center;">#</th>
               <th>Barangay Name</th>
-              <th>Current Point of Contact</th>
-              <th>Registered Roads</th>
+              <th>Current Official</th> <!-- 🚀 CHANGED HERE -->
+              <th>Registered City Roads</th>
               <th>Active Reports</th>
               <th>Action</th>
             </tr>
             </thead>
-            <tbody>
-            <tr>
-              <td><strong>Muzon</strong></td>
-              <td>Kap. Marciano Gatchalian</td>
-              <td>12 Roads</td>
-              <td><span class="badge high">3 Active</span></td>
-              <td><button class="btn-small manage-brgy-btn">Manage Barangay</button></td>
-            </tr>
-            <tr>
-              <td><strong>Tungkong Mangga</strong></td>
-              <td>Kap. Alexander Medina</td>
-              <td>8 Roads</td>
-              <td><span class="badge low">1 Active</span></td>
-              <td><button class="btn-small manage-brgy-btn">Manage Barangay</button></td>
-            </tr>
-            <tr>
-              <td><strong>Graceville</strong></td>
-              <td>Kap. Lenard Reyes</td>
-              <td>5 Roads</td>
-              <td><span class="badge medium" style="background-color: #e9ecef; color: #666;">0 Active</span></td>
-              <td><button class="btn-small manage-brgy-btn">Manage Barangay</button></td>
-            </tr>
+            <tbody id="barangay-table-body">
+            <tr><td colspan="6" style="text-align: center;">Loading Barangays...</td></tr>
             </tbody>
           </table>
         </div>
-
       </div>
+
+      <!-- ========================================== -->
+      <!-- MANAGE BARANGAY MODAL -->
+      <!-- ========================================== -->
+      <div id="barangay-modal" class="modal-overlay hidden">
+        <div class="modal-content" style="width: 700px;">
+
+          <!-- 🚀 ADDED THE EDIT PENCIL ICON TO THE HEADER -->
+          <div class="modal-header">
+            <h2 style="display: flex; align-items: center; gap: 10px;">
+              Manage Barangay: <span id="manage-brgy-name" class="highlight">Loading...</span>
+              <button onclick="openRenameBarangayModal()" style="background: none; border: none; cursor: pointer; font-size: 16px; padding: 0; margin-left: 5px; color: #3b82f6; transition: 0.2s;" title="Rename Barangay">✏️</button>
+            </h2>
+            <button class="close-brgy-btn close-modal-btn">✕</button>
+          </div>
+
+          <div class="modal-body">
+
+            <div class="report-section">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Barangay Details</h3>
+              </div>
+
+              <!-- 🚀 ADDED THE IDs TO THE GRID -->
+              <div class="report-detail-grid">
+                <div><strong>Current Official:</strong> <span id="manage-brgy-kapitan">Loading...</span></div>
+                <div><strong>Official Contact:</strong> <span id="manage-brgy-contact">Loading...</span></div>
+                <div><strong>Official Email:</strong> <span id="manage-brgy-email">Loading...</span></div>
+              </div>
+            </div>
+
+            <div class="report-section" style="border-bottom: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Registered City Roads</h3>
+
+                <button id="btn-open-add-road" class="add-road-btn" type="button" style="background-color: #1a0ca3; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                  <span style="color: #9b84e6; font-size: 18px; line-height: 1; font-weight: normal;">+</span> Add City Road
+                </button>
+              </div>
+
+              <table class="data-table" style="width: 100%; border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden;">
+                <thead style="background-color: #f8f9fa;">
+                <tr>
+                  <th style="padding: 10px; font-size: 11px; color: #555; text-transform: uppercase;">City Road ID</th>
+                  <th style="padding: 10px; font-size: 11px; color: #555; text-transform: uppercase;">City Road Name</th>
+                  <th style="padding: 10px; font-size: 11px; color: #555; text-transform: uppercase;">Road Importance</th>
+                  <th style="padding: 10px; font-size: 11px; text-align: right;">Action</th>
+                </tr>
+                </thead>
+                <!-- JavaScript will inject the rows here -->
+                <tbody id="manage-brgy-roads-body">
+                <tr><td colspan="4" style="text-align: center; padding: 15px;">Loading roads...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
 
       <div id="view-map" class="content-section hidden">
         <div class="header-container" style="margin-bottom: 20px;">
@@ -706,6 +825,241 @@
         </div>
 
         <div id="admin-global-map" style="height: 70vh; width: 100%; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 1;"></div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- POLISHED ADD CITY ROAD MODAL (NUCLEAR Z-INDEX) -->
+      <!-- ========================================== -->
+      <div id="add-road-modal" class="modal-overlay hidden" style="position: fixed !important; z-index: 9999 !important; background: rgba(0, 0, 0, 0.6);">
+        <div class="modal-content" style="width: 550px; border-radius: 12px; padding: 0; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+
+          <!-- Header Area -->
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
+              <span style="color: #6366f1; font-size: 20px;">➕</span> Register New City Road
+            </h2>
+            <button class="close-add-road-btn close-modal-btn" style="background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; padding: 5px;">✕</button>
+          </div>
+
+          <!-- Body Area -->
+          <div class="modal-body" style="padding: 24px;">
+            <!-- Helper Text -->
+            <p style="font-size: 13.5px; color: #64748b; margin-top: 0; margin-bottom: 24px; line-height: 1.5;">
+              Register a new road for this jurisdiction. The <strong>City Road ID</strong> will be securely auto-generated by the system upon saving.
+            </p>
+
+            <form id="form-add-city-road">
+              <div class="form-section" style="border: none; padding: 0; margin-bottom: 30px;">
+
+                <!-- Full Width: Road Name -->
+                <div class="form-group-vertical" style="margin-bottom: 18px;">
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                    City Road Name <span style="color: #ef4444;">*</span>
+                  </label>
+                  <input type="text" id="add-road-name" name="road_name" placeholder="e.g. Abella Road" required
+                         style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit;">
+                </div>
+
+                <!-- Grid: Importance & Type side-by-side -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 18px;">
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                      Road Importance <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="add-road-importance" name="road_importance" required
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit; background-color: #fff;">
+                      <option value="" disabled selected>Select...</option>
+                      <option value="Core">Core</option>
+                      <option value="Non-core">Non-core</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                      Road Type <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="add-road-type" name="road_type" required
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit; background-color: #fff;">
+                      <option value="" disabled selected>Select...</option>
+                      <option value="Asphalt">Asphalt</option>
+                      <option value="Gravel">Gravel</option>
+                      <option value="Earth">Earth</option>
+                      <option value="Concrete">Concrete</option>
+                      <option value="Mixed">Mixed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Full Width: Terrain -->
+                <div class="form-group-vertical">
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                    Terrain Type <span style="color: #ef4444;">*</span>
+                  </label>
+                  <select id="add-road-terrain" name="terrain_type" required
+                          style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit; background-color: #fff;">
+                    <option value="" disabled selected>Select Terrain...</option>
+                    <option value="Flat">Flat</option>
+                    <option value="Mountainous">Mountainous</option>
+                    <option value="Rolling">Rolling</option>
+                  </select>
+                </div>
+
+              </div>
+
+              <!-- Actions Footer -->
+              <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px;">
+                <!-- Outlined Cancel Button -->
+                <button type="button" class="btn-secondary close-add-road-btn"
+                        style="background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer;">
+                  Cancel
+                </button>
+                <!-- Solid Blue Save Button -->
+                <button type="submit" class="btn-submit"
+                        style="background-color: #1e3a8a; color: #ffffff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  💾 Save City Road
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ========================================== -->
+      <!-- POLISHED EDIT CITY ROAD MODAL -->
+      <!-- ========================================== -->
+      <div id="edit-road-modal" class="modal-overlay hidden" style="position: fixed !important; z-index: 9999 !important; background: rgba(0, 0, 0, 0.6);">
+        <div class="modal-content" style="width: 550px; border-radius: 12px; padding: 0; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+
+          <!-- Header Area -->
+          <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">✏️</span> Edit City Road Details
+            </h2>
+            <button class="close-edit-road-btn close-modal-btn" style="background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; padding: 5px;">✕</button>
+          </div>
+
+          <!-- Body Area -->
+          <div class="modal-body" style="padding: 24px;">
+            <!-- Helper Text -->
+            <p style="font-size: 13.5px; color: #64748b; margin-top: 0; margin-bottom: 24px; line-height: 1.5;">
+              Update the infrastructure details below. The <strong>City Road ID</strong> is system-generated and locked to preserve sequence integrity.
+            </p>
+
+            <form id="form-edit-city-road">
+
+              <!-- 🚀 SECRET HIDDEN ID: Tells the database which exact record to update -->
+              <input type="hidden" id="edit-db-id" name="db_id">
+
+              <div class="form-section" style="border: none; padding: 0; margin-bottom: 30px;">
+
+                <!-- Read-Only City Road Sequence ID -->
+                <div class="form-group-vertical" style="margin-bottom: 18px;">
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                    City Road ID (Locked)
+                  </label>
+                  <input type="text" id="edit-road-sequence-id" disabled
+                         style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #64748b; background-color: #f1f5f9; outline: none; box-sizing: border-box; font-family: inherit; cursor: not-allowed;">
+                </div>
+
+                <!-- Full Width: Road Name -->
+                <div class="form-group-vertical" style="margin-bottom: 18px;">
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                    City Road Name <span style="color: #ef4444;">*</span>
+                  </label>
+                  <input type="text" id="edit-road-name" required
+                         style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit;">
+                </div>
+
+                <!-- Grid: Importance & Type side-by-side -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 18px;">
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                      Road Importance <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="edit-road-importance" required
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit; background-color: #fff;">
+                      <option value="Core">Core</option>
+                      <option value="Non-core">Non-core</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group-vertical">
+                    <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                      Road Type <span style="color: #ef4444;">*</span>
+                    </label>
+                    <select id="edit-road-type" required
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit; background-color: #fff;">
+                      <option value="Asphalt">Asphalt</option>
+                      <option value="Gravel">Gravel</option>
+                      <option value="Earth">Earth</option>
+                      <option value="Concrete">Concrete</option>
+                      <option value="Mixed">Mixed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Full Width: Terrain -->
+                <div class="form-group-vertical">
+                  <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                    Terrain Type <span style="color: #ef4444;">*</span>
+                  </label>
+                  <select id="edit-road-terrain" required
+                          style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit; background-color: #fff;">
+                    <option value="Flat">Flat</option>
+                    <option value="Mountainous">Mountainous</option>
+                    <option value="Rolling">Rolling</option>
+                  </select>
+                </div>
+
+              </div>
+
+              <!-- Actions Footer -->
+              <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px;">
+                <!-- Outlined Cancel Button -->
+                <button type="button" class="btn-secondary close-edit-road-btn"
+                        style="background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer;">
+                  Cancel
+                </button>
+                <!-- Solid Blue Save Button -->
+                <button type="submit" class="btn-submit"
+                        style="background-color: #1e3a8a; color: #ffffff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                  💾 Save Changes
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- ✏️ RENAME BARANGAY MODAL -->
+      <!-- ========================================== -->
+      <div id="rename-brgy-modal" class="modal-overlay hidden" style="position: fixed !important; z-index: 99999 !important; background: rgba(0, 0, 0, 0.6);">
+        <div class="modal-content" style="width: 400px; border-radius: 12px; padding: 24px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+
+          <h3 style="margin-top: 0; color: #0f172a; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+            <span>✏️</span> Rename Barangay
+          </h3>
+
+          <form id="form-rename-barangay">
+            <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">New Barangay Name</label>
+            <input type="text" id="rename-brgy-input" required
+                   style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 20px; box-sizing: border-box; font-size: 14px; outline: none;">
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button type="button" onclick="document.getElementById('rename-brgy-modal').classList.add('hidden')"
+                      style="background: #ffffff; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #475569;">Cancel</button>
+              <button type="submit" class="btn-submit"
+                      style="background-color: #1e3a8a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">💾 Save</button>
+            </div>
+          </form>
+
+        </div>
       </div>
 
     </main>
@@ -1021,194 +1375,60 @@
       </div>
     </div>
 
-    <div id="add-brgy-modal" class="modal-overlay hidden" style="z-index: 1100;">
-      <div class="modal-content" style="width: 450px;">
+  <!-- ========================================== -->
+  <!-- POLISHED ADD BARANGAY MODAL (UI Upgraded) -->
+  <!-- ========================================== -->
+  <div id="add-brgy-modal" class="modal-overlay hidden" style="z-index: 1200; background: rgba(0, 0, 0, 0.4);">
+    <div class="modal-content" style="width: 480px; border-radius: 12px; padding: 0; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
 
-        <div class="modal-header">
-          <h2>Register New Barangay</h2>
-          <button class="close-add-brgy-btn close-modal-btn">✕</button>
-        </div>
-
-        <div class="modal-body">
-          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Enter the official details to register a new SJDM barangay and create their access account.</p>
-
-          <form id="form-add-barangay">
-            <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
-
-              <div class="form-group-vertical">
-                <label>Barangay Name</label>
-                <input type="text" name="barangay_name" placeholder="e.g., San Manuel" required>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>SJDM District</label>
-                <select name="district" required>
-                  <option value="" disabled selected>Select District...</option>
-                  <option value="District 1">District 1</option>
-                  <option value="District 2">District 2</option>
-                </select>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>Current Kapitan / Point of Contact</label>
-                <input type="text" name="kapitan_name" placeholder="e.g., Juan Dela Cruz" required>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>Official Contact Number</label>
-                <input type="text" name="contact_number" placeholder="e.g., (044) 123-4567" required>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>Official Email Address</label>
-                <input type="email" name="email_address" placeholder="e.g., admin@brgysanmanuel.gov.ph" required>
-                <span style="font-size: 11px; color: #666; margin-top: 4px;">* The system will send login credentials to this email.</span>
-              </div>
-
-            </div>
-
-            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 15px;">
-              <button type="button" class="btn-secondary close-add-brgy-btn">Cancel</button>
-              <button type="submit" class="btn-submit" style="background-color: #1a0ca3; border: none;">Save Barangay</button>
-            </div>
-          </form>
-        </div>
-
+      <!-- Header Area -->
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #e2e8f0;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
+          <span style="color: #6366f1; font-size: 20px;">➕</span> Register New Barangay
+        </h2>
+        <button class="close-add-brgy-btn close-modal-btn" style="background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; padding: 5px;">✕</button>
       </div>
-    </div>
 
-    <div id="barangay-modal" class="modal-overlay hidden">
-      <div class="modal-content" style="width: 700px;">
+      <!-- Body Area -->
+      <div class="modal-body" style="padding: 24px;">
 
-        <div class="modal-header">
-          <h2>Manage Barangay: <span class="highlight">Muzon</span></h2>
-          <button class="close-brgy-btn close-modal-btn">✕</button>
-        </div>
+        <!-- Helper Text matching the screenshot style -->
+        <p style="font-size: 13.5px; color: #64748b; margin-top: 0; margin-bottom: 24px; line-height: 1.5;">
+          Create and register a new jurisdiction for the system. Assigning the Kapitan is handled separately in the User Management tab.
+        </p>
 
-        <div class="modal-body">
+        <form id="form-add-barangay">
+          <div class="form-section" style="border: none; padding: 0; margin-bottom: 35px;">
 
-          <div class="report-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Barangay Details</h3>
-              <div style="display: flex; gap: 10px;">
-                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">Reset Password</button>
-                <button class="btn-secondary" style="padding: 6px 12px; font-size: 12px;">Edit Details</button>
-              </div>
+            <div class="form-group-vertical">
+              <label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 8px;">
+                Barangay Name <span style="color: #ef4444;">*</span>
+              </label>
+              <!-- Styled Input Field -->
+              <input type="text" id="add-brgy-name" name="barangay_name" placeholder="e.g. Muzon" required
+                     style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #0f172a; outline: none; box-sizing: border-box; font-family: inherit;">
             </div>
-            <div class="report-detail-grid">
-              <div><strong>Current Kapitan:</strong> Marciano Gatchalian</div>
-              <div><strong>Official Contact:</strong> (044) 123-4567</div>
-              <div><strong>Official Email:</strong> admin@muzonsjdm.gov.ph</div>
-              <div><strong>District:</strong> District 1</div>
-            </div>
+
           </div>
 
-          <div class="report-section" style="border-bottom: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Registered City Roads</h3>
-
-              <button class="add-road-btn" type="button" style="background-color: #1a0ca3; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                <span style="color: #9b84e6; font-size: 18px; line-height: 1; font-weight: normal;">+</span> Add City Road
-              </button>
-            </div>
-
-            <table class="data-table" style="width: 100%; border: 1px solid #eaeaea; border-radius: 6px; overflow: hidden;">
-              <thead style="background-color: #f8f9fa;">
-              <tr>
-                <th style="padding: 10px; font-size: 11px; color: #555; text-transform: uppercase;">City Road ID</th>
-                <th style="padding: 10px; font-size: 11px; color: #555; text-transform: uppercase;">City Road Name</th>
-                <th style="padding: 10px; font-size: 11px; color: #555; text-transform: uppercase;">Road Importance</th>
-                <th style="padding: 10px; font-size: 11px; text-align: right;">Action</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr>
-                <td style="padding: 10px; font-size: 12px;">CR-101</td>
-                <td style="padding: 10px; font-size: 12px;">Muzon Main Road</td>
-                <td style="padding: 10px; font-size: 12px;">Core</td>
-                <td style="padding: 10px; text-align: right;"><button style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 12px;">Edit</button></td>
-              </tr>
-              <tr>
-                <td style="padding: 10px; font-size: 12px;">CR-102</td>
-                <td style="padding: 10px; font-size: 12px;">Harmony Hills Blvd</td>
-                <td style="padding: 10px; font-size: 12px;">Non-core</td>
-                <td style="padding: 10px; text-align: right;"><button style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 12px;">Edit</button></td>
-              </tr>
-              </tbody>
-            </table>
+          <!-- Actions Footer -->
+          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px;">
+            <!-- Outlined Cancel Button -->
+            <button type="button" class="btn-secondary close-add-brgy-btn"
+                    style="background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer;">
+              Cancel
+            </button>
+            <!-- Solid Blue Save Button -->
+            <button type="submit" class="btn-submit"
+                    style="background-color: #1e3a8a; color: #ffffff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              💾 Save Barangay
+            </button>
           </div>
-
-        </div>
+        </form>
       </div>
-    </div>
 
-    <div id="add-road-modal" class="modal-overlay hidden" style="z-index: 1200;">
-      <div class="modal-content" style="width: 450px;">
-
-        <div class="modal-header">
-          <h2>Register New City Road</h2>
-          <button class="close-add-road-btn close-modal-btn">✕</button>
-        </div>
-
-        <div class="modal-body">
-          <form id="form-add-city-road">
-            <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
-
-              <div class="form-group-vertical">
-                <label>City Road Name</label>
-                <input type="text" name="road_name" required>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>City Road ID</label>
-                <input type="text" name="road_id" required>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>Road Importance</label>
-                <select name="road_importance" required>
-                  <option value="" disabled selected></option>
-                  <option value="Core">Core</option>
-                  <option value="Non-core">Non-core</option>
-                </select>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>Terrain Type</label>
-                <select name="terrain_type" required>
-                  <option value="" disabled selected></option>
-                  <option value="Flat">Flat</option>
-                  <option value="Mountainous">Mountainous</option>
-                  <option value="Rolling">Rolling</option>
-                </select>
-              </div>
-
-              <div class="form-group-vertical">
-                <label>Road Type</label>
-                <select name="road_type" required>
-                  <option value="" disabled selected></option>
-                  <option value="Asphalt">Asphalt</option>
-                  <option value="Gravel">Gravel</option>
-                  <option value="Earth">Earth</option>
-                  <option value="Concrete">Concrete</option>
-                  <option value="Mixed">Mixed</option>
-                </select>
-              </div>
-
-            </div>
-
-            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 15px;">
-              <button type="button" class="btn-secondary close-add-road-btn">Cancel</button>
-              <button type="submit" class="btn-submit" style="background-color: #1a0ca3; border: none;">Save City Road</button>
-            </div>
-
-          </form>
-        </div>
-
-      </div>
     </div>
   </div>
-
 
 
 </div>

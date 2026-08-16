@@ -1312,7 +1312,9 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
   tbody.innerHTML = '';
 
   if (dataArray.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: #94a3b8;">No active projects found.</td></tr>`;
+    // 🚀 DYNAMIC COLSPAN: 7 columns for Masterlist, 6 columns for Dashboard
+    const colCount = isDashboard ? "6" : "7";
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 30px; color: #94a3b8;">No active projects found.</td></tr>`;
     return;
   }
 
@@ -1342,6 +1344,24 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
       btnHtml = `<button onclick="${onClickAction}" style="background-color: #16a34a; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 2px 4px rgba(22,163,74,0.2);">View Proof</button>`;
     }
 
+    // ==========================================
+    // 🚀 NEW: DYNAMIC BATCH CHECKBOX LOGIC
+    // ==========================================
+    let checkboxHtml = '';
+
+    // Only process checkboxes if this is the Masterlist (NOT the dashboard table)
+    if (!isDashboard) {
+      // Only generate a clickable checkbox if the status is exactly "dispatched to ceo"
+      if (status === 'dispatched to ceo') {
+        checkboxHtml = `<td style="text-align: center; padding: 15px;">
+                                <input type="checkbox" class="defer-checkbox" value="${report.id}" onchange="toggleBatchActionBar()" style="cursor: pointer; width: 16px; height: 16px;">
+                            </td>`;
+      } else {
+        // If it's already "In Progress" or "Completed", leave an empty cell to keep the columns aligned
+        checkboxHtml = `<td style="padding: 15px;"></td>`;
+      }
+    }
+
     const tr = document.createElement('tr');
     tr.style.borderBottom = "1px solid #f1f5f9";
     tr.style.transition = "background-color 0.2s";
@@ -1350,7 +1370,8 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     tr.onmouseout = () => tr.style.backgroundColor = "transparent";
 
     tr.innerHTML = `
-       <td style="padding: 15px; border-left: 4px solid ${report.tierColor}; white-space: nowrap;"><strong>${formatId}</strong></td>
+        ${checkboxHtml} <!-- 🚀 Injects the checkbox column (or leaves it blank for dashboard) -->
+        <td style="padding: 15px; border-left: 4px solid ${report.tierColor}; white-space: nowrap;"><strong>${formatId}</strong></td>
         <td style="padding: 15px;">${formatBrgy}</td>
         <td style="padding: 15px; font-weight: 600; color: #0f172a;">${formatName}</td>
         <td style="padding: 15px; color: #64748b; white-space: nowrap;">${formatArea}</td>
@@ -1429,9 +1450,46 @@ window.openCEOManageModal = function(reportId) {
   // 4. Set temporary loading text
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
+  // ==========================================
+  // 🧹 5. THE FIX: WIPE OLD DATA & PREVIEWS (MATCHING EXACT HTML IDs)
+  // ==========================================
+  // 1. Clear previous server images
+  const dmgImg = document.getElementById('ceo-modal-image');
+  if (dmgImg) dmgImg.src = '';
+
+  const proofImg = document.getElementById('ceo-modal-proof-image');
+  if (proofImg) proofImg.src = '';
+
+  // 2. Clear the actual File Input and Remarks so they are empty
+  const proofInput = document.getElementById('ceo-repair-image-upload');
+  if (proofInput) proofInput.value = '';
+
+  const remarksInput = document.getElementById('ceo-repair-remarks');
+  if (remarksInput) remarksInput.value = '';
+
+  // 3. 🚀 WIPE THE VISUAL PREVIEW UI AND RESTORE DEFAULT CAMERA ICON
+
+  // A. Clear the green filename text
+  const fileNameDisplay = document.getElementById('ceo-repair-file-name');
+  if (fileNameDisplay) fileNameDisplay.innerText = '';
+
+  // B. Clear the actual image preview tag
+  const previewImgTag = document.getElementById('ceo-preview-img');
+  if (previewImgTag) previewImgTag.src = '';
+
+  // C. Hide the wrapper that holds the Image AND the Red "X" button
+  const previewContainer = document.getElementById('ceo-dropzone-preview');
+  if (previewContainer) previewContainer.style.display = 'none';
+
+  // D. SHOW the default "Click to upload or drag photo here" box again
+  const defaultDropzone = document.getElementById('ceo-dropzone-default');
+  if (defaultDropzone) defaultDropzone.style.display = 'block';
+  // ==========================================
+
   // 🚀 FETCH THE DATA
   apiFetch(`/api/reports/${reportId}`, { cache: 'no-store' })
     .then(report => {
+      // ... (Keep the rest of your .then() logic exactly as it is) ...
       // Save coordinates for the "Locate on Map" button
       currentCEOLat = report.latitude;
       currentCEOLng = report.longitude;
@@ -3485,6 +3543,71 @@ window.executePriorityDispatch = function(event) {
 };
 
 // ==========================================
+// 🏗️ CEO ACTION: BATCH DEFER (PENDING BUDGET)
+// ==========================================
+window.openBatchDeferModal = function() {
+  // Clear the textarea and show our beautiful new modal
+  document.getElementById('batch-defer-reason').value = '';
+  document.getElementById('batch-defer-modal').classList.remove('hidden');
+};
+
+window.submitBatchDefer = function() {
+  const reasonInput = document.getElementById('batch-defer-reason');
+  const reason = reasonInput.value;
+
+  if (!reason || reason.trim() === '') {
+    showToast("Please provide a reason for the deferral.", "error");
+    reasonInput.style.borderColor = "red";
+    setTimeout(() => reasonInput.style.borderColor = "#cbd5e1", 2000);
+    return;
+  }
+
+  // 2. Gather the IDs from the checked boxes
+  const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+  const selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+  const btn = document.getElementById('btn-confirm-batch-defer');
+  const originalText = btn.innerText;
+  btn.innerText = "Processing Batch...";
+  btn.disabled = true;
+
+  // 3. Send the IDs and the reason to the backend
+  fetch(`${API_BASE_URL}/api/reports/execute-batch-defer`, {  // 🚀 COMPLETELY RENAMED TO BYPASS CACHE
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      repairRemarks: reason,
+      reportIds: selectedIds
+    })
+  })
+    .then(res => res.json())
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        showToast(data.error, "error");
+      } else {
+        showToast(data.message, "success");
+        document.getElementById('batch-defer-modal').classList.add('hidden');
+
+        // Hide the action bar and uncheck the "Select All" box
+        document.getElementById('batch-action-bar').style.display = 'none';
+        const selectAllCb = document.getElementById('select-all-checkbox');
+        if(selectAllCb) selectAllCb.checked = false;
+
+        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
+      }
+    })
+    .catch(err => {
+      console.error("Batch Defer Error:", err);
+      showToast("A network error occurred.", "error");
+    })
+    .finally(() => {
+      btn.innerText = originalText;
+      btn.disabled = false;
+    });
+};
+
+// ==========================================
 // CEO: BULLETPROOF SUBMIT REPAIR
 // ==========================================
 window.submitCEOCompletion = function() {
@@ -3554,61 +3677,45 @@ function loadTrackingData() {
     .then(reports => {
       trackingTableBody.innerHTML = '';
 
-      // 🚀 FIX 1: Allow "closed" projects into the table
       const trackedReports = reports.filter(r => {
         const status = String(r.status || '').toLowerCase().trim();
         return status === 'dispatched to ceo' ||
           status === 'in progress' ||
           status === 'completed' ||
-          status === 'closed'; // <-- ADDED
+          status === 'pending budget' ||
+          status === 'closed' ||
+          status === 'archived';
       });
 
       if (trackedReports.length === 0) {
-        trackingTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No active repair projects to track.</td></tr>`;
+        // 🚀 FIX: Updated colspan to 7 to account for the new Checkbox column
+        trackingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px;">No active repair projects to track.</td></tr>`;
         return;
       }
 
-      // ==========================================
-      // 2. 🧠 SMART TRACKING ALGORITHM (MULTI-TIER SORT)
-      // ==========================================
-
-      // Step A: Assign mathematical scores so we can sort them easily
       trackedReports.forEach(report => {
-        // 🚀 FIX 2: Give 'Closed' a score of 0 so it drops to the absolute bottom
-        // Status Score: Completed (3) > In Progress (2) > Dispatched (1) > Closed (0)
         const status = String(report.status || '').toLowerCase().trim();
-        if (status === 'completed') report.statusScore = 3;
-        else if (status === 'in progress') report.statusScore = 2;
-        else if (status === 'dispatched to ceo') report.statusScore = 1;
-        else report.statusScore = 0; // <-- ADDED
+        if (status === 'completed') report.statusScore = 4;
+        else if (status === 'in progress') report.statusScore = 3;
+        else if (status === 'dispatched to ceo') report.statusScore = 2;
+        else if (status === 'pending budget') report.statusScore = 1;
+        else report.statusScore = 0;
 
-        // Priority Score (Matches your official logic)
         const severity = String(report.severity || 'low').toLowerCase();
         const importance = String(report.roadImportance || '').toLowerCase();
 
         if (severity === 'high' || (severity === 'medium' && importance.includes('core'))) {
-          report.priorityScore = 3; // HIGH
+          report.priorityScore = 3;
         } else if (severity === 'medium' || (severity === 'low' && importance.includes('core'))) {
-          report.priorityScore = 2; // MEDIUM
+          report.priorityScore = 2;
         } else {
-          report.priorityScore = 1; // LOW
+          report.priorityScore = 1;
         }
       });
 
-      // Step B: Run the 3-Rule Sort (BULLETPROOF FIX)
       trackedReports.sort((a, b) => {
-        // Rule 1: Actionable Status First (Completed to the top, Closed to bottom)
-        if (b.statusScore !== a.statusScore) {
-          return b.statusScore - a.statusScore;
-        }
-
-        // Rule 2: Highest Priority First (High > Medium > Low)
-        if (b.priorityScore !== a.priorityScore) {
-          return b.priorityScore - a.priorityScore;
-        }
-
-        // Rule 3: Tie-Breaker (Newest First)
-        // Using ID to prevent 'NaN' date errors!
+        if (b.statusScore !== a.statusScore) return b.statusScore - a.statusScore;
+        if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
         const idA = parseInt(a.id) || 0;
         const idB = parseInt(b.id) || 0;
         return idB - idA;
@@ -3635,15 +3742,25 @@ function loadTrackingData() {
         }
 
         let statusHtml = '';
-        // 🚀 FIX 3: Add UI styling for 'Closed' projects
+        // 🚀 NEW: Checkbox HTML logic
+        let checkboxHtml = '';
+
         if (currentStatus === 'completed') {
           statusHtml = `<span class="status-badge validated" style="background-color: #d4edda; color: #155724;">Completed (Pending QA)</span>`;
           borderStyle = '4px solid #28a745';
         } else if (currentStatus === 'in progress') {
           statusHtml = `<span class="status-badge" style="background-color: #cce5ff; color: #004085;">In Progress</span>`;
+        } else if (currentStatus === 'pending budget') {
+          statusHtml = `<span class="status-badge" style="background-color: #fef08a; color: #854d0e;">⚠️ Pending Budget</span>`;
+          borderStyle = '4px solid #eab308';
+          // 🚀 ONLY inject the checkbox if it is Pending Budget!
+          checkboxHtml = `<input type="checkbox" class="archive-checkbox" value="${report.id}" onclick="updateBatchArchiveUI()" style="cursor: pointer; transform: scale(1.2);">`;
         } else if (currentStatus === 'closed') {
           statusHtml = `<span class="status-badge" style="background-color: #e2e3e5; color: #6c757d;">✅ Officially Closed</span>`;
-          borderStyle = '4px solid #6c757d'; // Gray border
+          borderStyle = '4px solid #6c757d';
+        } else if (currentStatus === 'archived') {
+          statusHtml = `<span class="status-badge" style="background-color: #cbd5e1; color: #475569;">📁 Archived (Deferred)</span>`;
+          borderStyle = '4px solid #475569';
         } else {
           statusHtml = `<span class="status-badge pending" style="background-color: #e2e3e5; color: #383d41;">Dispatched to CEO</span>`;
         }
@@ -3652,13 +3769,13 @@ function loadTrackingData() {
         row.style.borderLeft = borderStyle;
         if (currentStatus === 'completed') row.style.backgroundColor = '#fafafa';
 
-        // 🎨 BONUS: Dim the entire row if it is closed so it looks archived!
-        if (currentStatus === 'closed') {
+        if (currentStatus === 'closed' || currentStatus === 'archived') {
           row.style.opacity = '0.6';
           row.style.backgroundColor = '#f8f9fa';
         }
 
         row.innerHTML = `
+          <td style="text-align: center;">${checkboxHtml}</td>
           <td><strong>${formatId}</strong></td>
           <td>${formatBrgy}</td>
           <td>${roadName}</td>
@@ -3671,10 +3788,98 @@ function loadTrackingData() {
     })
     .catch(error => {
       console.error("Error loading tracking data:", error);
-      trackingTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Failed to load tracking data.</td></tr>`;
+      trackingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Failed to load tracking data.</td></tr>`;
     });
 }
 
+// ==========================================
+// 🚀 NEW: BATCH ARCHIVE HELPER FUNCTIONS
+// ==========================================
+
+// 1. Select / Deselect All logic
+window.toggleArchiveSelectAll = function(sourceCheckbox) {
+  const checkboxes = document.querySelectorAll('.archive-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = sourceCheckbox.checked;
+  });
+  updateBatchArchiveUI();
+};
+
+// 2. Count checked boxes and show/hide the action bar
+window.updateBatchArchiveUI = function() {
+  const checkedBoxes = document.querySelectorAll('.archive-checkbox:checked');
+  const count = checkedBoxes.length;
+
+  const actionBar = document.getElementById('batch-archive-container');
+  const countText = document.getElementById('archive-selected-count');
+
+  if (count > 0) {
+    actionBar.style.display = 'flex';
+    countText.innerText = count;
+  } else {
+    actionBar.style.display = 'none';
+    const selectAllCb = document.getElementById('archive-select-all');
+    if (selectAllCb) selectAllCb.checked = false;
+  }
+};
+
+// Global variable to temporarily hold the IDs while the modal is open
+let pendingArchiveIds = [];
+
+// 3. Triggered when clicking "Archive Selected" in the grey action bar
+window.submitBatchArchive = function() {
+  const checkedBoxes = document.querySelectorAll('.archive-checkbox:checked');
+  if (checkedBoxes.length === 0) return;
+
+  // Gather all the selected IDs
+  pendingArchiveIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+  // Update the text in the modal to show the exact count
+  document.getElementById('batch-archive-confirm-text').innerText =
+    `Are you sure you want to securely archive these ${pendingArchiveIds.length} deferred projects?`;
+
+  // Show our beautiful custom modal!
+  document.getElementById('batch-archive-confirm-modal').classList.remove('hidden');
+};
+
+// 4. Triggered when clicking "Yes, Archive" inside the modal
+window.executeBatchArchive = function() {
+  // Hide the modal instantly
+  document.getElementById('batch-archive-confirm-modal').classList.add('hidden');
+
+  apiFetch('/api/reports/batch/archive', {
+    method: 'POST',
+    body: JSON.stringify({ reportIds: pendingArchiveIds })
+  })
+    .then(response => {
+      // 🚀 FIX: Pass exactly 2 parameters to match your showToast function
+      const successMsg = response.message || `Archived ${pendingArchiveIds.length} projects successfully.`;
+
+      if (window.showToast) {
+        window.showToast(successMsg, "success"); // <-- Now correctly formatted!
+      } else {
+        alert(successMsg);
+      }
+
+      // Hide the action bar and uncheck "Select All"
+      document.getElementById('batch-archive-container').style.display = 'none';
+      const selectAllCb = document.getElementById('archive-select-all');
+      if (selectAllCb) selectAllCb.checked = false;
+
+      // Reload the table instantly and clear the pending array
+      loadTrackingData();
+      pendingArchiveIds = [];
+    })
+    .catch(err => {
+      console.error("Batch archive error:", err);
+      if (window.showToast) {
+        window.showToast("Failed to archive projects.", "error"); // <-- Fixed parameter order here too!
+      } else {
+        alert("Failed to archive projects.");
+      }
+      pendingArchiveIds = []; // clear it out on error too
+    });
+};
 // ==========================================
 // 7. NEW TRACKING MODAL LOGIC
 // ==========================================
@@ -3686,7 +3891,6 @@ function openTrackingModal(reportId) {
   const trackingModal = document.getElementById('tracking-modal');
   if (!trackingModal) return;
 
-  // Reset the UI (In case they closed it while typing rework feedback earlier)
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
   const reworkInput = document.getElementById('rework-remarks-input');
@@ -3695,10 +3899,8 @@ function openTrackingModal(reportId) {
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
 
-  // Show the modal
   trackingModal.classList.remove('hidden');
 
-  // Force the modal to scroll to the very top instantly
   setTimeout(() => {
     const modalBody = trackingModal.querySelector('.modal-body');
     const modalContent = trackingModal.querySelector('.modal-content');
@@ -3707,7 +3909,6 @@ function openTrackingModal(reportId) {
     trackingModal.scrollTop = 0;
   }, 10);
 
-  // Fetch the data from the database
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       const setText = (id, text) => {
@@ -3727,13 +3928,12 @@ function openTrackingModal(reportId) {
       setText('track-modal-gps', `${report.latitude || '0'}° N, ${report.longitude || '0'}° E`);
       setText('track-modal-desc', report.damageDescription || 'No description provided.');
 
-      // 🚀 THE FIX: Look for the real user object first. If it exists, use their full name!
-      let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`; // Fallback
+      let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
 
       if (report.user && report.user.firstName && report.user.lastName) {
         submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
       } else if (report.reportedBy) {
-        submitterText = report.reportedBy; // Legacy fallback
+        submitterText = report.reportedBy;
       }
 
       setText('track-modal-submitter', submitterText);
@@ -3746,7 +3946,6 @@ function openTrackingModal(reportId) {
         else sevBox.innerHTML = `<span class="badge low">LOW</span>`;
       }
 
-      // Load original damage image
       if (typeof window.loadSecureImage === 'function') {
         window.loadSecureImage('track-modal-image', report.damageImage);
       }
@@ -3756,15 +3955,16 @@ function openTrackingModal(reportId) {
       const approveBtn = document.getElementById('btn-approve-project');
       const reworkBtn = document.getElementById('btn-rework-project');
 
-      // 🚀 NEW VARS FOR RESOLUTION EVIDENCE
       const proofPlaceholder = document.getElementById('track-modal-proof-placeholder');
       const resolutionData = document.getElementById('track-modal-resolution-data');
       const proofRemarks = document.getElementById('track-modal-proof-remarks');
 
       const status = String(report.status || '').toLowerCase();
 
+      // ==========================================
+      // 🚀 STATUS-BASED UI LOGIC
+      // ==========================================
       if (status === 'completed') {
-        // --- UI TEXT UPDATES ---
         if (statusBox) {
           statusBox.textContent = 'Repaired (Pending Approval)';
           statusBox.style.backgroundColor = '#d4edda';
@@ -3772,15 +3972,14 @@ function openTrackingModal(reportId) {
         }
         if (statusText) statusText.textContent = 'CEO has finished the repair. Awaiting Admin QA.';
 
-        // --- BUTTON UNLOCKS ---
         if (approveBtn) {
           approveBtn.disabled = false;
           approveBtn.style.backgroundColor = '#28a745';
           approveBtn.style.cursor = 'pointer';
+          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`; // 🚀 RESET TEXT
         }
         if (reworkBtn) reworkBtn.classList.remove('hidden');
 
-        // 🚀 SHOW PROOF PHOTO & HIDE PLACEHOLDER
         if (proofPlaceholder) proofPlaceholder.style.display = 'none';
         if (resolutionData) resolutionData.style.display = 'block';
 
@@ -3789,8 +3988,28 @@ function openTrackingModal(reportId) {
           window.loadSecureImage('track-modal-proof-image', report.proofOfRepairImage);
         }
 
+      } else if (status === 'pending budget') {
+        if (statusBox) {
+          statusBox.textContent = 'Deferred (Pending Budget)';
+          statusBox.style.backgroundColor = '#fef08a';
+          statusBox.style.color = '#854d0e';
+        }
+
+        if (statusText) statusText.textContent = `CEO Remarks: "${report.repairRemarks || "Deferred due to budget constraints."}"`;
+
+        // 🚀 THE FIX: Unlock the button so CPDO Admin can archive it!
+        if (approveBtn) {
+          approveBtn.disabled = false;
+          approveBtn.style.backgroundColor = '#475569'; // Slate Gray for archiving
+          approveBtn.style.cursor = 'pointer';
+          approveBtn.innerHTML = `<span class="icon">📁</span> Acknowledge & Archive`; // 🚀 DYNAMIC TEXT
+        }
+        if (reworkBtn) reworkBtn.classList.add('hidden');
+
+        if (proofPlaceholder) proofPlaceholder.style.display = 'block';
+        if (resolutionData) resolutionData.style.display = 'none';
+
       } else {
-        // --- UI TEXT UPDATES ---
         if (statusBox) {
           statusBox.textContent = report.status || 'Dispatched';
           statusBox.style.backgroundColor = '#e2e3e5';
@@ -3798,15 +4017,14 @@ function openTrackingModal(reportId) {
         }
         if (statusText) statusText.textContent = 'Engineering crew is actively handling this project.';
 
-        // --- BUTTON LOCKS ---
         if (approveBtn) {
           approveBtn.disabled = true;
           approveBtn.style.backgroundColor = '#ccc';
           approveBtn.style.cursor = 'not-allowed';
+          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`; // 🚀 RESET TEXT
         }
         if (reworkBtn) reworkBtn.classList.add('hidden');
 
-        // 🚀 SHOW PLACEHOLDER & HIDE PROOF PHOTO
         if (proofPlaceholder) proofPlaceholder.style.display = 'block';
         if (resolutionData) resolutionData.style.display = 'none';
       }
@@ -3845,29 +4063,38 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       if (!currentTrackingReportId) return;
 
-      btnApprove.innerHTML = "⏳ Approving...";
+      // 🚀 THE MAGIC: Detect if we are Archiving or Closing based on the button text
+      const isArchiving = btnApprove.innerText.includes('Archive');
+      const targetStatus = isArchiving ? "Archived" : "Closed";
+      const loadingText = isArchiving ? "⏳ Archiving..." : "⏳ Approving...";
+      const successMsg = isArchiving ? "Project safely archived!" : "Project officially approved and closed!";
+
+      // Save the original text so we can revert it if an error happens
+      const originalText = btnApprove.innerHTML;
+
+      btnApprove.innerHTML = loadingText;
       btnApprove.disabled = true;
 
       fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: "Closed" })
+        body: JSON.stringify({ status: targetStatus }) // 🚀 Send "Archived" OR "Closed"
       })
         .then(res => {
-          if (!res.ok) throw new Error("Failed to close project");
+          if (!res.ok) throw new Error("Failed to update project status");
           return res.text();
         })
         .then(() => {
-          showToast("Project officially approved and closed!", "success");
+          showToast(successMsg, "success");
           trackingModal.classList.add('hidden');
           if (typeof loadTrackingData === 'function') loadTrackingData();
         })
         .catch(err => {
           console.error(err);
-          showToast("Error closing project.", "error");
+          showToast(`Error ${isArchiving ? 'archiving' : 'closing'} project.`, "error");
         })
         .finally(() => {
-          btnApprove.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
+          btnApprove.innerHTML = originalText;
           btnApprove.disabled = false;
         });
     });
@@ -5553,6 +5780,14 @@ document.addEventListener('DOMContentLoaded', () => {
     bellBtn.addEventListener('click', (e) => {
       e.stopPropagation(); // Prevents the document click listener below from instantly closing it
       dropdown.classList.toggle('hidden');
+
+      // 🚀 THE SCROLL BUG FIX: Force scroll to top when opened
+      if (!dropdown.classList.contains('hidden')) {
+        const listContainer = document.getElementById('notification-list');
+        if (listContainer) {
+          listContainer.scrollTop = 0;
+        }
+      }
     });
 
     // 2. Close dropdown if the user clicks anywhere else on the screen
@@ -5565,13 +5800,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 🔔 PHASE 3: NOTIFICATION DATA INTEGRATION
+// 🔔 PHASE 3: NOTIFICATION LOGIC (MODAL POPUP)
 // ==========================================
 
-// 🚀 IMPORTANT: Replace this with your actual logged-in user's ID variable!
-const currentUserId = 1;
+// 🚀 DYNAMIC USER ID: Fetch the actual logged-in user's ID from session storage
+const currentUserId = sessionStorage.getItem("userId");
 
-// 1. HELPER: Format dates to "Time Ago" (e.g., "5 minutes ago")
+// Stop the notification script if no one is logged in yet (e.g., on the login screen)
+if (!currentUserId) {
+  console.warn("No user is currently logged in. Notifications will not load.");
+}
+
+// 1. HELPER: Format dates to "Time Ago"
 function timeAgo(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -5588,27 +5828,33 @@ function timeAgo(dateString) {
   return `${diffDays} days ago`;
 }
 
-// 2. CORE FUNCTION: Fetch and display all notifications
-window.loadNotifications = function() {
+// 2. HELPER: Fetch Unread Badge Count
+window.fetchUnreadBadgeCount = function() {
   if (!currentUserId) return;
-
-  // A. Fetch Unread Count for the Red Badge
   apiFetch(`/api/notifications/user/${currentUserId}/unread-count`)
     .then(count => {
       const badge = document.getElementById('notification-badge');
-      if (count > 0) {
-        badge.textContent = count > 99 ? '99+' : count;
-        badge.style.display = 'flex'; // Show badge
-      } else {
-        badge.style.display = 'none'; // Hide badge if 0
+      if (badge) {
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
       }
     })
     .catch(err => console.error("Failed to load badge count:", err));
+};
 
-  // B. Fetch Notification List for the Dropdown
+// 3. CORE FUNCTION: Load Compact Dropdown Notifications
+window.loadNotifications = function() {
+  if (!currentUserId) return;
+  fetchUnreadBadgeCount();
+
   apiFetch(`/api/notifications/user/${currentUserId}`)
     .then(notifications => {
       const listContainer = document.getElementById('notification-list');
+      if (!listContainer) return;
 
       if (!notifications || notifications.length === 0) {
         listContainer.innerHTML = '<div style="padding: 30px 20px; text-align: center; color: #94a3b8; font-size: 13px;">You have no notifications.</div>';
@@ -5616,38 +5862,77 @@ window.loadNotifications = function() {
       }
 
       let html = '';
-      notifications.forEach(notif => {
-        // Styling changes based on whether it is read or unread
-        const bgClass = notif.read ? 'background: #ffffff;' : 'background: #eff6ff;';
-        const weightClass = notif.read ? 'font-weight: 600;' : 'font-weight: 700;';
-        const dotHtml = notif.read ? '' : '<span style="height: 8px; width: 8px; background: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 4px; box-shadow: 0 0 5px rgba(59,130,246,0.5);"></span>';
+      const topNotifications = notifications.slice(0, 10);
+
+      topNotifications.forEach(notif => {
+        const bgClass = notif.read ? '#ffffff' : '#eff6ff';
+        const weightClass = notif.read ? '600' : '700';
+        const dotHtml = notif.read ? '' : '<span class="notif-dot" style="height: 8px; width: 8px; background: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 4px; box-shadow: 0 0 5px rgba(59,130,246,0.5);"></span>';
+
+        // Escaping text so quotes don't break the HTML attributes
+        const safeTitle = notif.title ? notif.title.replace(/"/g, '&quot;') : 'Notification';
+        const safeMessage = notif.message ? notif.message.replace(/"/g, '&quot;') : '';
+        const timeStr = timeAgo(notif.createdAt);
 
         html += `
-                <div onclick="markNotificationAsRead(${notif.id})" style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; ${bgClass} transition: background 0.2s;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-                        <div style="font-size: 13.5px; color: #1e293b; ${weightClass}">${notif.title}</div>
-                        ${dotHtml}
-                    </div>
-                    <div style="font-size: 12.5px; color: #475569; line-height: 1.4;">${notif.message}</div>
-                    <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">${timeAgo(notif.createdAt)}</div>
-                </div>
-                `;
+          <div data-read="${notif.read}"
+               data-title="${safeTitle}"
+               data-message="${safeMessage}"
+               data-time="${timeStr}"
+               onclick="openSingleNotification(${notif.id}, this)"
+               style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: ${bgClass}; transition: background 0.2s;">
+
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                  <div class="notif-title" style="font-size: 13.5px; color: #1e293b; font-weight: ${weightClass};">${notif.title}</div>
+                  ${dotHtml}
+              </div>
+              <div class="notif-message" style="font-size: 12.5px; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">${notif.message}</div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">${timeStr}</div>
+          </div>
+        `;
       });
       listContainer.innerHTML = html;
     })
     .catch(err => console.error("Failed to load notifications:", err));
 };
 
-// 3. ACTION: Mark a single notification as read when clicked
-window.markNotificationAsRead = function(notifId) {
+// 4. 🚀 THE NEW LOGIC: OPEN POPUP MODAL & MARK READ
+window.openSingleNotification = function(notifId, element) {
+  // A. Get the data stored safely inside the clicked element
+  const title = element.getAttribute('data-title');
+  const message = element.getAttribute('data-message');
+  const time = element.getAttribute('data-time');
+
+  // B. Populate the modal with the specific notification data
+  document.getElementById('single-notif-title').innerText = title;
+  document.getElementById('single-notif-message').innerText = message;
+  document.getElementById('single-notif-time').innerText = time;
+
+  // C. Open the detail modal and hide the dropdown bell
+  document.getElementById('single-notif-modal').classList.remove('hidden');
+  const dropdown = document.getElementById('notification-dropdown');
+  if (dropdown) dropdown.classList.add('hidden');
+
+  // D. If it's already read, we are done!
+  if (element.getAttribute('data-read') === 'true') return;
+
+  // E. Instantly update UI locally to "Read" state
+  element.setAttribute('data-read', 'true');
+  element.style.backgroundColor = '#ffffff';
+
+  const dot = element.querySelector('.notif-dot');
+  if (dot) dot.style.display = 'none';
+
+  const titleEl = element.querySelector('.notif-title');
+  if (titleEl) titleEl.style.fontWeight = '600';
+
+  // F. Send the read request to the backend silently
   fetch(`${API_BASE_URL}/api/notifications/${notifId}/read`, { method: 'PUT' })
-    .then(res => {
-      if (res.ok) loadNotifications(); // Instantly refresh the UI!
-    })
+    .then(() => fetchUnreadBadgeCount())
     .catch(err => console.error("Error marking as read:", err));
 };
 
-// 4. ACTION: Mark ALL notifications as read
+// 5. ACTION: Mark ALL notifications as read
 window.markAllAsRead = function() {
   if (!currentUserId) return;
 
@@ -5656,10 +5941,249 @@ window.markAllAsRead = function() {
 
   fetch(`${API_BASE_URL}/api/notifications/user/${currentUserId}/read-all`, { method: 'PUT' })
     .then(res => {
-      if (res.ok) loadNotifications(); // Instantly refresh the UI!
+      if (res.ok) loadNotifications();
     })
     .catch(err => console.error("Error marking all as read:", err))
     .finally(() => {
       if (markAllBtn) markAllBtn.innerText = "Mark all as read";
     });
 };
+
+// 6. ACTION: View All Activity Modal
+window.viewAllActivity = function() {
+  const dropdown = document.getElementById('notification-dropdown');
+  if (dropdown) dropdown.classList.add('hidden');
+
+  const allModal = document.getElementById('all-notifications-modal');
+  if (allModal) {
+    allModal.classList.remove('hidden');
+
+    const modalList = document.getElementById('all-notifications-list');
+    modalList.innerHTML = '<div style="padding: 30px; text-align: center; color: #64748b;">Loading history...</div>';
+
+    apiFetch(`/api/notifications/user/${currentUserId}`)
+      .then(notifications => {
+        if (!notifications || notifications.length === 0) {
+          modalList.innerHTML = '<div style="padding: 40px 20px; text-align: center; color: #94a3b8;">No notification history found.</div>';
+          return;
+        }
+
+        let html = '';
+        notifications.forEach(notif => {
+          const bgClass = notif.read ? '#ffffff' : '#eff6ff';
+          const weightClass = notif.read ? '600' : '700';
+          const dotHtml = notif.read ? '' : '<span class="notif-dot" style="height: 8px; width: 8px; background: #3b82f6; border-radius: 50%; display: inline-block; margin-top: 4px;"></span>';
+
+          const safeTitle = notif.title ? notif.title.replace(/"/g, '&quot;') : 'Notification';
+          const safeMessage = notif.message ? notif.message.replace(/"/g, '&quot;') : '';
+          const timeStr = timeAgo(notif.createdAt);
+
+          html += `
+            <div data-read="${notif.read}"
+                 data-title="${safeTitle}"
+                 data-message="${safeMessage}"
+                 data-time="${timeStr}"
+                 onclick="openSingleNotification(${notif.id}, this)"
+                 style="padding: 16px 24px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: ${bgClass}; transition: 0.2s;">
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                    <div class="notif-title" style="font-size: 14px; color: #1e293b; font-weight: ${weightClass};">${notif.title}</div>
+                    ${dotHtml}
+                </div>
+                <div class="notif-message" style="font-size: 13px; color: #475569; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">${notif.message}</div>
+                <div style="font-size: 12px; color: #94a3b8; margin-top: 8px; font-weight: 500;">${timeStr}</div>
+            </div>
+          `;
+        });
+        modalList.innerHTML = html;
+      })
+      .catch(err => {
+        modalList.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">Failed to load history.</div>';
+      });
+  }
+};
+// ==========================================
+// 🏗️ CEO ACTION: INDIVIDUAL DEFER (FROM MODAL)
+// ==========================================
+window.markAsPendingBudget = function() {
+  const reportId = window.currentCEOProjectID;
+
+  if (!reportId) {
+    showToast("Error: Could not identify the report.", "error");
+    return;
+  }
+
+  const reason = prompt("Enter the reason for deferring this repair:");
+  if (!reason || reason.trim() === "") return;
+
+  const btn = document.getElementById('btn-pending-budget');
+  if(btn) btn.innerText = "Deferring...";
+
+  fetch(`${API_BASE_URL}/api/reports/${reportId}/defer`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repairRemarks: reason })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) showToast(data.error, "error");
+      else {
+        showToast("Success: " + data.message, "success");
+        document.getElementById('manage-modal').classList.add('hidden');
+        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
+      }
+    })
+    .catch(err => {
+      console.error("Error deferring report:", err);
+      showToast("A network error occurred.", "error");
+    })
+    .finally(() => {
+      if(btn) btn.innerHTML = '<span class="icon">⏳</span> Defer (Pending Budget)';
+    });
+};
+
+// ==========================================
+// 🏗️ CEO ACTION: UNIFIED DEFER SYSTEM
+// ==========================================
+
+// Global variable to track if we are deferring a single project from the Review modal
+window.deferringSingleId = null;
+
+// 1. OPEN FROM INDIVIDUAL REVIEW MODAL (The Single Button)
+window.markAsPendingBudget = function() {
+  if (!currentCEOProjectID) {
+    showToast("Error: Could not identify the report.", "error");
+    return;
+  }
+
+  // Tell the system we are deferring THIS specific ID, not the checkboxes
+  window.deferringSingleId = currentCEOProjectID;
+
+  // Hide the review modal so they don't awkwardly overlap
+  document.getElementById('manage-modal').classList.add('hidden');
+
+  // Show the beautiful reason modal
+  document.getElementById('batch-defer-reason').value = '';
+  document.getElementById('batch-defer-modal').classList.remove('hidden');
+};
+
+// 2. OPEN FROM BATCH ACTION BAR (The Checkboxes)
+window.openBatchDeferModal = function() {
+  // Clear out the single ID tracker so the system knows to look at checkboxes instead
+  window.deferringSingleId = null;
+
+  document.getElementById('batch-defer-reason').value = '';
+  document.getElementById('batch-defer-modal').classList.remove('hidden');
+};
+
+// 3. VALIDATE REASON & SHOW CONFIRMATION WARNING
+window.submitBatchDefer = function() {
+  const reasonInput = document.getElementById('batch-defer-reason');
+  const reason = reasonInput.value;
+
+  if (!reason || reason.trim() === '') {
+    showToast("Please provide a reason for the deferral.", "error");
+    reasonInput.style.borderColor = "red";
+    setTimeout(() => reasonInput.style.borderColor = "#cbd5e1", 2000);
+    return;
+  }
+
+  let count = 0;
+
+  if (window.deferringSingleId) {
+    count = 1; // We are deferring just 1 from the Manage modal
+  } else {
+    const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+      showToast("No reports selected.", "error");
+      return;
+    }
+    count = checkedBoxes.length;
+  }
+
+  document.getElementById('confirm-defer-count').innerText = count;
+  document.getElementById('confirm-action-modal').classList.remove('hidden');
+};
+
+// 4. EXECUTE THE API CALL
+window.executeBatchDeferral = function() {
+  const reason = document.getElementById('batch-defer-reason').value;
+  let selectedIds = [];
+
+  // Grab the ID(s) depending on which way the CEO started the process
+  if (window.deferringSingleId) {
+    selectedIds.push(window.deferringSingleId);
+  } else {
+    const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+    selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+  }
+
+  const btn = document.getElementById('btn-final-confirm');
+  const originalText = btn.innerText;
+  btn.innerText = "Processing...";
+  btn.disabled = true;
+
+  // Send the array of IDs (whether it has 1 ID or 50 IDs) to the batch endpoint
+  fetch(`${API_BASE_URL}/api/reports/batch/defer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      repairRemarks: reason,
+      reportIds: selectedIds
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        showToast(data.error, "error");
+      } else {
+        showToast(data.message, "success");
+
+        // Hide all modals
+        document.getElementById('confirm-action-modal').classList.add('hidden');
+        document.getElementById('batch-defer-modal').classList.add('hidden');
+
+        // Hide the action bar and uncheck the "Select All" box
+        document.getElementById('batch-action-bar').style.display = 'none';
+        const selectAllCb = document.getElementById('select-all-checkbox');
+        if(selectAllCb) selectAllCb.checked = false;
+
+        // Reset the single ID tracker
+        window.deferringSingleId = null;
+
+        // Refresh table
+        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
+      }
+    })
+    .catch(err => {
+      console.error("Defer Error:", err);
+      showToast("A network error occurred.", "error");
+    })
+    .finally(() => {
+      btn.innerText = originalText;
+      btn.disabled = false;
+    });
+};
+
+// ==========================================
+// 🏗️ UI LISTENER: TOGGLE ACTION BAR ON CHECK
+// ==========================================
+window.toggleBatchActionBar = function() {
+  const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+  const actionBar = document.getElementById('batch-action-bar');
+  const countText = document.getElementById('selected-count');
+
+  if (checkedBoxes.length > 0) {
+    actionBar.style.display = 'flex';
+    countText.innerText = checkedBoxes.length;
+  } else {
+    actionBar.style.display = 'none';
+  }
+};
+
+window.toggleAllCheckboxes = function(masterCheckbox) {
+  const checkboxes = document.querySelectorAll('.defer-checkbox');
+  checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+  toggleBatchActionBar();
+};
+

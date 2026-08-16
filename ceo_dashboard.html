@@ -92,7 +92,7 @@
       <!-- ========================================== -->
       <!-- 👷 CEO PROFILE VIEW -->
       <!-- ========================================== -->
-      <div id="view-profile" class="content-section hidden">
+      <div id="view-profile" class="content-section hidden ceo-profile-theme">
 
         <div class="section-header-flex" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
           <div>
@@ -116,14 +116,14 @@
 
                 <!-- View & Change Buttons -->
                 <div style="display: flex; gap: 8px;">
-                  <button onclick="document.getElementById('view-profile-pic-modal').classList.remove('hidden')" style="font-size: 11px; padding: 4px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer; color: #475569; font-weight: 600;">👁️ View</button>
+                  <!-- 🚀 THE FIX: Calls openProfilePicViewer() -->
+                  <button onclick="openProfilePicViewer()" style="font-size: 11px; padding: 4px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer; color: #475569; font-weight: 600;">👁️ View</button>
                   <label style="font-size: 11px; padding: 4px 10px; border: none; background: #d35400; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">
                     📷 Change <input type="file" hidden id="profile-pic-upload" accept="image/*">
                   </label>
                 </div>
               </div>
 
-              <!-- 🚀 Real Name Injected Here -->
               <h4 id="side-profile-name" style="margin: 0; color: #d35400; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading...</h4>
               <p id="side-profile-role" style="margin: 5px 0 0 0; font-size: 13px; font-weight: bold; color: var(--text-muted);">Loading...</p>
             </div>
@@ -146,8 +146,8 @@
 
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
                 <h3 class="profile-tab-title" style="margin: 0; color: #d35400; border: none; padding: 0;">👷 Engineering Profile</h3>
-                <!-- 🚀 Edit Button -->
-                <button id="btn-edit-profile" onclick="document.getElementById('edit-profile-modal').classList.remove('hidden')" style="background: #fff3ec; border: 1px solid #fbd8c4; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #d35400; font-size: 13px; transition: 0.2s;">
+                <!-- 🚀 THE FIX: Removed the hardcoded onclick so app.js can pre-fill the form! -->
+                <button id="btn-edit-profile" style="background: #fff3ec; border: 1px solid #fbd8c4; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #d35400; font-size: 13px; transition: 0.2s;">
                   ✏️ Edit Information
                 </button>
               </div>
@@ -730,6 +730,9 @@
 
   </div>
 </div>
+<!-- 🚀 WEBSOCKET LIBRARIES (LIVE REFRESH) -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <script src="js/config.js"></script>
 <script src="js/app.js?v=bruteforce"></script>

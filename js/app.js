@@ -31,6 +31,65 @@
 })();
 
 // ==========================================
+// 🚀 ENTERPRISE WEBSOCKETS (LIVE DASHBOARD)
+// ==========================================
+let stompClient = null;
+
+function connectLiveDashboards() {
+  // Connect to the Java backend endpoint using your global API_BASE_URL (Great for Ngrok!)
+  const socket = new SockJS(`${API_BASE_URL}/ws-live`);
+  stompClient = Stomp.over(socket);
+
+  // Disable excessive debug logs in the console to keep it clean
+  stompClient.debug = null;
+
+  stompClient.connect({}, function (frame) {
+    console.log('🟢 WebSockets Connected: Live Mode Active!');
+
+    // Tune in to the /topic/updates radio frequency
+    stompClient.subscribe('/topic/updates', function (message) {
+
+      // When we hear the pulse from the Java backend:
+      if (message.body === "REFRESH_DASHBOARDS") {
+        console.log("⚡ Live pulse received! Waiting 300ms for DB to finalize...");
+
+        // 🚀 THE FIX: Give the database 0.3 seconds to officially commit the save!
+        setTimeout(() => {
+          // 🔔 1. REFRESH THE NOTIFICATIONS
+          if (typeof window.loadNotifications === "function") window.loadNotifications();
+
+          // 📊 2. REFRESH THE BARANGAY DASHBOARD
+          const brgyId = sessionStorage.getItem("barangayId");
+          if (brgyId && typeof window.loadBarangayReports === "function") {
+            window.loadBarangayReports(brgyId);
+          }
+
+          // 📊 3. REFRESH THE ADMIN DASHBOARD
+          if (typeof window.loadAdminDashboardData === "function") window.loadAdminDashboardData();
+          if (typeof window.loadAdminReports === "function") window.loadAdminReports();
+          if (typeof window.loadTrackingData === "function") window.loadTrackingData();
+          if (typeof window.loadUserManagementTable === "function") window.loadUserManagementTable();
+          if (typeof window.loadBarangayManagement === "function") window.loadBarangayManagement();
+
+          // 📊 4. REFRESH THE CEO DASHBOARD
+          if (typeof window.loadCEODashboardData === "function") window.loadCEODashboardData();
+        }, 300); // <-- 300 milliseconds delay
+      }
+    });
+
+  }, function (error) {
+    // If the server turns off, try to reconnect every 5 seconds silently
+    setTimeout(connectLiveDashboards, 5000);
+  });
+}
+
+// Start the WebSocket connection the second the page loads
+document.addEventListener("DOMContentLoaded", () => {
+  connectLiveDashboards();
+});
+// ==========================================
+
+// ==========================================
 // 🔍 REUSABLE GLOBAL TABLE SEARCH ENGINE
 // ==========================================
 /**
@@ -90,6 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
 async function apiFetch(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // 🚀 THE FIX: Force the browser to ALWAYS fetch live data, never use cached/old data
+  options.cache = 'no-store';
+
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -104,7 +166,6 @@ async function apiFetch(endpoint, options = {}) {
 
   return response.json();
 }
-
 // ==========================================
 // 🚀 SECURE IMAGE FETCHER (BULLETPROOF VERSION)
 // ==========================================
@@ -478,8 +539,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const contentSections = document.querySelectorAll('.content-section');
 
 // 🛠 Helper Function to switch views safely
-  function switchView(targetId) {
+  window.switchView = function(targetId) {
     if (!targetId) return;
+
+    // 💾 Save tab to memory so a browser refresh NEVER forgets it!
+    sessionStorage.setItem('roadwise_active_tab', targetId);
 
     // 1. Force close modals
     document.querySelectorAll('.modal-overlay').forEach(modal => {
@@ -488,7 +552,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Update UI Classes
     navLinks.forEach(nav => nav.classList.remove('active'));
-    contentSections.forEach(section => section.classList.add('hidden'));
+    contentSections.forEach(section => {
+      section.classList.add('hidden');
+      section.style.display = ''; // Safely clear inline styles so Profile button works!
+    });
 
     const activeLink = document.querySelector(`.nav-menu li[data-target="${targetId}"]`);
     if (activeLink) activeLink.classList.add('active');
@@ -496,55 +563,75 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
       targetSection.classList.remove('hidden');
+      targetSection.style.display = ''; // Safely clear inline styles
 
       // ==========================================
-      // 🚀 NEW: CLEAR ALL SEARCH BARS AND RESET TABLES
+      // 🚀 CLEAR ALL SEARCH BARS AND RESET TABLES
       // ==========================================
       document.querySelectorAll('.search-bar input').forEach(input => {
-        input.value = ''; // Erase the typed text
+        input.value = '';
       });
       document.querySelectorAll('table tbody tr').forEach(row => {
-        row.style.display = ''; // Un-hide any rows hidden by previous searches
+        row.style.display = '';
       });
 
       // ==========================================
       // 🚀 THE BRUTE-FORCE SCROLL RESET
       // ==========================================
-      // 1. Reset the main window (just in case)
       window.scrollTo(0, 0);
-
-      // 2. Reset the main section wrapper
       targetSection.scrollTop = 0;
-
-      // 3. Reset EVERY scrollable container inside this section (like table wrappers!)
       targetSection.querySelectorAll('div').forEach(div => {
         div.scrollTop = 0;
       });
-      // ==========================================
     }
 
-    // 3. SMART DATA LOADING: CEO Dashboard
-    const isCEODashboard = window.location.pathname.toLowerCase().includes("ceo");
-    if (isCEODashboard && (targetId === 'view-dashboard' || targetId === 'view-repair')) {
-      if (typeof window.loadCEODashboardData === 'function') {
-        window.loadCEODashboardData();
-      }
-    }
+    // ==========================================
+    // 🚀 SMART DATA LOADING ON REFRESH
+    // ==========================================
+    const currentPath = window.location.pathname.toLowerCase();
+    const isCEO = currentPath.includes("ceo");
+    const isAdmin = currentPath.includes("admin");
 
-    // 4. SMART DATA LOADING: Admin Pages
-    if (targetId === 'view-barangay-management') {
-      if (typeof window.loadBarangayManagement === 'function') {
-        window.loadBarangayManagement();
-      }
+    if (isCEO && (targetId === 'view-dashboard' || targetId === 'view-repair')) {
+      if (typeof window.loadCEODashboardData === 'function') window.loadCEODashboardData();
+    } else if (targetId === 'view-barangay-management') {
+      if (typeof window.loadBarangayManagement === 'function') window.loadBarangayManagement();
     } else if (targetId === 'view-user-management') {
-      if (typeof window.loadBarangayDropdownForAdmin === 'function') {
-        window.loadBarangayDropdownForAdmin();
-      }
-      if (typeof window.loadUserManagement === 'function') {
-        window.loadUserManagement();
-      }
+      if (typeof window.loadBarangayDropdownForAdmin === 'function') window.loadBarangayDropdownForAdmin();
+      if (typeof window.loadUserManagementTable === 'function') window.loadUserManagementTable();
+    } else if (targetId === 'view-reports') {
+      if (typeof window.loadAdminReports === 'function') window.loadAdminReports();
+    } else if (targetId === 'view-tracking') {
+      if (typeof window.loadTrackingData === 'function') window.loadTrackingData();
+    } else if (isAdmin && (targetId === 'view-admin-dashboard' || targetId === 'view-dashboard')) {
+      if (typeof window.loadAdminDashboardData === 'function') window.loadAdminDashboardData();
+    } else if (targetId === 'view-profile') {
+      // 🚀 REFRESH FIX: Load Profile Data if user hits F5 on the Profile Page!
+      if (typeof window.populateProfileData === 'function') window.populateProfileData();
+
+      // Reset the profile inner tabs to default
+      document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)').forEach(l => l.classList.remove('active'));
+      document.querySelectorAll('.profile-tab').forEach(t => t.classList.add('hidden'));
+
+      const defaultLink = document.querySelector('#profile-nav-menu li[data-target="tab-identity"]');
+      const defaultTab = document.getElementById('tab-identity');
+      if (defaultLink) defaultLink.classList.add('active');
+      if (defaultTab) defaultTab.classList.remove('hidden');
+    } else if (targetId === 'view-report-priority') {
+      if (typeof window.generatePriorityList === 'function') window.generatePriorityList();
     }
-  }
+
+      // ==========================================
+      // 🚀 THE MAP FIX: TELL MAPS TO LOAD ON REFRESH
+    // ==========================================
+    else if (targetId === 'view-map') {
+      if (typeof window.loadAdminGlobalMap === 'function') window.loadAdminGlobalMap();
+    } else if (targetId === 'view-ceo-map') {
+      if (typeof window.loadCEOGlobalMap === 'function') window.loadCEOGlobalMap();
+    } else if (targetId === 'view-barangay-map') {
+      if (typeof window.loadBarangayLocalMap === 'function') window.loadBarangayLocalMap();
+    }
+  };
 
 // 👆 Handle Sidebar Clicks
   navLinks.forEach(link => {
@@ -552,10 +639,11 @@ document.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
       const targetId = this.getAttribute('data-target');
 
-      // 📝 THE HISTORY TRICK: Write it down in the browser's memory
-      history.pushState({ target: targetId }, "", "#" + targetId);
-
-      switchView(targetId);
+      if (targetId) {
+        // Write it down in the browser's memory
+        history.pushState({ target: targetId }, "", "#" + targetId);
+        switchView(targetId);
+      }
     });
   });
 
@@ -565,18 +653,29 @@ document.addEventListener('DOMContentLoaded', () => {
       switchView(event.state.target);
     } else {
       // Default to dashboard if they go all the way back
-      const defaultHash = window.location.hash.replace('#', '') || 'view-dashboard';
+      const currentPath = window.location.pathname.toLowerCase();
+      const defaultHash = currentPath.includes("admin") ? 'view-admin-dashboard' : 'view-dashboard';
       switchView(defaultHash);
     }
   });
 
-// 🟢 INITIAL LOAD: If they refresh the page, keep them on the same tab
-  document.addEventListener("DOMContentLoaded", () => {
-    const hash = window.location.hash.replace('#', '');
-    if (hash) {
-      switchView(hash);
+// 🟢 INITIAL LOAD: Auto-Run to prevent timing bugs!
+  (function initializeView() {
+    const currentPath = window.location.pathname.toLowerCase();
+    let hash = window.location.hash.replace('#', '').trim();
+    let savedTab = sessionStorage.getItem('roadwise_active_tab');
+
+    // Priority Check: 1. URL Hash, 2. Saved Tab in Memory, 3. Default Dashboard
+    let finalTarget = hash || savedTab;
+
+    if (!finalTarget) {
+      finalTarget = currentPath.includes("admin") ? 'view-admin-dashboard' : 'view-dashboard';
     }
-  });
+
+    // Update URL and execute view
+    history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
+    switchView(finalTarget);
+  })();
 
 // ==========================================
 // ADMIN DASHBOARD: ACCEPT & VALIDATE LOGIC
@@ -924,46 +1023,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- PROFILE BUTTON TRIGGERS (WITH STATE RESET FIX) ---
   const profileBtn = document.querySelector('.header-profile-btn');
-  const viewProfile = document.getElementById('view-profile');
-
-  if (profileBtn && viewProfile) {
-    profileBtn.addEventListener('click', () => {
-      // 1. Hide other sections and clear active states
-      if (typeof contentSections !== 'undefined') {
-        contentSections.forEach(view => view.classList.add('hidden'));
-      }
-      document.querySelectorAll('.nav-menu li').forEach(li => li.classList.remove('active'));
-
-      // 2. Show Profile and load data
-      viewProfile.classList.remove('hidden');
-      window.populateProfileData();
-
-      // Force the profile tabs back to their default state!
-      const profileMenuLinks = document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)');
-      const profileTabs = document.querySelectorAll('.profile-tab');
-
-      // Remove active/visible from all profile tabs
-      profileMenuLinks.forEach(l => l.classList.remove('active'));
-      profileTabs.forEach(t => t.classList.add('hidden'));
-
-      // Force "Official Details" to be the active tab
-      const defaultLink = document.querySelector('#profile-nav-menu li[data-target="tab-identity"]');
-      const defaultTab = document.getElementById('tab-identity');
-      if (defaultLink) defaultLink.classList.add('active');
-      if (defaultTab) defaultTab.classList.remove('hidden');
-
-      // Clear the password form just in case they typed something before leaving
-      const formChangePassword = document.getElementById('form-change-password');
-      if (formChangePassword) {
-        formChangePassword.reset();
-        ['sec-current-pass', 'sec-new-pass', 'sec-confirm-pass'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.type = 'password';
-        });
-        document.querySelectorAll('#form-change-password span').forEach(span => {
-          span.textContent = '👁️';
-        });
-      }
+  if (profileBtn) {
+    profileBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // 🚀 THE FIX: Use the global router so the browser remembers we are here!
+      history.pushState({ target: 'view-profile' }, "", "#view-profile");
+      switchView('view-profile');
     });
   }
 
@@ -1008,19 +1073,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const backToDashBtn = document.getElementById('btn-back-dashboard');
   if (backToDashBtn) {
     backToDashBtn.addEventListener('click', () => {
-      if (viewProfile) viewProfile.classList.add('hidden');
+      const currentPath = window.location.pathname.toLowerCase();
+      const dashId = currentPath.includes("admin") ? 'view-admin-dashboard' : 'view-dashboard';
 
-      const mainDashboard = document.getElementById('view-dashboard') || document.getElementById('view-admin-dashboard');
-      if (mainDashboard) mainDashboard.classList.remove('hidden');
-
-      document.querySelectorAll('.nav-menu li').forEach(li => {
-        const target = li.getAttribute('data-target');
-        if (target === 'view-dashboard' || target === 'view-admin-dashboard') {
-          li.classList.add('active');
-        } else {
-          li.classList.remove('active');
-        }
-      });
+      // 🚀 THE FIX: Route safely back to the dashboard!
+      history.pushState({ target: dashId }, "", "#" + dashId);
+      switchView(dashId);
     });
   }
 
@@ -4215,7 +4273,8 @@ window.loadAdminGlobalMap = function() {
       // Filter out the fixed roads so the map only shows active hazards!
       const activeHazards = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
-        return !s.includes('complet') && !s.includes('clos') && !s.includes('reject');
+        // 🚀 THE FIX: Hide Completed, Closed, Rejected, AND Archived!
+        return !s.includes('complet') && !s.includes('clos') && !s.includes('reject') && !s.includes('archiv');
       });
 
       activeHazards.forEach(report => {
@@ -4436,7 +4495,8 @@ window.loadBarangayLocalMap = function() {
       // Filter out finished projects to keep the map focused on active hazards
       const activeLocalHazards = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
-        return !s.includes('complet') && !s.includes('clos');
+        // 🚀 THE FIX: Hide Completed, Closed, AND Archived!
+        return !s.includes('complet') && !s.includes('clos') && !s.includes('archiv');
       });
 
       activeLocalHazards.forEach(report => {
@@ -4654,21 +4714,42 @@ if (formEditProfile) {
 const profilePicUpload = document.getElementById('profile-pic-upload');
 const mainAvatar = document.getElementById('main-profile-avatar');
 
-// 1. Helper to visually update the Avatar circle
-function updateAvatarDisplay(imageName) {
+// 1. Helper to visually update the Avatar circle dynamically
+window.updateAvatarDisplay = function(imageName) {
   if (!mainAvatar) return;
 
-  if (!imageName || imageName === 'no_image.jpg' || imageName === 'null') {
+  // Ensure we apply the correct fallback gradient based on role
+  const applyFallbackTheme = () => {
     mainAvatar.innerHTML = '🏛️';
-    mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #1e40af, #3b82f6)';
+    const role = String(sessionStorage.getItem('userRole')).toLowerCase();
+
+    if (role.includes('admin') || role.includes('cpdo')) {
+      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #1e40af, #3b82f6)'; // Admin Blue
+    } else if (role.includes('ceo') || role.includes('engineer')) {
+      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #ea580c, #f97316)'; // CEO Orange
+    } else {
+      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #15803d, #22c55e)'; // Barangay Green
+    }
+  };
+
+  // 🚀 THE FIX 1: Strict check for bad database data ("null", "undefined", or empty)
+  if (!imageName ||
+    imageName === 'no_image.jpg' ||
+    String(imageName).trim().toLowerCase() === 'null' ||
+    String(imageName).trim().toLowerCase() === 'undefined' ||
+    String(imageName).trim() === '') {
+    applyFallbackTheme();
     return;
   }
 
   const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
 
-  // Uses your Ngrok security bypass to load the image cleanly
+  // 🚀 THE FIX 2: Check if the file ACTUALLY exists on the server
   fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
-    .then(res => res.blob())
+    .then(res => {
+      if (!res.ok) throw new Error("Image not found on server");
+      return res.blob();
+    })
     .then(blob => {
       const objectURL = URL.createObjectURL(blob);
       mainAvatar.innerHTML = ''; // Hide the emoji
@@ -4676,7 +4757,10 @@ function updateAvatarDisplay(imageName) {
       mainAvatar.style.backgroundSize = 'cover';
       mainAvatar.style.backgroundPosition = 'center';
     })
-    .catch(err => console.error("Failed to load avatar:", err));
+    .catch(err => {
+      console.error("Failed to load avatar, falling back to default:", err);
+      applyFallbackTheme(); // Revert to colored circle if the file is missing
+    });
 }
 
 // 2. The Upload Logic (Triggered when they pick a photo)
@@ -4723,9 +4807,15 @@ if (profilePicUpload) {
 }
 
 // 3. The View Button Logic (Wire this to the 'View' button in your HTML)
-function openProfilePicViewer() {
+window.openProfilePicViewer = function() {
   const imageName = sessionStorage.getItem('profilePicture');
-  if (!imageName || imageName === 'no_image.jpg' || imageName === 'null') {
+
+  // 🚀 THE FIX 3: Stop the modal from opening if data is bad!
+  if (!imageName ||
+    imageName === 'no_image.jpg' ||
+    String(imageName).trim().toLowerCase() === 'null' ||
+    String(imageName).trim().toLowerCase() === 'undefined' ||
+    String(imageName).trim() === '') {
     showToast("No custom profile picture uploaded.", "info");
     return;
   }
@@ -4733,14 +4823,27 @@ function openProfilePicViewer() {
   const modal = document.getElementById('view-profile-pic-modal');
   const fullImg = document.getElementById('full-size-profile-pic');
 
+  if (!modal || !fullImg) return;
+
   const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
 
-  // Fetch and display full size
+  // 🚀 THE FIX 4: Only open the modal if the fetch is 100% successful
   fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
-    .then(res => res.blob())
+    .then(res => {
+      if (!res.ok) throw new Error("Image file missing from server");
+      return res.blob();
+    })
     .then(blob => {
       fullImg.src = URL.createObjectURL(blob);
       modal.classList.remove('hidden');
+    })
+    .catch(err => {
+      console.error("Failed to load full size profile picture:", err);
+      showToast("Image file is missing or corrupted on the server.", "error");
+
+      // Wipe the bad ghost data so it defaults back to the colored circle
+      sessionStorage.setItem('profilePicture', 'no_image.jpg');
+      updateAvatarDisplay('no_image.jpg');
     });
 }
 
@@ -4751,7 +4854,6 @@ if (viewPicBtn) {
 }
 
 // Ensure the avatar updates every time the profile modal is opened
-// (Add this to your existing populateProfileData function if you want it to run on load!)
 updateAvatarDisplay(sessionStorage.getItem('profilePicture'));
 
 

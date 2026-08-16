@@ -1521,3 +1521,67 @@ body.dark-mode .settings-card-header { border-bottom-color: #334155; }
 /* Inputs and Selects in Dark Mode */
 body.dark-mode .bd-search-bar, body.dark-mode .bd-status-select, body.dark-mode input, body.dark-mode select, body.dark-mode textarea { background: #0f172a; border-color: #334155; color: #f8fafc; }
 body.dark-mode .bd-search-bar:focus, body.dark-mode input:focus { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.2); }
+
+/* =========================================
+   🚀 BARANGAY PROFILE SPECIFIC GREEN THEME
+========================================= */
+/* Active Tab Border & Text */
+.brgy-profile-theme .profile-nav li.active {
+  color: #16a34a !important;
+  border-left: 4px solid #16a34a !important;
+}
+
+/* Profile Section Titles */
+.brgy-profile-theme .profile-tab-title {
+  color: #15803d !important;
+  border-bottom: 2px solid #bbf7d0; /* 🚀 THE FIX: Removed the !important tag from here */
+}
+
+/* Green Glow when typing in Password boxes */
+.brgy-profile-theme .profile-input:focus {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15) !important;
+}
+
+/* =========================================
+   🚀 ADMIN PROFILE SPECIFIC BLUE THEME
+========================================= */
+/* Active Tab Border & Text */
+.admin-profile-theme .profile-nav li.active {
+  color: #1e40af !important;
+  border-left: 4px solid #1e40af !important;
+}
+
+/* Profile Section Titles */
+.admin-profile-theme .profile-tab-title {
+  color: #1e40af !important;
+  border-bottom: 2px solid #dbeafe; /* Light blue line */
+}
+
+/* Blue Glow when typing in Password boxes */
+.admin-profile-theme .profile-input:focus {
+  border-color: #1e40af !important;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.15) !important;
+}
+
+
+/* =========================================
+   🚀 CEO PROFILE SPECIFIC ORANGE THEME
+========================================= */
+/* Active Tab Border & Text */
+.ceo-profile-theme .profile-nav li.active {
+  color: #ea580c !important;
+  border-left: 4px solid #ea580c !important;
+}
+
+/* Profile Section Titles */
+.ceo-profile-theme .profile-tab-title {
+  color: #ea580c !important;
+  border-bottom: 2px solid #ffedd5; /* Light orange line */
+}
+
+/* Orange Glow when typing in Password boxes */
+.ceo-profile-theme .profile-input:focus {
+  border-color: #ea580c !important;
+  box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15) !important;
+}

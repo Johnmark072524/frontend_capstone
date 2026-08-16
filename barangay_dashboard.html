@@ -463,7 +463,8 @@
         </div>
       </div>
 
-      <div id="view-profile" class="content-section hidden">
+      <!-- 🚀 ADDED 'brgy-profile-theme' CLASS TO WRAPPER -->
+      <div id="view-profile" class="content-section hidden brgy-profile-theme">
 
         <div class="section-header-flex" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
           <h2 style="margin: 0;">Barangay Office Settings</h2>
@@ -478,20 +479,22 @@
           <div class="profile-sidebar">
             <div class="profile-header-mini">
 
-              <!-- 🚀 NEW: Interactive Profile Picture Container -->
               <div class="profile-avatar-wrapper" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 15px;">
-                <div class="profile-avatar-mini" id="main-profile-avatar" style="background: linear-gradient(135deg, #1e40af, #3b82f6); width: 80px; height: 80px; font-size: 35px; margin-bottom: 8px;">🏛️</div>
+                <!-- 🚀 CHANGED GRADIENT TO GREEN -->
+                <div class="profile-avatar-mini" id="main-profile-avatar" style="background: linear-gradient(135deg, #15803d, #22c55e); width: 80px; height: 80px; font-size: 35px; margin-bottom: 8px;">🏛️</div>
 
                 <!-- View & Change Buttons -->
                 <div style="display: flex; gap: 8px;">
-                  <button onclick="alert('View Picture feature coming soon!')" style="font-size: 11px; padding: 4px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer; color: #475569; font-weight: 600;">👁️ View</button>
-                  <label style="font-size: 11px; padding: 4px 10px; border: none; background: #1e40af; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                  <button onclick="openProfilePicViewer()" style="font-size: 11px; padding: 4px 10px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer; color: #475569; font-weight: 600;">👁️ View</button>
+                  <!-- 🚀 CHANGED BUTTON TO GREEN -->
+                  <label style="font-size: 11px; padding: 4px 10px; border: none; background: #16a34a; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">
                     📷 Change <input type="file" hidden id="profile-pic-upload" accept="image/*">
                   </label>
                 </div>
               </div>
 
-              <h4 id="sidebar-display-name" style="margin: 0; color: #1e40af;">Loading...</h4>
+              <!-- 🚀 CHANGED NAME TEXT TO DARK GREEN -->
+              <h4 id="sidebar-display-name" style="margin: 0; color: #15803d;">Loading...</h4>
               <p id="sidebar-display-role" style="margin: 5px 0 0 0; font-size: 13px; color: var(--text-muted);">Loading...</p>
             </div>
 
@@ -511,17 +514,15 @@
             <!-- TAB 1: IDENTITY -->
             <div id="tab-identity" class="profile-tab active">
 
-              <!-- 🚀 NEW: Edit Button added to Header -->
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid var(--accent-light); padding-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #bbf7d0; padding-bottom: 10px;">
                 <h3 class="profile-tab-title" style="margin: 0; border: none; padding: 0;">🏛️ Official Profile</h3>
-                <button id="btn-edit-profile" onclick="alert('Edit Modal coming soon!')" style="background: #f8f9fa; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #1e40af; font-size: 13px; transition: 0.2s;">
+                <!-- 🚀 CHANGED EDIT BUTTON TO GREEN -->
+                <button id="btn-edit-profile" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #15803d; font-size: 13px; transition: 0.2s;">
                   ✏️ Edit Information
                 </button>
               </div>
 
               <div class="profile-detail-row"><strong>Full Name:</strong> <span id="profile-full-name">Loading...</span></div>
-
-              <!-- 🚀 NEW: Added the 5 New Database Fields -->
               <div class="profile-detail-row"><strong>Official Email:</strong> <span id="profile-email">Loading...</span></div>
               <div class="profile-detail-row"><strong>Phone Number:</strong> <span id="profile-phone">Loading...</span></div>
               <div class="profile-detail-row"><strong>Date of Birth:</strong> <span id="profile-birthday">Loading...</span></div>
@@ -540,7 +541,6 @@
               <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Ensure your account remains secure by using a strong password.</p>
 
               <form id="form-change-password">
-                <!-- Current Password -->
                 <div class="form-group-vertical" style="margin-bottom: 15px;">
                   <label style="display:block; margin-bottom:5px; font-size: 13px; color: #333; font-weight: 600;">Current Password</label>
                   <div style="position: relative; width: 100%;">
@@ -549,7 +549,6 @@
                   </div>
                 </div>
 
-                <!-- New Password -->
                 <div class="form-group-vertical" style="margin-bottom: 15px;">
                   <label style="display:block; margin-bottom:5px; font-size: 13px; color: #333; font-weight: 600;">New Password</label>
                   <div style="position: relative; width: 100%;">
@@ -561,7 +560,6 @@
                   </p>
                 </div>
 
-                <!-- Confirm New Password -->
                 <div class="form-group-vertical" style="margin-bottom: 25px;">
                   <label style="display:block; margin-bottom:5px; font-size: 13px; color: #333; font-weight: 600;">Confirm New Password</label>
                   <div style="position: relative; width: 100%;">
@@ -570,7 +568,8 @@
                   </div>
                 </div>
 
-                <button type="submit" id="btn-submit-password" class="btn-submit" style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Update Password</button>
+                <!-- 🚀 CHANGED SUBMIT BUTTON TO GREEN -->
+                <button type="submit" id="btn-submit-password" class="btn-submit" style="width: 100%; padding: 10px; background: #16a34a; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Update Password</button>
               </form>
             </div>
 
@@ -698,7 +697,8 @@
 <!-- ========================================== -->
 <!-- EDIT PROFILE INFORMATION MODAL -->
 <!-- ========================================== -->
-<div id="edit-profile-modal" class="modal-overlay hidden">
+<!-- 🚀 ADDED 'brgy-profile-theme' so the inputs glow green when clicked -->
+<div id="edit-profile-modal" class="modal-overlay hidden brgy-profile-theme">
   <div class="modal-content" style="max-width: 700px;">
 
     <div class="modal-header">
@@ -742,7 +742,8 @@
 
         <!-- SECTION 2: EDITABLE PERSONAL DETAILS -->
         <div class="report-section" style="padding: 15px; border: 1px solid #cbd5e1; border-radius: 8px; background: white;">
-          <h3 class="section-title" style="margin: 0 0 15px 0; font-size: 13px; color: #1e40af; text-transform: uppercase; letter-spacing: 0.5px;">📝 Personal Details</h3>
+          <!-- 🚀 CHANGED TITLE COLOR TO DARK GREEN -->
+          <h3 class="section-title" style="margin: 0 0 15px 0; font-size: 13px; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px;">📝 Personal Details</h3>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div class="form-group-vertical">
@@ -773,7 +774,8 @@
         <!-- MODAL ACTIONS -->
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px;">
           <button type="button" onclick="document.getElementById('edit-profile-modal').classList.add('hidden')" style="padding: 8px 16px; border-radius: 4px; border: 1px solid #94a3b8; background: white; cursor: pointer; font-weight: 600; color: #475569;">Cancel</button>
-          <button type="submit" style="padding: 8px 20px; border-radius: 4px; background: #1e40af; color: white; border: none; cursor: pointer; font-weight: 600;">💾 Save Changes</button>
+          <!-- 🚀 CHANGED BUTTON TO GREEN -->
+          <button type="submit" style="padding: 8px 20px; border-radius: 4px; background: #16a34a; color: white; border: none; cursor: pointer; font-weight: 600;">💾 Save Changes</button>
         </div>
 
       </form>
@@ -992,6 +994,9 @@
   <span id="toast-icon" style="font-size: 20px;"></span>
   <span id="toast-message" style="font-weight: bold;"></span>
 </div>
+<!-- 🚀 WEBSOCKET LIBRARIES (LIVE REFRESH) -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
   <script src="js/config.js"></script>
 <script src="js/app.js"></script>

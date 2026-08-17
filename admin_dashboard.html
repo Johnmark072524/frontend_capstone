@@ -42,7 +42,6 @@
   </aside>
 
   <div class="main-content">
-
     <header class="top-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background-color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.03); height: 75px; z-index: 10; position: relative; border-bottom: none;">
 
       <!-- LEFT SIDE: Title -->
@@ -50,38 +49,37 @@
         <h1 style="margin: 0; font-size: 22px; color: #1e293b; font-weight: 700; letter-spacing: -0.5px;">CPDO Command Center</h1>
       </div>
 
-      <!-- 🚀 RIGHT SIDE: Grouped Bell & Profile -->
+      <!-- 🚀 RIGHT SIDE: Grouped Clock, Bell & Profile -->
       <div style="display: flex; align-items: center; gap: 25px;">
+
+        <!-- 🕒 LIVE CLOCK DISPLAY (Moved inside the container!) -->
+        <div style="background: white; border: 1px solid #eaeaea; padding: 8px 16px; border-radius: 30px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <span style="font-size: 16px;">⏱️</span>
+          <div id="live-clock-display" style="font-family: 'Segoe UI', Tahoma, sans-serif;">
+            <span style="font-size: 14px; font-weight: 700; color: #1e293b;">Loading time...</span>
+          </div>
+        </div>
 
         <!-- ========================================== -->
         <!-- 🔔 NOTIFICATION BELL SYSTEM -->
         <!-- ========================================== -->
         <div class="notification-wrapper" style="position: relative; display: inline-block;">
 
-          <!-- The Bell Icon & Red Badge -->
           <button id="btn-notification" style="background: none; border: none; font-size: 22px; cursor: pointer; position: relative; padding: 5px; transition: 0.2s; outline: none;">
             🔔
-            <!-- The Red Unread Badge -->
             <span id="notification-badge" style="position: absolute; top: 0px; right: -2px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; height: 16px; width: 16px; display: flex; justify-content: center; align-items: center; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">2</span>
           </button>
 
-          <!-- The Dropdown Menu (Hidden by default) -->
           <div id="notification-dropdown" class="hidden" style="position: absolute; right: 0; top: 45px; width: 340px; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 9999; overflow: hidden;">
-
-            <!-- Dropdown Header -->
             <div style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
               <h4 style="margin: 0; font-size: 15px; color: #0f172a; font-weight: 700;">Notifications</h4>
-
-              <!-- 🚀 Added the ID and the onclick function here! -->
               <button id="btn-mark-all-read" onclick="markAllAsRead()" style="background: none; border: none; font-size: 12px; color: #3b82f6; cursor: pointer; font-weight: 600; padding: 0; transition: 0.2s;">
                 Mark all as read
               </button>
             </div>
 
-            <!-- Notification List -->
             <div id="notification-list" style="max-height: 320px; overflow-y: auto;">
-
-              <!-- Fake Unread Notification (Light blue background) -->
+              <!-- Fake Unread Notification -->
               <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: #eff6ff; transition: 0.2s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
                   <div style="font-size: 13.5px; color: #1e293b; font-weight: 700;">New City Road Added</div>
@@ -91,31 +89,26 @@
                 <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">5 minutes ago</div>
               </div>
 
-              <!-- Fake Read Notification (White background) -->
+              <!-- Fake Read Notification -->
               <div style="padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; background: #ffffff; transition: 0.2s;">
                 <div style="font-size: 13.5px; color: #1e293b; font-weight: 600; margin-bottom: 4px;">Account Provisioned</div>
                 <div style="font-size: 12.5px; color: #64748b; line-height: 1.4;">Welcome to RoadWise! Your official account is now active.</div>
                 <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-weight: 500;">1 day ago</div>
               </div>
-
             </div>
 
-            <!-- Dropdown Footer -->
             <div style="padding: 12px; text-align: center; border-top: 1px solid #e2e8f0; background: #f8fafc;">
-              <!-- 🚀 FIXED: Replaced href="#" with a button that triggers tab navigation -->
               <button onclick="viewAllActivity()" style="background: none; border: none; font-size: 13px; color: #64748b; font-weight: 600; cursor: pointer; transition: 0.2s; padding: 0;">
                 View all activity
               </button>
             </div>
-
           </div>
         </div>
         <!-- ========================================== -->
 
-        <!-- PROFILE BUTTON -->
+        <!-- 👤 ADMIN PROFILE BUTTON -->
         <button class="header-profile-btn" style="background: #f0f4ff; border: 1px solid #d6e4ff; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #1a0ca3; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
           <span id="header-avatar-icon" class="icon" style="background: linear-gradient(135deg, #1a0ca3, #4361ee); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(26,12,163,0.4);">👤</span>
-
           <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
             <span id="header-display-name" style="font-size: 14px; font-weight: 700; color: #1a0ca3;">Loading...</span>
             <span id="header-display-role" style="font-size: 11px; font-weight: 600; color: #64748b;">Loading...</span>

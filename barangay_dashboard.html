@@ -64,8 +64,16 @@
         <h1 style="margin: 0; font-size: 22px; color: #1e293b; font-weight: 700; letter-spacing: -0.5px;">Barangay Overview</h1>
       </div>
 
-      <!-- 🚀 RIGHT SIDE: Grouped Bell & Profile -->
+      <!-- 🚀 RIGHT SIDE: Grouped Clock, Bell & Profile -->
       <div style="display: flex; align-items: center; gap: 25px;">
+
+        <!-- 🕒 LIVE CLOCK DISPLAY (Moved here for better UI flow) -->
+        <div style="background: white; border: 1px solid #eaeaea; padding: 8px 16px; border-radius: 30px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <span style="font-size: 16px;">⏱️</span>
+          <div id="live-clock-display" style="font-family: 'Segoe UI', Tahoma, sans-serif;">
+            <span style="font-size: 14px; font-weight: 700; color: #1e293b;">Loading time...</span>
+          </div>
+        </div>
 
         <!-- ========================================== -->
         <!-- 🔔 NOTIFICATION BELL SYSTEM -->
@@ -106,7 +114,7 @@
         </div>
         <!-- ========================================== -->
 
-        <!-- PROFILE BUTTON -->
+        <!-- 🏛️ PROFILE BUTTON (Anchored safely to the far right edge) -->
         <button class="header-profile-btn" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #166534; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
           <span class="icon" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(40,167,69,0.4);">🏛️</span>
 
@@ -118,6 +126,7 @@
         </button>
 
       </div>
+
     </header>
     <main class="content-area">
 

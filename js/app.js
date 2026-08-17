@@ -89,6 +89,176 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 // ==========================================
 
+
+// ==========================================
+// 🔍 BARANGAY REPORTS: SEARCH & DROPDOWN FILTER
+// ==========================================
+window.filterBarangayReports = function() {
+  const searchInput = document.getElementById('report-search-bar');
+  const statusFilter = document.getElementById('report-status-filter');
+  const listItems = document.querySelectorAll('#barangay-report-list .bd-list-item');
+
+  if (!searchInput || !statusFilter) return;
+
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  const filterValue = statusFilter.value.toLowerCase();
+
+  listItems.forEach(item => {
+    // 1. Grab all text inside the report card for the search text
+    const itemText = item.textContent.toLowerCase();
+
+    // 2. Grab specifically the status badge for the dropdown filter
+    const statusBadge = item.querySelector('.bd-status-badge');
+    const statusText = statusBadge ? statusBadge.textContent.toLowerCase() : '';
+
+    // Condition A: Does the text match the search bar?
+    const matchesSearch = itemText.includes(searchTerm);
+
+    // Condition B: Does the status match the dropdown?
+    let matchesStatus = false;
+    if (filterValue === 'all') {
+      matchesStatus = true; // "All Status" shows everything
+    } else if (filterValue === 'pending' && (statusText.includes('pending') || statusText.includes('resubmit'))) {
+      matchesStatus = true; // Groups Pending and Resubmitted
+    } else if (filterValue === 'validated' && (statusText.includes('validate') || statusText.includes('dispatch') || statusText.includes('progress') || statusText.includes('complet'))) {
+      matchesStatus = true; // Groups all positive/approved statuses
+    } else if (filterValue === 'rejected' && statusText.includes('reject')) {
+      matchesStatus = true;
+    }
+
+    // 🚀 Show the card ONLY if both conditions are met!
+    if (matchesSearch && matchesStatus) {
+      item.style.display = 'flex'; // Restore original flexbox display
+    } else {
+      item.style.display = 'none'; // Hide it
+    }
+  });
+};
+
+// ==========================================
+// 🔍 CEO REPORTS: SEARCH & PRIORITY FILTER
+// ==========================================
+window.filterCEOReports = function() {
+  const searchInput = document.getElementById('ceoSearch');
+  const priorityFilter = document.getElementById('ceo-priority-filter');
+
+  // Target the specific CEO Deploy Masterlist table rows
+  const tableRows = document.querySelectorAll('#deploy-master-table tr');
+
+  if (!searchInput || !priorityFilter) return;
+
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  const filterValue = priorityFilter.value.toLowerCase();
+
+  tableRows.forEach(row => {
+    // Skip empty state rows
+    if (row.cells.length < 2) return;
+
+    const rowText = row.textContent.toLowerCase();
+
+    // Check Search Bar
+    const matchesSearch = rowText.includes(searchTerm);
+
+    // Check Priority Dropdown
+    let matchesPriority = false;
+    if (filterValue === 'all') {
+      matchesPriority = true;
+    } else if (rowText.includes(filterValue)) { // Matches "High", "Medium", or "Low"
+      matchesPriority = true;
+    }
+
+    // Show row only if BOTH match
+    if (matchesSearch && matchesPriority) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+};
+
+// ==========================================
+// 🔍 ADMIN REPORTS: SEARCH & DROPDOWN FILTER
+// ==========================================
+window.filterAdminReports = function() {
+  const searchInput = document.getElementById('adminSearch');
+  const statusFilter = document.getElementById('admin-status-filter');
+
+  // 🚀 THE FIX: This magically finds ANY table rows inside the View Reports tab!
+  const tableRows = document.querySelectorAll('#view-reports table tbody tr');
+
+  if (!searchInput || !statusFilter) return;
+
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  const filterValue = statusFilter.value.toLowerCase();
+
+  tableRows.forEach(row => {
+    // Skip empty state rows (like "Loading..." or "No data")
+    if (row.cells.length < 2) return;
+
+    // Grab all text in the row for the search text
+    const rowText = row.textContent.toLowerCase();
+
+    // Condition A: Does the text match the search bar?
+    const matchesSearch = rowText.includes(searchTerm);
+
+    // Condition B: Does the status match the dropdown?
+    let matchesStatus = false;
+    if (filterValue === 'all') {
+      matchesStatus = true;
+    } else if (rowText.includes(filterValue)) {
+      matchesStatus = true;
+    }
+
+    // 🚀 Show the row ONLY if both conditions are met!
+    if (matchesSearch && matchesStatus) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+};
+
+// ==========================================
+// 🔍 REPAIR TRACKING: SEARCH & DROPDOWN FILTER
+// ==========================================
+window.filterTrackingReports = function() {
+  const searchInput = document.getElementById('trackSearch');
+  const statusFilter = document.getElementById('track-status-filter');
+
+  // Magically finds ANY table rows inside the Tracking tab
+  const tableRows = document.querySelectorAll('#view-tracking table tbody tr');
+
+  if (!searchInput || !statusFilter) return;
+
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  const filterValue = statusFilter.value.toLowerCase();
+
+  tableRows.forEach(row => {
+    // Skip empty state rows
+    if (row.cells.length < 2) return;
+
+    const rowText = row.textContent.toLowerCase();
+
+    // Check Search Bar
+    const matchesSearch = rowText.includes(searchTerm);
+
+    // Check Dropdown Filter
+    let matchesStatus = false;
+    if (filterValue === 'all') {
+      matchesStatus = true;
+    } else if (rowText.includes(filterValue)) {
+      matchesStatus = true;
+    }
+
+    // Show row only if BOTH match
+    if (matchesSearch && matchesStatus) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+};
+
 // ==========================================
 // 🔍 REUSABLE GLOBAL TABLE SEARCH ENGINE
 // ==========================================
@@ -125,22 +295,66 @@ window.executeGlobalSearch = function(inputId, tbodyId) {
 document.addEventListener('DOMContentLoaded', () => {
 
   // Load notifications immediately when the dashboard boots up
-  loadNotifications();
+  if (typeof loadNotifications === 'function') loadNotifications();
 
-  // 1. Barangay Table Search Listener (Live Typing)
-  const brgyInput = document.getElementById('search-barangay-input');
-  if (brgyInput) {
-    brgyInput.addEventListener('input', () => {
+  // 1. 🚀 BARANGAY DASHBOARD: Search Bar & Dropdown Listeners
+  const brgySearchInput = document.getElementById('report-search-bar');
+  const brgyStatusFilter = document.getElementById('report-status-filter');
+
+  if (brgySearchInput) {
+    brgySearchInput.addEventListener('input', window.filterBarangayReports);
+  }
+  if (brgyStatusFilter) {
+    brgyStatusFilter.addEventListener('change', window.filterBarangayReports);
+  }
+
+  // 2. Global Table Search: Barangay Management (Admin)
+  const adminBrgyInput = document.getElementById('search-barangay-input');
+  if (adminBrgyInput) {
+    adminBrgyInput.addEventListener('input', () => {
       executeGlobalSearch('search-barangay-input', 'barangay-table-body');
     });
   }
 
-  // 2. User Management Table Search Listener (Live Typing)
+  // 3. Global Table Search: User Management (Admin)
   const userInput = document.getElementById('search-user-input');
   if (userInput) {
     userInput.addEventListener('input', () => {
       executeGlobalSearch('search-user-input', 'user-management-tbody');
     });
+  }
+
+  // 4. 🚀 NEW: Admin Reports Table Search & Filter Listeners
+  const adminSearchInput = document.getElementById('adminSearch');
+  const adminStatusFilter = document.getElementById('admin-status-filter');
+
+  if (adminSearchInput) {
+    adminSearchInput.addEventListener('input', window.filterAdminReports);
+  }
+  if (adminStatusFilter) {
+    adminStatusFilter.addEventListener('change', window.filterAdminReports);
+  }
+
+  // 5. 🚀 NEW: Repair Tracking Table Search & Filter Listeners
+  const trackSearchInput = document.getElementById('trackSearch');
+  const trackStatusFilter = document.getElementById('track-status-filter');
+
+  if (trackSearchInput) {
+    trackSearchInput.addEventListener('input', window.filterTrackingReports);
+  }
+  if (trackStatusFilter) {
+    trackStatusFilter.addEventListener('change', window.filterTrackingReports);
+  }
+
+  // 6. 🚀 NEW: CEO Repair Queue Search & Filter Listeners
+  const ceoSearchInput = document.getElementById('ceoSearch');
+  const ceoPriorityFilter = document.getElementById('ceo-priority-filter');
+
+  if (ceoSearchInput) {
+    ceoSearchInput.addEventListener('input', window.filterCEOReports);
+  }
+  if (ceoPriorityFilter) {
+    ceoPriorityFilter.addEventListener('change', window.filterCEOReports);
   }
 
 });
@@ -1441,6 +1655,10 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     `;
     tbody.appendChild(tr);
   });
+  if (!isDashboard && typeof window.filterCEOReports === 'function') {
+    window.filterCEOReports();
+  }
+
 };
 
 // Placeholder for opening the specific report
@@ -2448,16 +2666,16 @@ function loadAdminReports() {
       reportsTableBody.innerHTML = '';
 
       // ==========================================
-      // 🚀 SEPARATION OF CONCERNS: Filter out Tracking items!
+      // 🚀 SEPARATION OF CONCERNS: Filter out Tracking & Archive items!
       // ==========================================
-      // We DO NOT want to see Dispatched, In Progress, Completed, or Closed here.
-      // Those belong in the Tracking Table!
+      // We DO NOT want to see Dispatched, In Progress, Completed, Closed, or Archived here.
       const inboxReports = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
         return !s.includes('dispatch') &&
           !s.includes('progress') &&
           !s.includes('complet') &&
-          !s.includes('clos');
+          !s.includes('clos') &&
+          !s.includes('archiv'); // 🚀 THE FIX: Hide Archived reports from the Inbox!
       });
 
       if (inboxReports.length === 0) {
@@ -2554,6 +2772,13 @@ function loadAdminReports() {
       // 🚀 FORCE TABLE SCROLL TO TOP ON LOAD
       const tableContainer = document.querySelector('.table-container') || document.querySelector('.table-responsive');
       if (tableContainer) tableContainer.scrollTop = 0;
+
+      // ==========================================
+      // 🚀 THE FIX: INSTANTLY RE-APPLY THE FILTER!
+      // ==========================================
+      if (typeof window.filterAdminReports === 'function') {
+        window.filterAdminReports();
+      }
 
     })
     .catch(error => {
@@ -2924,6 +3149,10 @@ function loadBarangayReports(barangayId) {
 
       // Update Chart
       updateSeverityChart([highSev, medSev, lowSev]);
+
+      // 🚀 THE FIX: Re-apply the search/filter just in case data was reloaded!
+      if (typeof window.filterBarangayReports === 'function') window.filterBarangayReports();
+
     })
     .catch(error => {
       console.error("Error loading reports:", error);
@@ -3843,6 +4072,10 @@ function loadTrackingData() {
         `;
         trackingTableBody.appendChild(row);
       });
+      if (typeof window.filterTrackingReports === 'function') {
+        window.filterTrackingReports();
+      }
+
     })
     .catch(error => {
       console.error("Error loading tracking data:", error);
@@ -6288,4 +6521,66 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
   checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
   toggleBatchActionBar();
 };
+// ==========================================
+// 🧹 AUTO-RESET SEARCH BARS ON NAVIGATION
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Grab every button in your sidebar navigation menu
+  const navButtons = document.querySelectorAll('.nav-menu li');
+
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+
+      // 1. Reset Admin Reports Search & Filter
+      const adminSearch = document.getElementById('adminSearch');
+      const adminFilter = document.getElementById('admin-status-filter');
+      if (adminSearch) adminSearch.value = '';
+      if (adminFilter) adminFilter.value = 'All';
+      if (typeof window.filterAdminReports === 'function') window.filterAdminReports();
+
+      // 2. Reset Barangay Dashboard Search & Filter
+      const brgySearch = document.getElementById('report-search-bar');
+      const brgyFilter = document.getElementById('report-status-filter');
+      if (brgySearch) brgySearch.value = '';
+      if (brgyFilter) brgyFilter.value = 'All';
+      if (typeof window.filterBarangayReports === 'function') window.filterBarangayReports();
+
+      // 3. Reset Global Admin Settings Tables (User & Barangay Management)
+      const adminBrgySearch = document.getElementById('search-barangay-input');
+      const adminUserSearch = document.getElementById('search-user-input');
+
+      if (adminBrgySearch) {
+        adminBrgySearch.value = '';
+        if (typeof window.executeGlobalSearch === 'function') {
+          window.executeGlobalSearch('search-barangay-input', 'barangay-table-body');
+        }
+      }
+
+      if (adminUserSearch) {
+        adminUserSearch.value = '';
+        if (typeof window.executeGlobalSearch === 'function') {
+          window.executeGlobalSearch('search-user-input', 'user-management-tbody');
+        }
+      }
+
+      // 4. Reset Repair Tracking Search & Filter
+      const trackSearch = document.getElementById('trackSearch');
+      const trackFilter = document.getElementById('track-status-filter');
+      if (trackSearch) trackSearch.value = '';
+      if (trackFilter) trackFilter.value = 'All';
+      if (typeof window.filterTrackingReports === 'function') window.filterTrackingReports();
+
+
+      // 5. Reset CEO Repair Queue Search & Filter
+      const ceoSearch = document.getElementById('ceoSearch');
+      const ceoFilter = document.getElementById('ceo-priority-filter');
+      if (ceoSearch) ceoSearch.value = '';
+      if (ceoFilter) ceoFilter.value = 'All';
+      if (typeof window.filterCEOReports === 'function') window.filterCEOReports();
+
+
+    });
+  });
+});
 

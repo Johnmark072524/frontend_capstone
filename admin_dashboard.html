@@ -505,29 +505,41 @@
 
       <div id="view-reports" class="content-section hidden">
 
-        <div class="section-header-flex">
-          <h2>Pending Report Validations</h2>
-          <div style="display: flex; gap: 15px; align-items: center;">
-            <div class="search-bar">
-              <label for="adminSearch" style="display: none;">Search Reports</label>
-              <input type="text" id="adminSearch" name="adminSearch" placeholder="Search Report ID or Barangay...">
-            </div>
+        <!-- 🚀 THE FIX: Restyled to match the Barangay Dashboard UI exactly! -->
+        <div class="bd-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+          <div>
+            <h2 style="margin: 0; color: #333; font-size: 20px;">City Road Reports</h2>
+          </div>
 
+          <div style="display: flex; gap: 15px; align-items: center;">
+            <!-- 🔍 The Search Bar -->
+            <input type="text" id="adminSearch" class="bd-search-bar" placeholder="🔍 Search ID or Brgy..." style="padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 5px; outline: none;">
+
+            <!-- 📂 The Status Dropdown (Cleaned up for Inbox only!) -->
+            <select id="admin-status-filter" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; outline: none; cursor: pointer;">
+              <option value="All">All Status</option>
+              <option value="Pending">Pending Validation</option>
+              <option value="Resubmit">Resubmitted</option>
+              <option value="Validated">Validated</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+
+            <!-- 🖨️ Enhanced Generate Report Menu -->
             <div style="position: relative;">
-              <button class="btn-secondary" id="btn-generate-menu" style="background-color: white;">
-                <span class="icon">🖨️</span> Generate Report ▼
+              <button id="btn-generate-menu" style="background-color: #1e40af; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;">
+                <span>🖨️</span> Generate Report ▼
               </button>
 
-              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; width: 180px; z-index: 100; overflow: hidden;">
-                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: var(--text-main);">
-                  📑 All Reports
+              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 8px; width: 250px; z-index: 100; overflow: hidden;">
+                <!-- 🚀 REPLACED: All Reports -> Annual City Road Inventory -->
+                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-size: 13px; color: #1e40af; font-weight: 700; transition: background 0.2s;">
+                  📑 Annual City Road Inventory
                 </button>
-                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 600;">
-                  🚨 Priority List
+                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 700; transition: background 0.2s;">
+                  🚨 Priority Repair List
                 </button>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -556,25 +568,25 @@
       <!-- ========================================== -->
       <div id="view-user-management" class="content-section hidden">
 
-        <div class="section-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-          <!-- LEFT SIDE: Title & Subtitle -->
+        <!-- 🚀 THE FIX: Unified UI Header matching the other tables -->
+        <div class="bd-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
           <div>
-            <h2 style="margin: 0; font-size: 24px; color: #1e293b;">👥 User Management</h2>
+            <h2 style="margin: 0; color: #333; font-size: 20px;">👥 User Management</h2>
             <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Provision and manage accounts for Barangay Officials.</p>
           </div>
 
-          <!-- 🚀 RIGHT SIDE: Grouped Button & Search Bar -->
-          <div style="display: flex; align-items: center; gap: 15px;">
-            <button id="btn-open-add-user" style="background: #1e40af; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(30,64,175,0.2); transition: 0.2s;">
-              <span class="icon">➕</span> Add New Official
-            </button>
+          <div style="display: flex; gap: 15px; align-items: center;">
+            <!-- 🔍 Live Search Bar (Button removed!) -->
+            <input type="text" id="search-user-input" class="bd-search-bar" placeholder="🔍 Search official or brgy..." style="padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 5px; outline: none;">
 
-            <div class="search-bar" style="margin: 0; display: flex; gap: 8px;">
-              <input type="text" id="search-user-input" placeholder="Search name, username, or barangay...">
-              <button class="btn-action" type="button" onclick="executeGlobalSearch('search-user-input', 'user-management-tbody')">Search</button>
-            </div>
+            <!-- ➕ Primary Add Button -->
+            <button id="btn-open-add-user" style="background-color: #1e40af; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;">
+              <span>➕</span> Add New Official
+            </button>
           </div>
         </div>
+
+        <!-- Note: Your table code goes directly below this! Do not delete your table! -->
 
         <!-- THE OFFICIALS DATA TABLE -->
         <div style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; overflow: hidden;">
@@ -672,31 +684,39 @@
 
       <div id="view-tracking" class="content-section hidden">
 
-        <div class="section-header-flex">
-          <h2>Repair Project Tracking</h2>
+        <!-- 🚀 THE FIX: Restyled to match the Admin Inbox and Barangay UI exactly! -->
+        <div class="bd-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+          <div>
+            <h2 style="margin: 0; color: #333; font-size: 20px;">Repair Project Tracking</h2>
+          </div>
 
           <div style="display: flex; gap: 15px; align-items: center;">
-            <div class="search-bar">
-              <select style="padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; outline: none; margin-right: 10px;">
-                <option>Filter: All Priorities</option>
-                <option>High Priority Only</option>
-              </select>
-              <input type="text" placeholder="Search Project ID or Location...">
-              <button class="btn-action">Search</button>
-            </div>
+            <!-- 🔍 The Search Bar (No button needed!) -->
+            <input type="text" id="trackSearch" class="bd-search-bar" placeholder="🔍 Search ID or Brgy..." style="padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 5px; outline: none;">
 
+            <!-- 📂 The Status Dropdown (Customized for Tracking) -->
+            <select id="track-status-filter" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; outline: none; cursor: pointer;">
+              <option value="All">All Status</option>
+              <option value="Dispatched">Dispatched to CEO</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Pending Budget">Pending Budget</option>
+              <option value="Completed">Completed (Pending QA)</option>
+              <option value="Closed">Officially Closed</option>
+              <option value="Archived">Archived</option>
+            </select>
+
+            <!-- 🖨️ Enhanced Generate Report Menu -->
             <div style="position: relative;">
-              <button class="btn-secondary" id="btn-track-generate" style="background-color: white;">
-                <span class="icon">🖨️</span> Generate Report ▼
+              <button id="btn-track-generate" style="background-color: #1e40af; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;">
+                <span>🖨️</span> Generate Report ▼
               </button>
 
-              <div id="track-print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; width: 200px; z-index: 100; overflow: hidden;">
-                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 600;">
+              <div id="track-print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 8px; width: 220px; z-index: 100; overflow: hidden;">
+                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 700; transition: background 0.2s;">
                   ✅ Repaired City Roads
                 </button>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -739,23 +759,25 @@
       <!-- ========================================== -->
       <div id="view-barangay" class="content-section hidden">
 
-        <div class="section-header-flex">
-          <h2>Barangay Infrastructure Management</h2>
+        <!-- 🚀 THE FIX: Unified UI Header matching the other tables -->
+        <div class="bd-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+          <div>
+            <h2 style="margin: 0; color: #333; font-size: 20px;">Barangay Infrastructure Management</h2>
+            <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Manage city roads and infrastructure assignments.</p>
+          </div>
 
           <div style="display: flex; gap: 15px; align-items: center;">
-            <button class="btn-submit" id="btn-add-barangay" style="padding: 8px 15px; font-size: 13px;">
-              <span class="icon">➕</span> Add Barangay
-            </button>
+            <!-- 🔍 Live Search Bar (Button removed!) -->
+            <input type="text" id="search-barangay-input" class="bd-search-bar" placeholder="🔍 Search SJDM Barangay..." style="padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 5px; outline: none;">
 
-            <div class="search-bar">
-              <input type="text" id="search-barangay-input" placeholder="Search SJDM Barangay...">
-              <button class="btn-action" type="button"
-                      onclick="executeGlobalSearch('search-barangay-input', 'barangay-table-body')">
-                Search
-              </button>
-            </div>
+            <!-- ➕ Primary Add Button -->
+            <button id="btn-add-barangay" style="background-color: #1e40af; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;">
+              <span>➕</span> Add Barangay
+            </button>
           </div>
         </div>
+
+        <!-- Note: Your table code goes directly below this! Do not delete your table! -->
         <div class="table-container">
           <table class="data-table">
             <thead>

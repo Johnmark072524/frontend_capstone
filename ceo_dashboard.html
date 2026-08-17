@@ -382,32 +382,46 @@
 
       <div id="view-repair" class="content-section hidden">
 
-        <div class="section-header-flex">
-          <h2>Active Repair Queue</h2>
+        <!-- 🚀 THE FIX: Unified UI Header matching Admin & Barangay -->
+        <div class="bd-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0;">
+          <div>
+            <h2 style="margin: 0; color: #333; font-size: 20px;">Active Repair Queue</h2>
+          </div>
 
           <div style="display: flex; gap: 15px; align-items: center;">
-            <div class="search-bar">
-              <select style="padding: 8px 15px; border-radius: 6px; border: 1px solid #ccc; outline: none; margin-right: 10px;">
-                <option>Filter: All Priorities</option>
-                <option>High Priority Only</option>
-              </select>
-              <input type="text" placeholder="Search Project ID or Location...">
-              <button class="btn-action">Search</button>
-            </div>
+            <!-- 📂 The Priority Dropdown -->
+            <select id="ceo-priority-filter" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; outline: none; cursor: pointer;">
+              <option value="All">All Priorities</option>
+              <option value="High">High Priority Only</option>
+              <option value="Medium">Medium Priority</option>
+              <option value="Low">Low Priority</option>
+            </select>
 
+            <!-- 🔍 The Search Bar (Button removed for Live Search!) -->
+            <input type="text" id="ceoSearch" class="bd-search-bar" placeholder="🔍 Search ID or Location..." style="padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 5px; outline: none;">
+
+            <!-- 🖨️ Enhanced Generate Report Menu (Themed CEO Orange!) -->
             <div style="position: relative;">
-              <button class="btn-secondary" id="btn-generate-menu" style="background-color: white;">
-                <span class="icon">🖨️</span> Generate Report ▼
+              <button id="btn-generate-menu" style="background-color: #ea580c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;">
+                <span>🖨️</span> Generate Report ▼
               </button>
 
-              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; width: 210px; z-index: 100; overflow: hidden;">
-                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: var(--text-main);">📑 All Projects</button>
-                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 600;">🚨 Priority List</button>
-                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 600;">✅ Repaired City Roads</button>
+              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 8px; width: 220px; z-index: 100; overflow: hidden;">
+                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-size: 13px; color: var(--text-main); font-weight: 700; transition: background 0.2s;">
+                  📑 All Projects
+                </button>
+                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 700; transition: background 0.2s;">
+                  🚨 Priority List
+                </button>
+                <button class="dropdown-item" id="btn-print-repaired" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #28a745; font-weight: 700; transition: background 0.2s;">
+                  ✅ Repaired City Roads
+                </button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Note: Your table code goes directly below this! Do not delete your table! -->
 
         <!-- 🚀 NEW: HIDDEN BATCH ACTION BAR -->
         <div id="batch-action-bar" style="display: none; margin-bottom: 15px; background: #fffbeb; padding: 12px 20px; border-left: 5px solid #f59e0b; border-radius: 6px; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">

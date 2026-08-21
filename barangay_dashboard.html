@@ -16,24 +16,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-  <style>
-    /* 🚀 Barangay Green Theme Overrides */
-    .sidebar .nav-menu li.active {
-      background-color: rgba(40, 167, 69, 0.08) !important;
-      border-left: 4px solid #28a745 !important;
-    }
-    .sidebar .nav-menu li.active a,
-    .sidebar .nav-menu li.active .icon {
-      color: #28a745 !important;
-    }
-    .content-area {
-      padding: 30px 40px !important; /* Gives the dashboard better breathing room */
-      background-color: #f8fafc; /* Softer background color */
-    }
-  </style>
 
 </head>
-<body>
+<body class="brgy-theme">
 
 <div class="app-layout">
 
@@ -114,21 +99,20 @@
         </div>
         <!-- ========================================== -->
 
-        <!-- 🏛️ PROFILE BUTTON (Anchored safely to the far right edge) -->
-        <button class="header-profile-btn" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #166534; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
-          <span class="icon" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(40,167,69,0.4);">🏛️</span>
-
-          <!-- 🚀 2-LINE STACKED TEXT -->
+        <button class="header-profile-btn profile-pill" style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #166534; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
+          <div id="header-avatar-box" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(40,167,69,0.4); overflow: hidden; position: relative; flex-shrink: 0;">
+            <img id="header-profile-img" src="" alt="Avatar" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+            <span id="header-profile-fallback">🏛️</span>
+          </div>
           <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
             <span id="header-display-name" style="font-size: 14px; font-weight: 700; color: #166534;">Loading...</span>
             <span id="header-display-role" style="font-size: 11px; font-weight: 600; color: #64748b;">Loading...</span>
           </div>
         </button>
-
       </div>
 
     </header>
-    <main class="content-area">
+    <main class="content-area" style="padding: 12px 35px 30px 35px;">
 
       <div id="view-dashboard" class="content-section">
 
@@ -324,53 +308,83 @@
       </div>
 
       <!-- ========================================== -->
-      <!-- ⚙️ SETTINGS VIEW -->
+      <!-- ⚙️ SETTINGS VIEW (BALANCED FULL-WIDTH GRID) -->
       <!-- ========================================== -->
       <div id="view-settings" class="content-section hidden">
-        <div class="section-header-flex" style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h2 style="margin: 0; font-size: 24px; color: #1e293b;">System Settings</h2>
-            <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Manage application preferences and data backups.</p>
-          </div>
-          <button id="btn-settings-back-dashboard" style="background: white; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; color: #475569; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <span style="font-size: 14px;">⬅️</span> Back to Dashboard
-          </button>
+        <div class="section-header" style="margin-bottom: 25px;">
+          <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #1e293b;">Data Management & Backups</h2>
+          <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Review, preview, print, and download annual road inspection records for official LGU compliance.</p>
         </div>
 
-        <div class="settings-grid">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; width: 100%;">
 
-          <!-- 🎨 UI PREFERENCES CARD -->
-          <div class="settings-card">
-            <div class="settings-card-header">
-              <span class="icon" style="font-size: 20px;">🎨</span>
-              <h3>Interface Preferences</h3>
-            </div>
-            <div class="settings-row">
-              <div class="settings-info">
-                <h4>Dark Mode</h4>
-                <p>Switch the dashboard to a dark slate theme to reduce eye strain during nighttime reporting.</p>
+          <!-- 📊 CARD 1: ANNUAL EXPORT & PRINT CENTER -->
+          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
+                <span style="font-size: 24px; background: #eff6ff; padding: 8px; border-radius: 8px; line-height: 1;">📊</span>
+                <div>
+                  <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #1e293b;">Annual Audit & Export Center</h3>
+                  <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Filter and export inspection records by audit cycle</p>
+                </div>
               </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="toggle-dark-mode">
-                <span class="slider round"></span>
-              </label>
+
+              <p style="color: #475569; font-size: 13.5px; line-height: 1.6; margin-bottom: 22px;">
+                Generate formal road damage inventories, road dimensions, and repair status sheets for local government records and verification.
+              </p>
+
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <label for="export-inventory-year" style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+                  Select Inventory Cycle Year:
+                </label>
+                <select id="export-inventory-year" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #1e293b; background: #fff; cursor: pointer; outline: none;">
+                  <option value="ALL">All Recorded Years</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
+              <button type="button" onclick="openAnnualReportPreview()" style="flex: 1; min-width: 180px; padding: 11px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+                <span>👁️</span> Preview & Print Report
+              </button>
             </div>
           </div>
 
-          <!-- 📥 DATA MANAGEMENT CARD -->
-          <div class="settings-card">
-            <div class="settings-card-header">
-              <span class="icon" style="font-size: 20px;">📥</span>
-              <h3>Data Management</h3>
-            </div>
-            <div class="settings-row">
-              <div class="settings-info">
-                <h4>Export Local Reports Backup</h4>
-                <p>Download a complete CSV spreadsheet of all road inspections submitted by your specific Barangay for local record-keeping.</p>
+          <!-- 📋 CARD 2: AUDIT & RETENTION COMPLIANCE GUIDE -->
+          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
+              <span style="font-size: 24px; background: #f0fdf4; padding: 8px; border-radius: 8px; line-height: 1;">🏛️</span>
+              <div>
+                <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #1e293b;">Audit & Record Compliance</h3>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">San Jose Del Monte RoadWise Reporting Protocol</p>
               </div>
-              <button id="btn-export-csv" class="btn-export">
-                <span class="icon">📊</span> Download CSV
-              </button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: #475569; line-height: 1.5;">
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <span style="font-size: 16px; line-height: 1.2;">📅</span>
+                <div>
+                  <strong style="color: #1e293b;">Annual Cycle Archiving</strong>
+                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Past validated and resolved road projects remain queryable for historical review and audit verification.</p>
+                </div>
+              </div>
+
+              <!-- 🚀 REPLACED: CLEAN PRINT & PDF LAYOUT -->
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <span style="font-size: 16px; line-height: 1.2;">📄</span>
+                <div>
+                  <strong style="color: #1e293b;">Print-Ready Document Layout</strong>
+                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Automatically formats reports into a clean, landscape layout with official seals, dates, and account details for PDF export.</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <span style="font-size: 16px; line-height: 1.2;">📊</span>
+                <div>
+                  <strong style="color: #1e293b;">Spreadsheet Compatibility</strong>
+                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Exported CSV files contain complete physical dimensions (length, width, culverts, bridges) formatted for Excel.</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -995,6 +1009,97 @@
       <!-- Full notification history will inject here -->
     </div>
 
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- 📄 ANNUAL REPORT PREVIEW & PRINT MODAL                  -->
+<!-- ======================================================= -->
+<div id="annual-report-preview-modal" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); z-index: 100000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+  <div style="background: white; border-radius: 12px; width: 92%; max-width: 1050px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.3); overflow: hidden;">
+
+    <!-- Modal Toolbar (Hidden during actual print) -->
+    <div class="no-print" style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3 style="margin: 0; font-size: 18px; color: #1e293b;">Annual Inspection Report Preview</h3>
+        <p style="margin: 3px 0 0 0; font-size: 12px; color: #64748b;">Review document layout and verify records before printing or downloading.</p>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button type="button" onclick="printReportDocument()" style="padding: 8px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          🖨️ Print / Save as PDF
+        </button>
+        <button type="button" onclick="downloadPreviewedCSV()" style="padding: 8px 18px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          📥 Download CSV
+        </button>
+        <button type="button" onclick="closeReportPreviewModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; margin-left: 8px; line-height: 1;">&times;</button>
+      </div>
+    </div>
+
+    <!-- Printable Paper Container -->
+    <div id="printable-report-area" style="flex: 1; padding: 40px; overflow-y: auto; background: white; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b;">
+
+      <!-- Official Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px;">
+        <img src="img/cpdologo.png" alt="Logo" style="height: 65px; width: auto;" onerror="this.style.display='none'">
+        <div style="text-align: center; flex: 1; margin: 0 20px;">
+          <h4 style="margin: 0; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 1px;">Republic of the Philippines • City of San Jose Del Monte</h4>
+          <h2 style="margin: 4px 0; font-size: 20px; color: #0f172a; font-weight: 800;">ANNUAL ROAD DAMAGE & INVENTORY REPORT</h2>
+          <p id="preview-report-subtitle" style="margin: 0; font-size: 13px; font-weight: 600; color: #2563eb;">Inventory Cycle: 2026</p>
+        </div>
+        <img src="img/logo.png" alt="RoadWise Logo" style="height: 65px; width: auto;" onerror="this.style.display='none'">
+      </div>
+
+      <!-- Report Metadata Banner -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 25px; font-size: 12px;">
+        <div><strong>Generated By:</strong> <span id="preview-generated-by">Loading...</span></div>
+        <div><strong>Barangay / Scope:</strong> <span id="preview-scope">All Barangays</span></div>
+        <div><strong>Date Generated:</strong> <span id="preview-date">August 21, 2026</span></div>
+        <div><strong>Total Records:</strong> <span id="preview-total-count">0</span></div>
+      </div>
+
+      <!-- Data Table with Full Road Specifications -->
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+        <thead>
+        <tr style="background: #0f172a; color: white;">
+          <th style="padding: 8px 6px; border: 1px solid #0f172a; width: 65px;">Proj ID</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a;">Barangay</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a;">Road Name & Type</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a; width: 110px;">Road Dimensions</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a; width: 100px;">Culverts / Bridges</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a;">Damage Details</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a; width: 70px; text-align: center;">Severity</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a; width: 90px; text-align: center;">Status</th>
+          <th style="padding: 8px 6px; border: 1px solid #0f172a; width: 80px; text-align: right;">Date</th>
+        </tr>
+        </thead>
+        <tbody id="preview-report-table-body">
+        <!-- Dynamically Injected in Chronological Order -->
+        </tbody>
+      </table>
+
+      <!-- Signatures Footer -->
+      <!-- ✍️ ANNUAL REPORT MODAL SIGNATURE BLOCK -->
+      <div style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
+
+        <!-- Left Side: Official / Inspector -->
+        <div style="text-align: center; width: 240px;">
+          <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+          <strong id="preview-sign-name" style="margin: 0; font-size: 12px; font-weight: 700; color: #0f172a; display: block; text-transform: uppercase;">Official Name</strong>
+          <span style="font-size: 10.5px; color: #777; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+          <span id="preview-sign-role" style="margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; display: block;">Barangay Official</span>
+        </div>
+
+        <!-- Right Side: Approving Head -->
+        <div style="text-align: center; width: 240px;">
+          <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+          <strong style="margin: 0; font-size: 12px; font-weight: 700; color: #0f172a; display: block; text-transform: uppercase;">CPDO Department Head</strong>
+          <span style="font-size: 10.5px; color: #777; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+          <span style="margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; display: block;">City Planning & Development OFf</span>
+        </div>
+
+      </div>
+
+    </div>
   </div>
 </div>
 

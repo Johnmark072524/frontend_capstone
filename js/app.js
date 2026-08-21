@@ -1047,28 +1047,91 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // ==========================================
-  // 5. DROPDOWN PRINT MENU LOGIC
-  // ==========================================
-  const generateMenuBtn = document.getElementById('btn-generate-menu');
-  const printDropdown = document.getElementById('print-dropdown');
+  // =======================================================
+// 🖨️ GLOBAL GENERATE REPORT CONTROLLER (FAIL-PROOF)
+// =======================================================
 
-  if (generateMenuBtn && printDropdown) {
-    generateMenuBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      printDropdown.classList.toggle('hidden');
-    });
+// 1. Toggle Dropdown Menu Open/Close
+  window.toggleGenerateReportDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById("print-dropdown");
+    if (!dropdown) return;
 
-    window.addEventListener('click', () => {
-      if (!printDropdown.classList.contains('hidden')) {
-        printDropdown.classList.add('hidden');
+    if (dropdown.classList.contains("hidden")) {
+      dropdown.classList.remove("hidden");
+      dropdown.style.display = "block";
+    } else {
+      dropdown.classList.add("hidden");
+      dropdown.style.display = "none";
+    }
+  };
+
+// 2. Global Outside-Click Listener to Close Dropdown
+  document.addEventListener("click", function(e) {
+    const dropdown = document.getElementById("print-dropdown");
+    const btn = document.getElementById("btn-generate-menu");
+    if (dropdown && !dropdown.classList.contains("hidden")) {
+      if (btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add("hidden");
+        dropdown.style.display = "none";
       }
-    });
+    }
+  });
 
-    printDropdown.addEventListener('click', (e) => {
-      e.stopPropagation();
+// 3. Option 1: Open Annual City Road Inventory View
+  window.openAdminRoadInventory = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById("print-dropdown");
+    if (dropdown) {
+      dropdown.classList.add("hidden");
+      dropdown.style.display = "none";
+    }
+
+    // Hide all sections
+    document.querySelectorAll(".content-section").forEach(sec => {
+      sec.classList.add("hidden");
+      sec.style.display = "none";
     });
-  }
+    document.querySelectorAll(".nav-menu li").forEach(l => l.classList.remove("active"));
+
+    // Show Inventory View
+    const invSection = document.getElementById("view-road-inventory");
+    if (invSection) {
+      invSection.classList.remove("hidden");
+      invSection.style.display = "block";
+    }
+
+    // Load Inventory Data
+    if (typeof window.loadAdminInventoryYears === "function") window.loadAdminInventoryYears();
+    if (typeof window.loadAdminRoadInventory === "function") window.loadAdminRoadInventory();
+  };
+
+// 4. Option 2: Open Priority Repair List View
+  window.openPriorityReportList = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById("print-dropdown");
+    if (dropdown) {
+      dropdown.classList.add("hidden");
+      dropdown.style.display = "none";
+    }
+
+    // Hide all sections
+    document.querySelectorAll(".content-section").forEach(sec => {
+      sec.classList.add("hidden");
+      sec.style.display = "none";
+    });
+    document.querySelectorAll(".nav-menu li").forEach(l => l.classList.remove("active"));
+
+    // Show Priority View
+    const prioritySection = document.getElementById("view-report-priority");
+    if (prioritySection) {
+      prioritySection.classList.remove("hidden");
+      prioritySection.style.display = "block";
+    }
+
+    // Generate Priority List
+    if (typeof generatePriorityList === "function") generatePriorityList();
+  };
 
   // ==========================================
 // 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE & MODALS
@@ -1122,12 +1185,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==========================================
-// 9. MASTER PROFILE LOGIC (CRASH-PROOF VERSION)
+// 9. MASTER PROFILE LOGIC (HEADER, SIDEBAR & PHOTO)
 // ==========================================
-
   window.populateProfileData = function() {
     try {
-      // 1. Grab data securely and PREVENT "null" string crashes
       const getSafeStr = (key, fallback) => {
         const val = sessionStorage.getItem(key);
         return (val && val !== 'null' && val.trim() !== '') ? val : fallback;
@@ -1140,22 +1201,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const phone = getSafeStr('phoneNumber', 'Not Provided');
       const birthday = getSafeStr('birthday', '');
       const gender = getSafeStr('gender', 'Not Specified');
-
       const username = getSafeStr('username', 'N/A');
       const role = getSafeStr('userRole', 'BARANGAY');
       const barangayName = getSafeStr('barangayName', 'Not Assigned');
+      const profilePic = getSafeStr('profilePicture', '');
 
-      // 2. Smart Name Builder
+      // Name & Age Builder
       let fullName = middleName ? `${firstName} ${middleName} ${lastName}` : `${firstName} ${lastName}`;
-
-      // 3. SAFE AGE CALCULATOR
       let displayAge = "N/A";
       let displayBirthday = "Not Provided";
 
       if (birthday) {
         displayBirthday = birthday;
         const birthDate = new Date(birthday);
-        if (!isNaN(birthDate.getTime())) { // Ensure date is valid before doing math
+        if (!isNaN(birthDate.getTime())) {
           const today = new Date();
           let ageCalc = today.getFullYear() - birthDate.getFullYear();
           const m = today.getMonth() - birthDate.getMonth();
@@ -1166,33 +1225,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 🚀 4. SMART ROLE FORMATTER (Cleans up the text for the UI)
+      // Role Formatter
       let displayRole = "Barangay Official";
       const userRoleLower = String(role).toLowerCase();
-
       if (userRoleLower.includes('admin') || userRoleLower.includes('cpdo')) {
         displayRole = "CPDO Admin";
       } else if (userRoleLower.includes('ceo') || userRoleLower.includes('engineer')) {
         displayRole = "City Engineer";
       }
 
-      // 5. Inject into the Sidebars / Top Headers safely
       const setElText = (id, text) => {
         const el = document.getElementById(id);
         if (el) el.textContent = text;
       };
 
+      // Text Injections
       setElText('sidebar-display-name', fullName);
       setElText('sidebar-display-role', displayRole);
-
       setElText('side-profile-name', fullName);
       setElText('side-profile-role', displayRole);
       setElText('side-profile-brgy', barangayName);
-
       setElText('header-display-name', fullName);
-      setElText('header-display-role', displayRole); // 🚀 INJECTS ROLE INTO TOP HEADER
+      setElText('header-display-role', displayRole);
 
-      // 6. Inject into the Official Profile Tab
       setElText('profile-full-name', fullName);
       setElText('profile-email', email);
       setElText('profile-phone', phone);
@@ -1202,7 +1257,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setElText('profile-username', username);
       setElText('profile-role', displayRole);
 
-      // 7. DYNAMIC DEPARTMENT ROUTING
       const profileBarangayEl = document.getElementById('profile-barangay');
       if (profileBarangayEl) {
         if (userRoleLower.includes('admin') || userRoleLower.includes('cpdo')) {
@@ -1213,8 +1267,40 @@ document.addEventListener('DOMContentLoaded', () => {
           profileBarangayEl.textContent = barangayName;
         }
       }
+
+      // 🖼️ RENDER PROFILE PICTURE IN HEADER & PROFILE TAB
+      const headerImg = document.getElementById('header-profile-img');
+      const headerFallback = document.getElementById('header-profile-fallback');
+      const mainAvatar = document.getElementById('main-profile-avatar');
+
+      const isValidImage = profilePic &&
+        profilePic !== 'no_image.jpg' &&
+        profilePic.toLowerCase() !== 'null' &&
+        profilePic.toLowerCase() !== 'undefined';
+
+      if (isValidImage) {
+        if (headerImg) {
+          window.loadSecureImage('header-profile-img', profilePic);
+          headerImg.style.display = 'block';
+        }
+        if (headerFallback) headerFallback.style.display = 'none';
+
+        if (mainAvatar) {
+          mainAvatar.innerHTML = `<img id="sidebar-avatar-img" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+          window.loadSecureImage('sidebar-avatar-img', profilePic);
+        }
+      } else {
+        if (headerImg) headerImg.style.display = 'none';
+        if (headerFallback) headerFallback.style.display = 'inline';
+
+        if (mainAvatar) {
+          const defaultIcon = userRoleLower.includes('admin') ? '🏢' : (userRoleLower.includes('ceo') ? '⚙️' : '🏛️');
+          mainAvatar.innerHTML = defaultIcon;
+        }
+      }
+
     } catch (error) {
-      console.error("🚨 Profile Population Crashed:", error);
+      console.error("🚨 Profile Population Error:", error);
     }
   };
 
@@ -1297,152 +1383,162 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // ==========================================
+// ==========================================
 // 10. OFFICIAL REPORT LOGIC (CEO PRIORITY LIST)
 // ==========================================
-  const btnPrintPriority = document.getElementById('btn-print-priority');
-  const viewReportPriority = document.getElementById('view-report-priority');
   const btnPrintDocument = document.getElementById('btn-print-document');
   const btnCloseReport = document.getElementById('btn-close-report');
+  const viewReportPriority = document.getElementById('view-report-priority');
 
-// 1. Hook up the Sidebar Button
-  if (btnPrintPriority && viewReportPriority) {
-    btnPrintPriority.addEventListener('click', () => {
-      // Hide all other dashboard sections
-      if (typeof contentSections !== 'undefined') {
-        contentSections.forEach(sec => sec.classList.add('hidden'));
-      }
-      document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
-
-      // Show the official document
-      viewReportPriority.classList.remove('hidden');
-
-      // 🚀 RUN THE ALGORITHM
-      generatePriorityList();
+// 1. Print Official Document (Suppresses browser header & footer stamps)
+  if (btnPrintDocument) {
+    btnPrintDocument.addEventListener('click', () => {
+      const originalTitle = document.title;
+      document.title = " ";
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
     });
   }
 
-// 2. Hook up the Print & Back Buttons
-  if (btnPrintDocument) {
-    btnPrintDocument.addEventListener('click', () => window.print());
-  }
+// 2. Back to Reports / Dashboard
   if (btnCloseReport) {
     btnCloseReport.addEventListener('click', () => {
-      viewReportPriority.classList.add('hidden');
-      document.getElementById('view-dashboard').classList.remove('hidden');
+      // 1. Hide the Priority Report View
+      if (viewReportPriority) {
+        viewReportPriority.classList.add('hidden');
+        viewReportPriority.style.display = 'none';
+      }
+
+      // 2. Return directly to the Reports Inbox if available
+      const viewReports = document.getElementById('view-reports');
+      if (viewReports) {
+        viewReports.classList.remove('hidden');
+        viewReports.style.display = 'block';
+        return;
+      }
+
+      // 3. Fallback: Trigger the main dashboard
+      const mainDashboardView =
+        document.getElementById('view-dashboard') ||
+        document.getElementById('view-overview') ||
+        document.querySelector('.content-section:not(#view-report-priority):not(#view-settings)');
+
+      if (mainDashboardView) {
+        mainDashboardView.classList.remove('hidden');
+        mainDashboardView.style.display = '';
+      }
     });
   }
 
 // ==========================================
-// 🧠 THE STRICT PRIORITY ALGORITHM 🧠
+// 🧠 THE STRICT PRIORITY ALGORITHM
 // ==========================================
   function generatePriorityList() {
+    // 🚀 1. SET DATE & ADMIN NAME INSTANTLY (Synchronous - No Waiting)
+    const dateEl = document.getElementById('priority-doc-date');
+    if (dateEl) {
+      dateEl.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
 
-    // 🚀 THE FIX: Swapped standard fetch for apiFetch to bypass Ngrok CORS
+    const adminName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim();
+    const adminNameEl = document.getElementById('priority-admin-name');
+    if (adminNameEl) {
+      adminNameEl.textContent = adminName || "CPDO Administrator";
+    }
+
+    // 🚀 2. FETCH & POPULATE REPORTS TABLE
     apiFetch(`/api/reports`)
       .then(reports => {
+        const validatedReports = (Array.isArray(reports) ? reports : []).filter(
+          r => String(r.status || '').toLowerCase() === 'validated'
+        );
 
-        // 🛡️ THE GATEKEEPER: Only Validated Reports reach the CEO
-        const validatedReports = reports.filter(r => String(r.status || '').toLowerCase() === 'validated');
-
-        // 🧮 CALCULATE SCORES
+        // Calculate Priority Scores
         validatedReports.forEach(report => {
           const severity = String(report.severity || 'Unassessed').toLowerCase();
           const importance = String(report.roadImportance || '').toLowerCase();
 
-          // Default fallback for AI that hasn't graded the photo yet
           report.tierScore = 0;
           report.tierLabel = 'PENDING AI';
-          report.tierColor = '#6c757d'; // Gray
+          report.tierColor = '#6c757d';
 
-          // STEP 1: THE STRICT DECISION TREE (3 TIERS)
           if (severity === 'high') {
             report.tierScore = 3;
             report.tierLabel = 'HIGH';
-            report.tierColor = '#dc3545'; // Red
+            report.tierColor = '#dc3545';
           } else if (severity === 'medium') {
             if (importance.includes('core')) {
-              report.tierScore = 3; // Bumps up to High!
+              report.tierScore = 3;
               report.tierLabel = 'HIGH';
-              report.tierColor = '#dc3545'; // Red
+              report.tierColor = '#dc3545';
             } else {
-              report.tierScore = 2; // Stays Medium
+              report.tierScore = 2;
               report.tierLabel = 'MEDIUM';
-              report.tierColor = '#ff8c00'; // Orange
+              report.tierColor = '#ff8c00';
             }
           } else if (severity === 'low') {
             if (importance.includes('core')) {
-              report.tierScore = 2; // Bumps up to Medium!
+              report.tierScore = 2;
               report.tierLabel = 'MEDIUM';
-              report.tierColor = '#ff8c00'; // Orange
+              report.tierColor = '#ff8c00';
             } else {
-              report.tierScore = 1; // Stays Low
+              report.tierScore = 1;
               report.tierLabel = 'LOW';
-              report.tierColor = '#28a745'; // Green
+              report.tierColor = '#28a745';
             }
           }
 
-          // STEP 2: THE TIE-BREAKER (Area)
           const dLength = parseFloat(report.damageLength) || 0;
           const dWidth = parseFloat(report.damageWidth) || 0;
           report.areaScore = dLength * dWidth;
         });
 
-        // 🔄 THE DOUBLE SORT (Tier First, then Area)
+        // Sort: Highest Priority Tier first, then Largest Area
         validatedReports.sort((a, b) => {
           if (b.tierScore !== a.tierScore) {
             return b.tierScore - a.tierScore;
           }
-          // If they have the exact same Tier, sort by Largest Area
           return b.areaScore - a.areaScore;
         });
 
-        // 🖨️ RENDER TO HTML TABLE
+        // Render to HTML Table
         const tbody = document.querySelector('.document-table tbody');
         if (!tbody) return;
 
-        tbody.innerHTML = ''; // Wipe out the hardcoded HTML rows
+        tbody.innerHTML = '';
 
         if (validatedReports.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No validated reports available for dispatch.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No validated reports available for dispatch.</td></tr>`;
           return;
         }
 
         validatedReports.forEach((report, index) => {
-          // Formatting data safely
           const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
           const formatName = report.cityRoadName || 'Unnamed Road';
           const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-          // Damage Type is used ONLY as a label for the crew, not for math!
           const formatDamage = report.damageType || 'Unspecified';
           const dLength = report.damageLength || 0;
           const dWidth = report.damageWidth || 0;
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                    <td style="text-align: center;"><strong>${index + 1}</strong></td>
-                    <td>${formatId}</td>
-                    <td><strong>${formatName}</strong><br><span style="font-size: 11px; color: #555;">Brgy. ${formatBrgy}</span></td>
-                    <td>${formatDamage}</td>
-                    <td>${dLength}m x ${dWidth}m</td>
-                    <td style="text-align: center; font-weight: bold; color: ${report.tierColor};">${report.tierLabel}</td>
-                `;
+          <td style="text-align: center;"><strong>${index + 1}</strong></td>
+          <td>${formatId}</td>
+          <td><strong>${formatName}</strong><br><span style="font-size: 11px; color: #555;">Brgy. ${formatBrgy}</span></td>
+          <td>${formatDamage}</td>
+          <td>${dLength}m x ${dWidth}m</td>
+          <td style="text-align: center; font-weight: bold; color: ${report.tierColor};">${report.tierLabel}</td>
+        `;
           tbody.appendChild(tr);
         });
-
-        // Auto-update Document Date to today
-        const dateEl = document.querySelector('.official-document p strong');
-        if(dateEl) {
-          dateEl.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-        }
-
       })
       .catch(err => {
         console.error("Error generating priority list:", err);
-        showToast("Error loading priority list.", "error");
+        if (typeof showToast === 'function') showToast("Error loading priority list.", "error");
       });
   }
-
 
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
@@ -5186,114 +5282,6 @@ if (formChangePassword) {
   });
 }
 
-// ==========================================
-// ⚙️ SYSTEM SETTINGS LOGIC (Dark Mode & CSV)
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-
-  // 1. 🌙 DARK MODE ENGINE
-  const darkModeToggle = document.getElementById('toggle-dark-mode');
-
-  // Check browser memory on load
-  if (localStorage.getItem('roadwise_dark_mode') === 'enabled') {
-    document.body.classList.add('dark-mode');
-    if (darkModeToggle) darkModeToggle.checked = true;
-  }
-
-  if (darkModeToggle) {
-    darkModeToggle.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        document.body.classList.add('dark-mode');
-        localStorage.setItem('roadwise_dark_mode', 'enabled');
-      } else {
-        document.body.classList.remove('dark-mode');
-        localStorage.setItem('roadwise_dark_mode', 'disabled');
-      }
-    });
-  }
-
-  // 2. 📊 CSV EXPORT ENGINE (Barangay Local Backup)
-  const btnExportCsv = document.getElementById('btn-export-csv');
-  if (btnExportCsv) {
-    btnExportCsv.addEventListener('click', () => {
-      const barangayId = sessionStorage.getItem("barangayId");
-      if (!barangayId) {
-        if(typeof showToast === 'function') showToast("Error: Barangay ID not found.", "error");
-        return;
-      }
-
-      btnExportCsv.innerHTML = "⏳ Generating...";
-
-      // Fetch the exact reports for this barangay
-      apiFetch(`/api/reports/barangay/${barangayId}`)
-        .then(reports => {
-          if (!reports || reports.length === 0) {
-            if(typeof showToast === 'function') showToast("No reports available to export.", "error");
-            btnExportCsv.innerHTML = `<span class="icon">📊</span> Download CSV`;
-            return;
-          }
-
-          // Generate CSV Headers
-          let csvContent = "Report ID,Road Name,Road Type,Terrain,Width (m),Length (m),Damage Type,Severity,Status,Date Submitted\n";
-
-          // Generate CSV Rows
-          reports.forEach(r => {
-            const id = `RPT-${String(r.id).padStart(4, '0')}`;
-            // Wrap text in quotes to prevent commas in descriptions from breaking the Excel columns
-            const roadName = `"${r.cityRoadName || 'N/A'}"`;
-            const roadType = `"${r.roadType || 'N/A'}"`;
-            const terrain = `"${r.terrainType || 'N/A'}"`;
-            const width = r.width || 0;
-            const length = r.length || 0;
-            const damageType = `"${r.damageType || 'None'}"`;
-            const severity = `"${r.severity || 'Unassessed'}"`;
-            const status = `"${r.status || 'Pending'}"`;
-            const dateStr = r.dateSubmitted || r.date_submitted;
-            const date = dateStr ? `"${new Date(dateStr).toLocaleDateString()}"` : `"N/A"`;
-
-            csvContent += `${id},${roadName},${roadType},${terrain},${width},${length},${damageType},${severity},${status},${date}\n`;
-          });
-
-          // Trigger the physical download in the browser
-          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-          const link = document.createElement("a");
-          const url = URL.createObjectURL(blob);
-          link.setAttribute("href", url);
-          link.setAttribute("download", `Barangay_${barangayId}_Road_Inventory_Backup.csv`);
-          link.style.visibility = 'hidden';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          if(typeof showToast === 'function') showToast("CSV Backup Downloaded Successfully!", "success");
-          btnExportCsv.innerHTML = `<span class="icon">📊</span> Download CSV`;
-        })
-        .catch(err => {
-          console.error("CSV Export Error:", err);
-          if(typeof showToast === 'function') showToast("Failed to generate CSV backup.", "error");
-          btnExportCsv.innerHTML = `<span class="icon">📊</span> Download CSV`;
-        });
-    });
-  }
-
-  // 3. ⬅️ BACK BUTTON FOR SETTINGS TAB
-  const settingsBackBtn = document.getElementById('btn-settings-back-dashboard');
-  if (settingsBackBtn) {
-    settingsBackBtn.addEventListener('click', () => {
-      document.getElementById('view-settings').classList.add('hidden');
-      const dashboardView = document.getElementById('view-dashboard');
-      if (dashboardView) dashboardView.classList.remove('hidden');
-
-      // Fix Sidebar Highlight
-      document.querySelectorAll('.nav-menu li').forEach(li => {
-        const target = li.getAttribute('data-target');
-        if (target === 'view-dashboard') li.classList.add('active');
-        else li.classList.remove('active');
-      });
-    });
-  }
-});
-
 
 // ==========================================
 // 👥 USER MANAGEMENT DATA FETCHER
@@ -6623,3 +6611,610 @@ document.addEventListener("DOMContentLoaded", () => {
     window.startLiveClock();
   }
 });
+
+// ==========================================
+// 📊 ANNUAL REPORT & PREVIEW SYSTEM (CHRONOLOGICAL & DETAILED)
+// ==========================================
+
+let currentPreviewReports = [];
+
+// ==========================================
+// 🕒 0. ROBUST DATE FORMATTER HELPER
+// ==========================================
+function formatReportDate(r) {
+  if (!r) return "N/A";
+
+  // Prioritizes dateSubmitted from your Java entity
+  const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at || r.dateReported || r.date;
+  if (!rawDate) return "N/A";
+
+  // Handles Jackson array format: [2026, 8, 21]
+  if (Array.isArray(rawDate) && rawDate.length >= 3) {
+    const year = rawDate[0];
+    const month = String(rawDate[1]).padStart(2, '0');
+    const day = String(rawDate[2]).padStart(2, '0');
+    return new Date(`${year}-${month}-${day}`).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  // Handles ISO date strings: "2026-08-21"
+  const parsed = new Date(rawDate);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  return String(rawDate);
+}
+
+// ==========================================
+// 📅 1. DYNAMIC INVENTORY YEARS LOADER
+// ==========================================
+window.loadDynamicInventoryYears = function() {
+  const yearSelect = document.getElementById("export-inventory-year");
+  if (!yearSelect) return;
+
+  const barangayId = sessionStorage.getItem("barangayId");
+  const userRole = (sessionStorage.getItem("userRole") || "").toUpperCase();
+
+  let endpoint = "/api/reports";
+  if (userRole.includes("BARANGAY") && barangayId && barangayId !== "null") {
+    endpoint = `/api/reports/barangay/${barangayId}`;
+  }
+
+  fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: { "ngrok-skip-browser-warning": "true" }
+  })
+    .then(res => res.json())
+    .then(reports => {
+      if (!Array.isArray(reports)) return;
+
+      const uniqueYears = [...new Set(
+        reports
+          .map(r => r.inventoryYear)
+          .filter(y => y && String(y).trim() !== "" && String(y).toLowerCase() !== "null" && String(y).toLowerCase() !== "undefined")
+      )].sort((a, b) => Number(a) - Number(b)); // Chronological year order (Earliest to Latest)
+
+      yearSelect.innerHTML = `<option value="ALL">All Recorded Years</option>`;
+
+      uniqueYears.forEach(year => {
+        const opt = document.createElement("option");
+        opt.value = year;
+        opt.textContent = `${year} Inventory Cycle`;
+        yearSelect.appendChild(opt);
+      });
+    })
+    .catch(err => console.error("Failed to load inventory years:", err));
+};
+
+// ==========================================
+// 👁️ 2. OPEN & POPULATE PREVIEW (FIRST TO LATEST)
+// ==========================================
+window.openAnnualReportPreview = function() {
+  const yearSelect = document.getElementById("export-inventory-year");
+  const selectedYear = yearSelect ? yearSelect.value : "ALL";
+  const barangayId = sessionStorage.getItem("barangayId");
+  const userRole = (sessionStorage.getItem("userRole") || "").toUpperCase();
+  const userName = (sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "Official");
+
+  let endpoint = "/api/reports";
+  if (userRole.includes("BARANGAY") && barangayId && barangayId !== "null") {
+    endpoint = `/api/reports/barangay/${barangayId}`;
+  }
+
+  fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: { "ngrok-skip-browser-warning": "true" }
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to fetch reports.");
+      return res.json();
+    })
+    .then(reports => {
+      if (!Array.isArray(reports) || reports.length === 0) {
+        if (typeof showToast === 'function') showToast("No reports found to generate preview.", "info");
+        return;
+      }
+
+      // Filter by inventory year
+      let filtered = selectedYear === "ALL"
+        ? reports
+        : reports.filter(r => String(r.inventoryYear) === String(selectedYear));
+
+      if (filtered.length === 0) {
+        if (typeof showToast === 'function') showToast(`No reports found for year ${selectedYear}.`, "info");
+        return;
+      }
+
+      // 🚀 CHRONOLOGICAL SORTING: First to Latest (Ascending Project ID)
+      filtered.sort((a, b) => Number(a.id) - Number(b.id));
+      currentPreviewReports = filtered;
+
+      // Metadata Population
+      const brgyName = sessionStorage.getItem("barangayName") || "City-Wide Scope";
+      document.getElementById("preview-report-subtitle").textContent = `Inventory Cycle: ${selectedYear === "ALL" ? "All Recorded Years" : selectedYear}`;
+      document.getElementById("preview-generated-by").textContent = userName;
+      document.getElementById("preview-scope").textContent = userRole.includes("BARANGAY") ? brgyName : "All Barangays (City-Wide)";
+      document.getElementById("preview-date").textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      document.getElementById("preview-total-count").textContent = currentPreviewReports.length;
+
+      // ✍️ Clean Signature (Name on top, Role below, no parentheses)
+      const signNameElem = document.getElementById("preview-sign-name");
+      const signRoleElem = document.getElementById("preview-sign-role");
+      if (signNameElem) signNameElem.textContent = userName;
+      if (signRoleElem) signRoleElem.textContent = userRole.includes("BARANGAY") ? "Barangay Official" : "CPDO Official";
+
+      // Detailed Table Population
+      const tbody = document.getElementById("preview-report-table-body");
+      tbody.innerHTML = currentPreviewReports.map((r, index) => {
+        const bName = r.barangay ? (r.barangay.name || r.barangay.barangayName) : (r.barangayName || "N/A");
+        const dateStr = formatReportDate(r); // 🚀 Clean date resolution
+        const rowBg = index % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+        // Technical Road Details
+        const roadType = r.roadType || r.roadImportance || "Standard";
+        const terrain = r.terrainType ? ` • ${r.terrainType}` : "";
+        const dimensions = `L: ${r.length != null ? r.length + 'm' : 'N/A'} | W: ${r.width != null ? r.width + 'm' : 'N/A'}`;
+        const culvertBridge = `Culv: ${r.lengthOfCulverts != null ? r.lengthOfCulverts + 'm' : '0m'}<br>Bridges: ${r.numberOfBridges != null ? r.numberOfBridges : '0'}`;
+        const damageDetails = `<strong>${r.damageType || 'General'}</strong>${r.damageLength ? ` (${r.damageLength}m × ${r.damageWidth || 0}m)` : ''}`;
+
+        return `
+          <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-weight: 700;">PRJ-${r.id}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${bName}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">
+              <strong>${r.cityRoadName || 'N/A'}</strong><br>
+              <span style="font-size: 10px; color: #64748b;">${roadType}${terrain}</span>
+            </td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${dimensions}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${culvertBridge}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${damageDetails}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: ${r.severity === 'High' ? '#dc2626' : (r.severity === 'Medium' ? '#d97706' : '#16a34a')};">${r.severity || 'N/A'}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 10px;">${r.status || 'Pending'}</td>
+            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 10px; font-weight: 600;">${dateStr}</td>
+          </tr>
+        `;
+      }).join("");
+
+      const modal = document.getElementById("annual-report-preview-modal");
+      modal.classList.remove("hidden");
+      modal.style.display = "flex";
+    })
+    .catch(err => {
+      console.error(err);
+      if (typeof showToast === 'function') showToast("Failed to load report preview.", "error");
+    });
+};
+
+// ==========================================
+// 🖨️ 3. CLEAN PRINT TRIGGER (SUPPRESS TITLE HEADER)
+// ==========================================
+window.printReportDocument = function() {
+  const originalTitle = document.title;
+
+  // Temporarily clear title to remove the browser header during print
+  document.title = " ";
+  window.print();
+
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
+};
+
+// ==========================================
+// 📥 4. CSV DOWNLOAD (WITH FULL ROAD SPECS & CLEAN DATES)
+// ==========================================
+window.downloadPreviewedCSV = function() {
+  if (!currentPreviewReports || currentPreviewReports.length === 0) return;
+
+  const selectedYear = document.getElementById("export-inventory-year")?.value || "ALL";
+  const headers = [
+    "Project ID",
+    "Inventory Year",
+    "Barangay",
+    "City Road Name",
+    "Road Type",
+    "Terrain Type",
+    "Length (m)",
+    "Width (m)",
+    "Length of Culverts (m)",
+    "Number of Bridges",
+    "Damage Type",
+    "Damage Length (m)",
+    "Damage Width (m)",
+    "Severity",
+    "Status",
+    "Reported By",
+    "Date Reported"
+  ];
+
+  const rows = currentPreviewReports.map(r => {
+    const brgyName = r.barangay ? (r.barangay.name || r.barangay.barangayName) : (r.barangayName || "N/A");
+    const dateStr = formatReportDate(r);
+
+    return [
+      `"PRJ-${r.id}"`,
+      `"${r.inventoryYear || 'N/A'}"`,
+      `"${brgyName}"`,
+      `"${(r.cityRoadName || 'N/A').replace(/"/g, '""')}"`,
+      `"${r.roadType || r.roadImportance || 'N/A'}"`,
+      `"${r.terrainType || 'N/A'}"`,
+      `"${r.length != null ? r.length : ''}"`,
+      `"${r.width != null ? r.width : ''}"`,
+      `"${r.lengthOfCulverts != null ? r.lengthOfCulverts : '0'}"`,
+      `"${r.numberOfBridges != null ? r.numberOfBridges : '0'}"`,
+      `"${(r.damageType || 'N/A').replace(/"/g, '""')}"`,
+      `"${r.damageLength != null ? r.damageLength : ''}"`,
+      `"${r.damageWidth != null ? r.damageWidth : ''}"`,
+      `"${r.severity || 'N/A'}"`,
+      `"${r.status || 'N/A'}"`,
+      `"${(r.reportedBy || 'Official').replace(/"/g, '""')}"`,
+      `"${dateStr}"`
+    ].join(",");
+  });
+
+  const csvString = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const downloadUrl = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `RoadWise_Audit_Report_${selectedYear}_${Date.now()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(downloadUrl);
+};
+
+// ==========================================
+// ❌ 5. CLOSE MODAL
+// ==========================================
+window.closeReportPreviewModal = function() {
+  const modal = document.getElementById("annual-report-preview-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+  }
+};
+
+// ==========================================
+// 🚀 6. INITIALIZE
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof window.loadDynamicInventoryYears === "function") {
+    window.loadDynamicInventoryYears();
+  }
+});
+
+// =======================================================
+// 📑 ADMIN CITY ROAD INVENTORY CONTROLLER
+// =======================================================
+
+let adminCachedInventory = [];
+
+// Helper: Convert length values to kilometers
+function parseToKilometers(val) {
+  if (val == null || isNaN(val) || val === "") return 0;
+  const num = parseFloat(val);
+  return num > 20 ? (num / 1000) : num;
+}
+
+// Helper: Format terrain names cleanly
+function formatTerrainType(terrain) {
+  if (!terrain || String(terrain).trim() === "") return "FLAT";
+  const t = String(terrain).toUpperCase().trim();
+  if (t.includes("MOUNTAIN")) return "MOUNTAINOUS";
+  if (t.includes("ROLL")) return "ROLLING";
+  return t;
+}
+
+// Helper: Extract Inventory Year (handles inventory_year, inventoryYear, or date fallback)
+function getReportYear(r) {
+  if (!r) return "";
+  const yearVal = r.inventory_year || r.inventoryYear;
+  if (yearVal && String(yearVal).trim() !== "" && String(yearVal).toLowerCase() !== "null" && String(yearVal).toLowerCase() !== "undefined") {
+    return String(yearVal).trim();
+  }
+  const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at || r.dateReported || r.date;
+  if (rawDate) {
+    if (Array.isArray(rawDate) && rawDate.length >= 1) return String(rawDate[0]);
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) return String(parsed.getFullYear());
+  }
+  return "";
+}
+
+// Helper: Format Date for Display
+function formatInventoryDate(r) {
+  if (!r) return "N/A";
+  const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at || r.dateReported || r.date;
+  if (!rawDate) return "N/A";
+
+  if (Array.isArray(rawDate) && rawDate.length >= 3) {
+    const year = rawDate[0];
+    const month = String(rawDate[1]).padStart(2, '0');
+    const day = String(rawDate[2]).padStart(2, '0');
+    return new Date(`${year}-${month}-${day}`).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  const parsed = new Date(rawDate);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  return String(rawDate);
+}
+
+// =======================================================
+// 📅 1. DYNAMIC ADMIN INVENTORY YEARS LOADER
+// =======================================================
+window.loadAdminInventoryYears = function() {
+  const yearSelect = document.getElementById("inventory-filter-year");
+  if (!yearSelect) return;
+
+  apiFetch("/api/reports")
+    .then(reports => {
+      if (!Array.isArray(reports)) return;
+
+      const uniqueYears = [...new Set(
+        reports
+          .map(r => getReportYear(r))
+          .filter(y => y !== "")
+      )].sort((a, b) => Number(b) - Number(a)); // Newest cycle first
+
+      const currentSelected = yearSelect.value;
+      yearSelect.innerHTML = `<option value="ALL">All Recorded Years</option>`;
+
+      uniqueYears.forEach(year => {
+        const opt = document.createElement("option");
+        opt.value = year;
+        opt.textContent = `${year} Inventory Cycle`;
+        yearSelect.appendChild(opt);
+      });
+
+      if (currentSelected && uniqueYears.includes(currentSelected)) {
+        yearSelect.value = currentSelected;
+      }
+    })
+    .catch(err => console.error("Failed to load admin inventory years:", err));
+};
+
+// =======================================================
+// 📊 2. LOAD, FILTER, DEDUPLICATE & RENDER INVENTORY TABLE
+// =======================================================
+window.loadAdminRoadInventory = function() {
+  const yearSelect = document.getElementById("inventory-filter-year");
+  const selectedYear = yearSelect ? yearSelect.value : "ALL";
+  const tbody = document.getElementById("admin-inventory-table-body");
+  const tfoot = document.getElementById("admin-inventory-table-foot");
+
+  // Populate Document Meta Labels
+  const dateLabel = document.getElementById("admin-inventory-date-label");
+  if (dateLabel) {
+    dateLabel.textContent = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  const yearLabel = document.getElementById("admin-inventory-year-label");
+  if (yearLabel) {
+    yearLabel.textContent = selectedYear === "ALL" ? "ALL RECORDED YEARS" : `${selectedYear} CYCLE`;
+  }
+
+  const adminFullName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim();
+  const prepByEl = document.getElementById("admin-inventory-prepared-by");
+  if (prepByEl) {
+    prepByEl.textContent = adminFullName || "CPDO Administrator";
+  }
+
+  apiFetch("/api/reports")
+    .then(reports => {
+      if (!Array.isArray(reports) || reports.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #64748b;">No road records found in database.</td></tr>`;
+        if (tfoot) tfoot.innerHTML = "";
+        return;
+      }
+
+      // 1. Filter by Selected Inventory Cycle
+      let list = selectedYear === "ALL"
+        ? reports
+        : reports.filter(r => getReportYear(r) === String(selectedYear));
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #64748b;">No records found for inventory cycle ${selectedYear}.</td></tr>`;
+        if (tfoot) tfoot.innerHTML = "";
+        return;
+      }
+
+      // 2. 🚫 DEDUPLICATION: Keep unique roads (retaining newest inspection)
+      const uniqueRoadsMap = new Map();
+      list.forEach(r => {
+        const roadKey = String(r.cityRoadId || r.cityRoadName || r.id).trim().toLowerCase();
+        if (!uniqueRoadsMap.has(roadKey)) {
+          uniqueRoadsMap.set(roadKey, r);
+        } else {
+          const existing = uniqueRoadsMap.get(roadKey);
+          const currentDate = new Date(r.dateSubmitted || r.dateReported || r.createdAt || 0);
+          const existingDate = new Date(existing.dateSubmitted || existing.dateReported || existing.createdAt || 0);
+          if (currentDate > existingDate) {
+            uniqueRoadsMap.set(roadKey, r);
+          }
+        }
+      });
+      let deduplicatedList = Array.from(uniqueRoadsMap.values());
+
+      // 3. 🔢 SORT ASCENDING BY ROAD ID
+      deduplicatedList.sort((a, b) => {
+        const idA = String(a.cityRoadId || a.id || '').replace(/\D/g, '');
+        const idB = String(b.cityRoadId || b.id || '').replace(/\D/g, '');
+
+        if (idA && idB && !isNaN(Number(idA)) && !isNaN(Number(idB))) {
+          return Number(idA) - Number(idB);
+        }
+        return String(a.cityRoadId || a.id).localeCompare(String(b.cityRoadId || b.id), undefined, { numeric: true, sensitivity: 'base' });
+      });
+
+      adminCachedInventory = deduplicatedList;
+
+      // Surface & Dimension Totals
+      let sumLength = 0;
+      let sumAsphalt = 0;
+      let sumGravel = 0;
+      let sumEarth = 0;
+      let sumConcrete = 0;
+      let sumMixed = 0;
+      let sumCulverts = 0;
+      let sumBridges = 0;
+
+      // Render Table Rows (15 Columns, Date at Far Right)
+      tbody.innerHTML = deduplicatedList.map((r, index) => {
+        const roadId = r.cityRoadId || `3142000000${String(r.id).padStart(2, '0')}`;
+        const roadName = r.cityRoadName || "Unnamed Road";
+        const dateInspected = formatInventoryDate(r);
+        const totalKm = parseToKilometers(r.length);
+        const roadWidth = r.width != null && !isNaN(r.width) && String(r.width).trim() !== "" ? Number(r.width).toFixed(2) : "N/A";
+        const roadType = (r.roadType || "").toLowerCase();
+
+        // Surface breakdown logic
+        const asphaltVal = roadType.includes("asphalt") ? totalKm : 0;
+        const gravelVal = roadType.includes("gravel") ? totalKm : 0;
+        const earthVal = roadType.includes("earth") ? totalKm : 0;
+        const concreteVal = (roadType.includes("concrete") || roadType.includes("paved") || roadType === "") ? totalKm : 0;
+        const mixedVal = roadType.includes("mixed") ? totalKm : 0;
+
+        const culvertVal = r.lengthOfCulverts != null ? (parseFloat(r.lengthOfCulverts) || 0) : 0;
+        const bridgesVal = r.numberOfBridges != null ? (parseInt(r.numberOfBridges, 10) || 0) : 0;
+
+        sumLength += totalKm;
+        sumAsphalt += asphaltVal;
+        sumGravel += gravelVal;
+        sumEarth += earthVal;
+        sumConcrete += concreteVal;
+        sumMixed += mixedVal;
+        sumCulverts += culvertVal;
+        sumBridges += bridgesVal;
+
+        const importance = r.roadImportance ? (r.roadImportance.toLowerCase().includes("non") ? "Non-Core" : "Core") : "Core";
+        const terrain = formatTerrainType(r.terrainType);
+        const rowBg = index % 2 === 0 ? "#ffffff" : "#f8fafc";
+
+        return `
+          <tr style="background: ${rowBg}; border-bottom: 1px solid #cbd5e1; color: #0f172a;">
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; font-family: monospace; font-weight: 700; text-align: center;">${roadId}</td>
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; font-weight: 600;">${roadName}</td>
+            <td style="padding: 7px 4px; border: 1px solid #cbd5e1; text-align: center;">City</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: right; font-weight: 700;">${totalKm.toFixed(3)}</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: right; font-weight: 600;">${roadWidth}</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${asphaltVal > 0 ? asphaltVal.toFixed(3) : '0'}</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${gravelVal > 0 ? gravelVal.toFixed(3) : '0'}</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${earthVal > 0 ? earthVal.toFixed(3) : '0'}</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${concreteVal > 0 ? concreteVal.toFixed(3) : '0'}</td>
+            <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${mixedVal > 0 ? mixedVal.toFixed(3) : '0'}</td>
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${importance}</td>
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${terrain}</td>
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: right;">${culvertVal > 0 ? culvertVal.toFixed(2) : '0'}</td>
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${bridgesVal}</td>
+            <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 600;">${dateInspected}</td>
+          </tr>
+        `;
+      }).join("");
+
+      // Summary totals footer row
+      if (tfoot) {
+        tfoot.innerHTML = `
+          <tr style="background: #e2e8f0; color: #0f172a; font-size: 11px;">
+            <td colspan="3" style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: right; font-weight: 800;">TOTALS:</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: right; font-weight: 800;">${sumLength.toFixed(3)}</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; color: #64748b; font-size: 10px;">-</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sumAsphalt.toFixed(3)}</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sumGravel.toFixed(3)}</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sumEarth.toFixed(3)}</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sumConcrete.toFixed(3)}</td>
+            <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sumMixed.toFixed(3)}</td>
+            <td colspan="2" style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: center; font-size: 10px; color: #475569;">${deduplicatedList.length} Unique Roads</td>
+            <td style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: right; font-weight: 800;">${sumCulverts.toFixed(2)}</td>
+            <td style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sumBridges}</td>
+            <td style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: center; color: #64748b; font-size: 10px;">-</td>
+          </tr>
+        `;
+      }
+    })
+    .catch(err => {
+      console.error("Error loading admin road inventory:", err);
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #ef4444;">Failed to fetch road inventory data.</td></tr>`;
+    });
+};
+
+// =======================================================
+// 📥 3. EXPORT CSV (15 COLUMNS WITH INSPECTION DATE AT END)
+// =======================================================
+window.downloadAdminInventoryCSV = function() {
+  if (!adminCachedInventory || adminCachedInventory.length === 0) {
+    if (typeof showToast === "function") showToast("No inventory records to export.", "info");
+    return;
+  }
+
+  const selectedYear = document.getElementById("inventory-filter-year")?.value || "ALL";
+  const headers = [
+    "Road ID",
+    "Road Name",
+    "Class",
+    "Length (km)",
+    "Width (m)",
+    "Asphalt (km)",
+    "Gravel (km)",
+    "Earth (km)",
+    "Concrete (km)",
+    "Mixed (km)",
+    "Road Importance",
+    "Terrain Type",
+    "Length of Culverts (m)",
+    "Number of Bridges",
+    "Date Inspected"
+  ];
+
+  const rows = adminCachedInventory.map(r => {
+    const roadId = r.cityRoadId || `3142000000${String(r.id).padStart(2, '0')}`;
+    const roadName = r.cityRoadName || "Unnamed Road";
+    const dateInspected = formatInventoryDate(r);
+    const totalKm = parseToKilometers(r.length);
+    const roadWidth = r.width != null && !isNaN(r.width) && String(r.width).trim() !== "" ? Number(r.width).toFixed(2) : "";
+    const roadType = (r.roadType || "").toLowerCase();
+
+    const asphaltKm = roadType.includes("asphalt") ? totalKm.toFixed(3) : "0";
+    const gravelKm = roadType.includes("gravel") ? totalKm.toFixed(3) : "0";
+    const earthKm = roadType.includes("earth") ? totalKm.toFixed(3) : "0";
+    const concreteKm = (roadType.includes("concrete") || roadType.includes("paved") || roadType === "") ? totalKm.toFixed(3) : "0";
+    const mixedKm = roadType.includes("mixed") ? totalKm.toFixed(3) : "0";
+
+    const importance = r.roadImportance ? (r.roadImportance.toLowerCase().includes("non") ? "Non-Core" : "Core") : "Core";
+    const terrain = formatTerrainType(r.terrainType);
+    const culverts = r.lengthOfCulverts != null ? Number(r.lengthOfCulverts).toFixed(2) : "0";
+    const bridges = r.numberOfBridges != null ? r.numberOfBridges : "0";
+
+    return [
+      `"${roadId}"`,
+      `"${roadName.replace(/"/g, '""')}"`,
+      `"City"`,
+      `"${totalKm.toFixed(3)}"`,
+      `"${roadWidth}"`,
+      `"${asphaltKm}"`,
+      `"${gravelKm}"`,
+      `"${earthKm}"`,
+      `"${concreteKm}"`,
+      `"${mixedKm}"`,
+      `"${importance}"`,
+      `"${terrain}"`,
+      `"${culverts}"`,
+      `"${bridges}"`,
+      `"${dateInspected}"`
+    ].join(",");
+  });
+
+  const csvString = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const downloadUrl = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `CSJDM_City_Road_Inventory_${selectedYear}_${Date.now()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(downloadUrl);
+};

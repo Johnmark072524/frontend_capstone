@@ -14,7 +14,7 @@
 
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="admin-theme">
 
 <div class="app-layout">
 
@@ -107,8 +107,11 @@
         <!-- ========================================== -->
 
         <!-- 👤 ADMIN PROFILE BUTTON -->
-        <button class="header-profile-btn" style="background: #f0f4ff; border: 1px solid #d6e4ff; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #1a0ca3; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
-          <span id="header-avatar-icon" class="icon" style="background: linear-gradient(135deg, #1a0ca3, #4361ee); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(26,12,163,0.4);">👤</span>
+        <button class="header-profile-btn profile-pill" style="background: #f0f4ff; border: 1px solid #d6e4ff; padding: 6px 16px 6px 6px; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; color: #1a0ca3; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: 0.2s;">
+          <div id="header-avatar-box" style="background: linear-gradient(135deg, #1a0ca3, #4361ee); color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center; font-size: 15px; box-shadow: 0 2px 6px rgba(26,12,163,0.4); overflow: hidden; position: relative; flex-shrink: 0;">
+            <img id="header-profile-img" src="" alt="Avatar" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+            <span id="header-profile-fallback">👤</span>
+          </div>
           <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
             <span id="header-display-name" style="font-size: 14px; font-weight: 700; color: #1a0ca3;">Loading...</span>
             <span id="header-display-role" style="font-size: 11px; font-weight: 600; color: #64748b;">Loading...</span>
@@ -118,7 +121,7 @@
       </div>
     </header>
 
-    <main class="content-area">
+    <main class="content-area" style="padding: 12px 35px 30px 35px;">
 
       <div id="view-admin-dashboard" class="content-section ad-dashboard-container">
 
@@ -240,7 +243,7 @@
 
           <div style="text-align: center; margin-bottom: 30px;">
             <h2 style="font-family: 'Times New Roman', Times, serif; text-transform: uppercase; font-size: 24px; margin-bottom: 5px; color: #000;">High Priority Road Repair Masterlist</h2>
-            <p style="font-size: 14px; color: #333; margin: 0;">Date Generated: <strong></strong></p>
+            <p style="font-size: 14px; color: #333; margin: 0;">Date Generated: <strong id="priority-doc-date"></strong></p>
             <p style="font-size: 14px; color: #333; margin: 5px 0 0 0; font-style: italic;">For Immediate Action & Budget Allocation by the City Engineering Office (CEO)</p>
           </div>
 
@@ -264,24 +267,30 @@
             </tbody>
           </table>
 
-          <div class="document-signatures">
-            <div class="sig-box">
-              <p>Generated & Verified By:</p>
-              <div class="sig-line"></div>
-              <strong>Juan Dela Cruz</strong>
-              <p>Lead Admin, CPDO</p>
+          <!-- ✍️ CLEAN SIGNATURE BLOCK (WITH SIGNATURE LABELS) -->
+          <div class="document-signatures" style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
+
+            <!-- Left Side: CPDO Admin -->
+            <div class="sig-box" style="text-align: center; width: 240px;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #555;">Generated & Verified By:</p>
+              <div class="sig-line" style="border-bottom: 1.5px solid #000; height: 35px; margin-bottom: 6px;"></div>
+              <strong id="priority-admin-name" style="text-transform: uppercase; font-size: 13px; color: #000; display: block;">CPDO Admin</strong>
+              <p style="margin: 2px 0 0 0; font-size: 10.5px; color: #777; font-style: italic;">(Signature over Printed Name)</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; font-weight: 700; color: #000;">City Planning & Development Coordinator</p>
             </div>
-            <div class="sig-box">
-              <p>Received & Acknowledged By:</p>
-              <div class="sig-line"></div>
-              <strong>Engr. _______________________</strong>
-              <p>City Engineering Office Representative</p>
+
+            <!-- Right Side: CEO Representative -->
+            <div class="sig-box" style="text-align: center; width: 240px;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #555;">Received & Acknowledged By:</p>
+              <div class="sig-line" style="border-bottom: 1.5px solid #000; height: 35px; margin-bottom: 6px;"></div>
+              <p style="margin: 0; font-size: 10.5px; color: #777; font-style: italic;">(Signature over Printed Name)</p>
+              <p style="margin: 2px 0 0 0; font-size: 12px; font-weight: 700; color: #000;">City Engineering Office Head</p>
             </div>
+
           </div>
 
         </div>
       </div>
-
 
 
       <!-- ========================================== -->
@@ -496,6 +505,10 @@
         </div>
       </div>
 
+      <!-- ========================================== -->
+      <!-- 🖼️ REPORTS BUTTON-->
+      <!-- ========================================== -->
+
       <div id="view-reports" class="content-section hidden">
 
         <!-- 🚀 THE FIX: Restyled to match the Barangay Dashboard UI exactly! -->
@@ -516,20 +529,18 @@
               <option value="Validated">Validated</option>
               <option value="Rejected">Rejected</option>
             </select>
-
-            <!-- 🖨️ Enhanced Generate Report Menu -->
-            <div style="position: relative;">
-              <button id="btn-generate-menu" style="background-color: #1e40af; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s;">
+            <!-- 🖨️ Bulletproof Generate Report Dropdown -->
+            <div style="position: relative; display: inline-block;">
+              <button type="button" id="btn-generate-menu" onclick="toggleGenerateReportDropdown(event)" style="background-color: #1e40af; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                 <span>🖨️</span> Generate Report ▼
               </button>
 
-              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: 110%; background: white; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 8px; width: 250px; z-index: 100; overflow: hidden;">
-                <!-- 🚀 REPLACED: All Reports -> Annual City Road Inventory -->
-                <button class="dropdown-item" id="btn-print-all" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-size: 13px; color: #1e40af; font-weight: 700; transition: background 0.2s;">
-                  📑 Annual City Road Inventory
+              <div id="print-dropdown" class="hidden" style="position: absolute; right: 0; top: calc(100% + 6px); background: white; border: 1px solid #cbd5e1; box-shadow: 0 8px 20px rgba(0,0,0,0.12); border-radius: 8px; width: 250px; z-index: 99999; overflow: hidden;">
+                <button type="button" onclick="openAdminRoadInventory(event)" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-size: 13px; color: #1e40af; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                  <span>📑</span> Annual City Road Inventory
                 </button>
-                <button class="dropdown-item" id="btn-print-priority" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 700; transition: background 0.2s;">
-                  🚨 Priority Repair List
+                <button type="button" onclick="openPriorityReportList(event)" style="width: 100%; text-align: left; padding: 12px 15px; background: white; border: none; cursor: pointer; font-size: 13px; color: #dc3545; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                  <span>🚨</span> Priority Repair List
                 </button>
               </div>
             </div>
@@ -554,6 +565,112 @@
           </table>
         </div>
 
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- 📑 ADMIN VIEW: ANNUAL CITY ROAD PHYSICAL INVENTORY       -->
+      <!-- ======================================================= -->
+      <div id="view-road-inventory" class="content-section hidden">
+
+        <!-- Control Toolbar (Excluded from Print) -->
+        <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #ffffff; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <!-- ⬅ Back to Reports -->
+            <button type="button" id="btn-close-inventory" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;">
+              ⬅ Back to Reports
+            </button>
+
+            <!-- Year Filter -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="inventory-filter-year" style="font-weight: 700; font-size: 13px; color: #334155;">Inventory Cycle:</label>
+              <select id="inventory-filter-year" onchange="loadAdminRoadInventory()" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: #fff; cursor: pointer; outline: none;">
+                <option value="ALL">All Recorded Years</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Export & Print Actions -->
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" onclick="printAdminRoadInventory()" style="padding: 9px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+              <span>🖨️</span> Print Masterlist
+            </button>
+
+            <button type="button" onclick="downloadAdminInventoryCSV()" style="padding: 9px 18px; background: #16a34a; color: #ffffff; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22,163,74,0.2);">
+              <span>📥</span> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Official Document Sheet -->
+        <div id="admin-inventory-sheet" style="background: #ffffff; border-radius: 8px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); color: #0f172a; font-family: 'Segoe UI', Arial, sans-serif;">
+
+          <!-- Letterhead -->
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 18px;">
+            <img src="img/cpdologo.png" alt="CPDO Logo" style="height: 70px; width: auto;" onerror="this.style.display='none'">
+            <div style="text-align: center; flex: 1; margin: 0 20px;">
+              <p style="margin: 0; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; font-weight: 600;">Republic of the Philippines • Province of Bulacan</p>
+              <h2 style="margin: 3px 0; font-size: 20px; color: #0f172a; font-weight: 800; text-transform: uppercase;">City of San Jose Del Monte</h2>
+              <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #2563eb;">CITY PLANNING AND DEVELOPMENT OFFICE</h3>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">ANNUAL CITY ROAD PHYSICAL INVENTORY REPORT</p>
+            </div>
+            <img src="img/logo.png" alt="RoadWise Logo" style="height: 70px; width: auto;" onerror="this.style.display='none'">
+          </div>
+
+          <!-- Metadata Strip -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 11.5px; color: #334155; font-weight: 600;">
+            <div>CITY/MUNICIPALITY: <span style="font-weight: 800; color: #0f172a;">SAN JOSE DEL MONTE CITY</span></div>
+            <div>INVENTORY CYCLE: <span id="admin-inventory-year-label" style="font-weight: 800; color: #2563eb;">ALL RECORDED YEARS</span></div>
+            <div>DATE GENERATED: <span id="admin-inventory-date-label" style="font-weight: 800; color: #0f172a;"></span></div>
+          </div>
+
+          <!-- Inventory Data Table -->
+          <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 10.5px; text-align: left; border: 1.5px solid #0f172a;">
+              <thead>
+              <tr style="background: #0f172a; color: #ffffff; text-align: center; font-weight: 700;">
+                <th style="padding: 8px 6px; border: 1px solid #334155; width: 110px;">Road ID</th>
+                <th style="padding: 8px 6px; border: 1px solid #334155; text-align: left;">Road Name</th>
+                <th style="padding: 8px 4px; border: 1px solid #334155; width: 45px;">Class</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 60px;">Length<br>(km)</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 50px;">Width<br>(m)</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 55px;">Asphalt<br>(km)</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 55px;">Gravel<br>(km)</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 55px;">Earth<br>(km)</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 60px;">Concrete<br>(km)</th>
+                <th style="padding: 8px 5px; border: 1px solid #334155; width: 55px;">Mixed<br>(km)</th>
+                <th style="padding: 8px 6px; border: 1px solid #334155; width: 80px;">Road<br>Importance</th>
+                <th style="padding: 8px 6px; border: 1px solid #334155; width: 85px;">Terrain Type</th>
+                <th style="padding: 8px 6px; border: 1px solid #334155; width: 75px;">Length of<br>Culverts (m)</th>
+                <th style="padding: 8px 6px; border: 1px solid #334155; width: 55px;">Number of<br>Bridges</th>
+                <th style="padding: 8px 6px; border: 1px solid #334155; width: 85px; text-align: center;">Date Inspected</th>
+              </tr>
+              </thead>
+              <tbody id="admin-inventory-table-body">
+              <tr>
+                <td colspan="15" style="text-align: center; padding: 25px; color: #64748b; font-style: italic;">
+                  Loading City Road Inventory records...
+                </td>
+              </tr>
+              </tbody>
+              <tfoot id="admin-inventory-table-foot" style="background: #f1f5f9; font-weight: 700; border-top: 2px solid #0f172a;">
+              <!-- Column Sum Totals will inject here -->
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Signatures -->
+          <div style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
+            <div style="text-align: center; width: 240px;">
+              <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569;">Prepared By:</p>
+              <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+              <strong id="admin-inventory-prepared-by" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block;">CPDO Administrator</strong>
+              <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
+              <span style="font-size: 11px; color: #475569; font-weight: 600; display: block; margin-top: 2px;">Road Inventory Officer</span>
+            </div>
+
+          </div>
+
+        </div>
       </div>
 
       <!-- ========================================== -->
@@ -1202,10 +1319,7 @@
 
         <div class="modal-header">
           <h2>Review Report <span class="highlight" id="modal-header-id">#RPT-0000</span></h2>
-          <div style="display: flex; gap: 15px; align-items: center;">
-            <button class="btn-secondary" id="btn-print-single" style="padding: 4px 10px; font-size: 12px;"><span class="icon">🖨️</span> Print</button>
-            <button class="close-modal-btn" onclick="closeReviewModal()">✕</button>
-          </div>
+          <button class="close-modal-btn" onclick="closeReviewModal()">✕</button>
         </div>
 
         <div class="modal-body">
@@ -1310,10 +1424,7 @@
 
         <div class="modal-header">
           <h2>Track Project <span id="track-modal-id" class="highlight">#PRJ-0000</span></h2>
-          <div style="display: flex; gap: 15px; align-items: center;">
-            <button class="btn-secondary" style="padding: 4px 10px; font-size: 12px;"><span class="icon">🖨️</span> Print</button>
-            <button class="close-tracking-btn close-modal-btn">✕</button>
-          </div>
+          <button class="close-tracking-btn close-modal-btn">✕</button>
         </div>
 
         <div class="modal-body">

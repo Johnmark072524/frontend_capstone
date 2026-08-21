@@ -950,111 +950,6 @@ body.login-page {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ========================================== */
-/* OFFICIAL DOCUMENT & PRINT STYLES           */
-/* ========================================== */
-
-.official-document {
-  background: white;
-  max-width: 850px; /* Standard A4 Width */
-  margin: 0 auto;
-  padding: 50px 60px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  border: 1px solid #ccc;
-  color: #000;
-  font-family: Arial, sans-serif;
-}
-
-.document-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.doc-logo-left, .doc-logo-right {
-  height: 90px;
-  width: auto;
-}
-
-.doc-header-text {
-  text-align: center;
-  line-height: 1.3;
-}
-
-.doc-header-text p {
-  margin: 0;
-  font-size: 14px;
-}
-
-.document-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 50px;
-}
-
-.document-table th, .document-table td {
-  border: 1px solid #000;
-  padding: 12px 10px;
-  font-size: 13px;
-  color: #000;
-}
-
-.document-table th {
-  background-color: #f0f0f0;
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-
-.document-signatures {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 80px;
-}
-
-.sig-box {
-  width: 35%;
-  text-align: center;
-}
-
-.sig-line {
-  border-bottom: 1px solid #000;
-  height: 40px;
-  margin-bottom: 5px;
-}
-
-.sig-box p {
-  font-size: 13px;
-  margin: 0;
-  color: #333;
-}
-
-/* --- THE PRINT MAGIC --- */
-@media print {
-  /* 1. Hide everything that isn't the paper */
-  .sidebar, .top-header, .no-print, .btn-secondary, .btn-submit, .modal-overlay {
-    display: none !important;
-  }
-
-  /* 2. Remove layout restrictions so the paper fills the printer bounds */
-  .app-layout {
-    display: block;
-  }
-
-  .main-content {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-  }
-
-  /* 3. Strip the shadow and borders for a clean print */
-  .official-document {
-    box-shadow: none;
-    border: none;
-    padding: 0;
-    max-width: 100%;
-  }
-}
 
 /* ==========================================
    TOAST NOTIFICATION STYLES
@@ -1585,3 +1480,309 @@ body.dark-mode .bd-search-bar:focus, body.dark-mode input:focus { border-color: 
   border-color: #ea580c !important;
   box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15) !important;
 }
+
+/* =======================================================
+   🎨 MASTER ROLE-BASED THEMES (SIDEBAR & PROFILE TABS)
+======================================================= */
+
+/* -------------------------------------------------------
+   1. 🌿 BARANGAY THEME (GREEN)
+------------------------------------------------------- */
+/* Sidebar Nav */
+body.brgy-theme .sidebar .nav-menu li.active {
+  background-color: rgba(40, 167, 69, 0.08) !important;
+  border-left: 4px solid #28a745 !important;
+}
+body.brgy-theme .sidebar .nav-menu li.active a,
+body.brgy-theme .sidebar .nav-menu li.active .icon {
+  color: #28a745 !important;
+}
+
+/* Profile Tabs & Inputs */
+.brgy-profile-theme .profile-nav li.active,
+body.brgy-theme .profile-nav li.active {
+  color: #16a34a !important;
+  border-left: 4px solid #16a34a !important;
+}
+.brgy-profile-theme .profile-tab-title {
+  color: #15803d !important;
+  border-bottom: 2px solid #bbf7d0 !important;
+}
+.brgy-profile-theme .profile-input:focus {
+  border-color: #16a34a !important;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15) !important;
+}
+
+/* -------------------------------------------------------
+   2. 🏢 CPDO ADMIN THEME (BLUE)
+------------------------------------------------------- */
+/* Sidebar Nav */
+body.admin-theme .sidebar .nav-menu li.active {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+  border-left: 4px solid #2563eb !important;
+}
+body.admin-theme .sidebar .nav-menu li.active a,
+body.admin-theme .sidebar .nav-menu li.active .icon {
+  color: #2563eb !important;
+}
+
+/* Profile Tabs & Inputs */
+.admin-profile-theme .profile-nav li.active,
+body.admin-theme .profile-nav li.active {
+  color: #1e40af !important;
+  border-left: 4px solid #1e40af !important;
+}
+.admin-profile-theme .profile-tab-title {
+  color: #1e40af !important;
+  border-bottom: 2px solid #dbeafe !important;
+}
+.admin-profile-theme .profile-input:focus {
+  border-color: #1e40af !important;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.15) !important;
+}
+
+/* -------------------------------------------------------
+   3. ⚙️ CEO CITY ENGINEER THEME (ORANGE)
+------------------------------------------------------- */
+/* Sidebar Nav */
+body.ceo-theme .sidebar .nav-menu li.active {
+  background-color: rgba(234, 88, 12, 0.08) !important;
+  border-left: 4px solid #ea580c !important;
+}
+body.ceo-theme .sidebar .nav-menu li.active a,
+body.ceo-theme .sidebar .nav-menu li.active .icon {
+  color: #ea580c !important;
+}
+
+/* Profile Tabs & Inputs */
+.ceo-profile-theme .profile-nav li.active,
+body.ceo-theme .profile-nav li.active {
+  color: #ea580c !important;
+  border-left: 4px solid #ea580c !important;
+}
+.ceo-profile-theme .profile-tab-title {
+  color: #ea580c !important;
+  border-bottom: 2px solid #ffedd5 !important;
+}
+.ceo-profile-theme .profile-input:focus {
+  border-color: #ea580c !important;
+  box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15) !important;
+}
+
+/* ==========================================
+   📄 OFFICIAL DOCUMENT SCREEN STYLING
+========================================== */
+.official-document {
+  background: white;
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 50px 60px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border: 1px solid #ccc;
+  color: #000;
+  font-family: Arial, sans-serif;
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.doc-logo-left,
+.doc-logo-right {
+  height: 90px;
+  width: auto;
+}
+
+.doc-header-text {
+  text-align: center;
+  line-height: 1.3;
+}
+
+.doc-header-text p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.document-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 50px;
+}
+
+.document-table th,
+.document-table td {
+  border: 1px solid #000;
+  padding: 12px 10px;
+  font-size: 13px;
+  color: #000;
+}
+
+.document-table th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.document-signatures {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 80px;
+}
+
+.sig-box {
+  width: 35%;
+  text-align: center;
+}
+
+.sig-line {
+  border-bottom: 1px solid #000;
+  height: 40px;
+  margin-bottom: 5px;
+}
+
+.sig-box p {
+  font-size: 13px;
+  margin: 0;
+  color: #333;
+}
+
+/* ==========================================
+   🖨️ UNIFIED PRINT ENGINE (ZERO BROWSER HEADERS)
+========================================== */
+@page {
+  size: landscape;
+  margin: 0; /* Suppresses URL, date, and page title headers */
+}
+
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* 1. Hide base UI elements */
+  body * {
+    visibility: hidden !important;
+  }
+
+  .sidebar,
+  .top-header,
+  .no-print,
+  nav,
+  button,
+  header {
+    display: none !important;
+  }
+
+  /* 2. Print Target A: Annual Report Modal */
+  #annual-report-preview-modal:not(.hidden),
+  #annual-report-preview-modal:not(.hidden) * {
+    visibility: visible !important;
+  }
+
+  #annual-report-preview-modal:not(.hidden) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    display: block !important;
+    box-shadow: none !important;
+    z-index: 999999 !important;
+  }
+
+  #annual-report-preview-modal > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  #printable-report-area {
+    padding: 15mm 20mm !important;
+    overflow: visible !important;
+  }
+
+  /* 3. Print Target B: High Priority Masterlist Document */
+  #view-report-priority:not(.hidden),
+  #view-report-priority:not(.hidden) .official-document,
+  #view-report-priority:not(.hidden) .official-document * {
+    visibility: visible !important;
+  }
+
+  #view-report-priority:not(.hidden) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    display: block !important;
+  }
+
+  #view-report-priority .official-document {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 15mm 20mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+/* ==========================================
+   🖨️ ADMIN ROAD INVENTORY PRINT STYLES
+========================================== */
+@page {
+  size: landscape;
+  margin: 0;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #view-road-inventory:not(.hidden),
+  #view-road-inventory:not(.hidden) #admin-inventory-sheet,
+  #view-road-inventory:not(.hidden) #admin-inventory-sheet * {
+    visibility: visible !important;
+  }
+
+  #view-road-inventory:not(.hidden) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    display: block !important;
+  }
+
+  #view-road-inventory:not(.hidden) #admin-inventory-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12mm 15mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .no-print,
+  .sidebar,
+  .top-header,
+  nav,
+  button {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+

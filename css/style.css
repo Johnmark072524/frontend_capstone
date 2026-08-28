@@ -1658,13 +1658,20 @@ body.ceo-theme .profile-nav li.active {
 }
 
 @media print {
+  /* 🎨 1. Force exact table background colors & styling */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
   }
 
-  /* 1. Hide base UI elements */
+  /* 2. Hide base UI elements */
   body * {
     visibility: hidden !important;
   }
@@ -1678,7 +1685,7 @@ body.ceo-theme .profile-nav li.active {
     display: none !important;
   }
 
-  /* 2. Print Target A: Annual Report Modal */
+  /* 3. Print Target A: Annual Report Modal (CEO / Barangay) */
   #annual-report-preview-modal:not(.hidden),
   #annual-report-preview-modal:not(.hidden) * {
     visibility: visible !important;
@@ -1709,7 +1716,7 @@ body.ceo-theme .profile-nav li.active {
     overflow: visible !important;
   }
 
-  /* 3. Print Target B: High Priority Masterlist Document */
+  /* 4. Print Target B: High Priority Masterlist Document (Active Tab) */
   #view-report-priority:not(.hidden),
   #view-report-priority:not(.hidden) .official-document,
   #view-report-priority:not(.hidden) .official-document * {
@@ -1734,6 +1741,98 @@ body.ceo-theme .profile-nav li.active {
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
+  }
+
+  /* 5. Print Target C: Active Road Inventory Sheet (Active Tab) */
+  #view-road-inventory:not(.hidden),
+  #view-road-inventory:not(.hidden) #admin-inventory-sheet,
+  #view-road-inventory:not(.hidden) #admin-inventory-sheet * {
+    visibility: visible !important;
+  }
+
+  #view-road-inventory:not(.hidden) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    display: block !important;
+  }
+
+  #view-road-inventory:not(.hidden) #admin-inventory-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 15mm 20mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* 6. Print Target D: Archive Inventory Modal (Archive Card 1) */
+  #archive-inventory-preview-modal:not(.hidden),
+  #archive-inventory-preview-modal:not(.hidden) * {
+    visibility: visible !important;
+  }
+
+  #archive-inventory-preview-modal:not(.hidden) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    display: block !important;
+    box-shadow: none !important;
+    z-index: 999999 !important;
+  }
+
+  #archive-inventory-preview-modal > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 15mm 20mm !important;
+    overflow: visible !important;
+  }
+
+  /* 🚀 7. Print Target E: Archive Priority Preview Modal (Archive Card 2) */
+  #archive-priority-preview-modal:not(.hidden),
+  #archive-priority-preview-modal:not(.hidden) * {
+    visibility: visible !important;
+  }
+
+  #archive-priority-preview-modal:not(.hidden) {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    display: block !important;
+    box-shadow: none !important;
+    z-index: 999999 !important;
+  }
+
+  #archive-priority-preview-modal > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 15mm 20mm !important;
+    overflow: visible !important;
+  }
+
+  /* 🚫 8. TABLE CONTROLS */
+  tfoot {
+    display: table-row-group !important;
+  }
+
+  thead {
+    display: table-row-group !important;
   }
 }
 

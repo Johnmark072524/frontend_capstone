@@ -745,7 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================================
+// ==========================================
 // 1. SIDEBAR NAVIGATION & SPA HISTORY LOGIC
 // ==========================================
 // ⚠️ Kept global so the rest of app.js (like Profile Logic) doesn't crash!
@@ -834,7 +834,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (targetId === 'view-report-priority') {
       if (typeof window.generatePriorityList === 'function') window.generatePriorityList();
     }
-
+    // 🚀 NEW: THE SETTINGS TRIGGER
+    else if (targetId === 'view-settings') {
+      if (typeof window.loadActiveCycleOverview === 'function') window.loadActiveCycleOverview();
+    }
       // ==========================================
       // 🚀 THE MAP FIX: TELL MAPS TO LOAD ON REFRESH
     // ==========================================
@@ -875,21 +878,210 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🟢 INITIAL LOAD: Auto-Run to prevent timing bugs!
   (function initializeView() {
-    const currentPath = window.location.pathname.toLowerCase();
     let hash = window.location.hash.replace('#', '').trim();
     let savedTab = sessionStorage.getItem('roadwise_active_tab');
 
-    // Priority Check: 1. URL Hash, 2. Saved Tab in Memory, 3. Default Dashboard
+    // Priority Check: 1. URL Hash, 2. Saved Tab in Memory
     let finalTarget = hash || savedTab;
 
-    if (!finalTarget) {
-      finalTarget = currentPath.includes("admin") ? 'view-admin-dashboard' : 'view-dashboard';
+    // 🛑 SAFETY CHECK: Does the target actually exist in the HTML?
+    if (!finalTarget || !document.getElementById(finalTarget)) {
+      // If it's missing or invalid, forcefully find the correct dashboard ID
+      if (document.getElementById('view-admin-dashboard')) {
+        finalTarget = 'view-admin-dashboard';
+      } else if (document.getElementById('view-dashboard')) {
+        finalTarget = 'view-dashboard';
+      } else {
+        console.error("CRITICAL: No dashboard container found in HTML!");
+        return;
+      }
     }
 
-    // Update URL and execute view
+    // Update URL and execute view safely
     history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
     switchView(finalTarget);
   })();
+
+
+// =======================================================
+// ⚙️ ADMIN SETTINGS & CYCLE TRACKER LOGIC
+// =======================================================
+
+// Helper: Extract Year
+  function getReportYearSettings(r) {
+    if (!r) return "";
+    const yearVal = r.inventory_year || r.inventoryYear;
+    if (yearVal && String(yearVal).trim() !== "" && String(yearVal).toLowerCase() !== "null") {
+      return String(yearVal).trim();
+    }
+    const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at || r.dateReported || r.date;
+    if (rawDate) {
+      if (Array.isArray(rawDate) && rawDate.length >= 1) return String(rawDate[0]);
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime())) return String(parsed.getFullYear());
+    }
+    return "";
+  }
+
+// Main Function: Load Dynamic Counts from Database
+  window.loadActiveCycleOverview = function() {
+    const currentYear = String(new Date().getFullYear());
+    const yearEl = document.getElementById("settings-active-year");
+    if (yearEl) yearEl.textContent = `${currentYear} Cycle`;
+
+    // Fetch actual Total City Roads AND all Reports concurrently
+    Promise.all([
+      apiFetch("/api/city-roads").catch(() => []),
+      apiFetch("/api/reports").catch(() => [])
+    ])
+      .then(([cityRoads, reports]) => {
+        // A. Get Actual Total Road Count from DB (Fallback to 378 if API fails)
+        const totalRoads = (Array.isArray(cityRoads) && cityRoads.length > 0) ? cityRoads.length : 378;
+
+        // B. Filter Reports for the Current Year ONLY
+        const currentYearReports = (Array.isArray(reports) ? reports : []).filter(r => {
+          return getReportYearSettings(r) === currentYear;
+        });
+
+        // C. Deduplicate: Count how many UNIQUE roads have been inspected this year
+        const uniqueRoadsInspected = new Set();
+        currentYearReports.forEach(r => {
+          const roadKey = String(r.cityRoadId || r.cityRoadName || r.id).trim().toLowerCase();
+          if (roadKey) uniqueRoadsInspected.add(roadKey);
+        });
+
+        const inspectedCount = uniqueRoadsInspected.size;
+
+        // D. Calculate Percentage safely
+        let percentage = 0;
+        if (totalRoads > 0) {
+          percentage = Math.round((inspectedCount / totalRoads) * 100);
+        }
+        if (percentage > 100) percentage = 100;
+
+        // E. Update the UI DOM Elements
+        const countEl = document.getElementById("settings-inspected-count");
+        const totalEl = document.getElementById("settings-total-roads");
+        const barEl = document.getElementById("settings-progress-bar");
+        const percentEl = document.getElementById("settings-progress-percent");
+        const badgeEl = document.getElementById("cycle-status-badge");
+
+        if (countEl) countEl.textContent = inspectedCount;
+        if (totalEl) totalEl.textContent = totalRoads;
+        if (percentEl) percentEl.textContent = `${percentage}%`;
+
+        if (barEl) {
+          barEl.style.width = `${percentage}%`;
+
+          // Visual feedback based on completion
+          if (percentage >= 100) {
+            barEl.style.background = "#16a34a"; // Green
+            if (percentEl) percentEl.style.color = "#16a34a";
+            if (badgeEl) {
+              badgeEl.textContent = "COMPLETED (READY TO ARCHIVE)";
+              badgeEl.style.background = "#fee2e2";
+              badgeEl.style.color = "#dc2626";
+              badgeEl.style.borderColor = "#fecaca";
+            }
+          } else {
+            barEl.style.background = "#2563eb"; // Blue
+            if (percentEl) percentEl.style.color = "#2563eb";
+            if (badgeEl) {
+              badgeEl.textContent = "ACTIVE (OPEN FOR INSPECTION)";
+              badgeEl.style.background = "#dcfce7";
+              badgeEl.style.color = "#16a34a";
+              badgeEl.style.borderColor = "#bbf7d0";
+            }
+          }
+        }
+      })
+      .catch(err => console.error("Failed to load cycle overview data:", err));
+  };
+
+// =======================================================
+// 🚨 DANGER ZONE: ANNUAL CYCLE ROLLOVER LOGIC
+// =======================================================
+
+// 1. Open the Verification Modal
+  window.openRolloverModal = function() {
+    const modal = document.getElementById("modal-rollover-confirm");
+    const input = document.getElementById("input-rollover-confirm");
+    const btn = document.getElementById("btn-execute-rollover");
+
+    if (modal) {
+      modal.style.display = "flex";
+      modal.classList.remove("hidden");
+    }
+
+    if (input && btn) {
+      input.value = ""; // Reset input
+      input.focus();
+      btn.style.opacity = "0.5";
+      btn.style.pointerEvents = "none";
+      btn.style.cursor = "not-allowed";
+
+      // 2. Real-time typing validation
+      input.oninput = function() {
+        if (this.value.trim().toUpperCase() === "ARCHIVE CYCLE") {
+          btn.style.opacity = "1";
+          btn.style.pointerEvents = "auto";
+          btn.style.cursor = "pointer";
+        } else {
+          btn.style.opacity = "0.5";
+          btn.style.pointerEvents = "none";
+          btn.style.cursor = "not-allowed";
+        }
+      };
+    }
+  };
+
+// 3. Close the Modal
+  window.closeRolloverModal = function() {
+    const modal = document.getElementById("modal-rollover-confirm");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.add("hidden");
+    }
+  };
+
+// 4. Fire the Request to the Backend
+  window.executeAnnualRollover = function() {
+    const btn = document.getElementById("btn-execute-rollover");
+    if (btn) {
+      btn.innerHTML = "Processing... ⏳";
+      btn.style.pointerEvents = "none";
+      btn.style.opacity = "0.7";
+    }
+
+    apiFetch("/api/reports/rollover-annual-cycle", {
+      method: "POST"
+    })
+      .then(res => {
+        if (typeof showToast === "function") {
+          showToast(`Rollover Complete: Archived ${res.archivedCount || 0} reports. Emails sent.`, "success");
+        } else {
+          alert(`Rollover Complete: Archived ${res.archivedCount || 0} reports.`);
+        }
+
+        window.closeRolloverModal();
+        if (typeof window.loadActiveCycleOverview === "function") {
+          window.loadActiveCycleOverview();
+        }
+      })
+      .catch(err => {
+        console.error("Rollover failed:", err);
+        if (typeof showToast === "function") {
+          showToast("Error processing annual rollover.", "error");
+        } else {
+          alert("Error processing annual rollover.");
+        }
+      })
+      .finally(() => {
+        if (btn) {
+          btn.innerHTML = "Execute Rollover";
+        }
+      });
+  };
 
 // ==========================================
 // ADMIN DASHBOARD: ACCEPT & VALIDATE LOGIC
@@ -2521,7 +2713,13 @@ function handleLogin() {
       }
     })
     .catch(error => {
-      showToast(error.message, "error");
+      // 🚀 SMART CHECK: User-friendly Network Error
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        showToast("System is currently offline or unreachable. Please try again later.", "error");
+      } else {
+        showToast(error.message, "error");
+      }
+
       if (loginBtn) {
         loginBtn.innerHTML = "Log in ➔";
         loginBtn.disabled = false;
@@ -2582,6 +2780,21 @@ function handleVerifyMfa() {
       }
       sessionStorage.setItem("barangayName", data.barangayName || "City Hall Central");
 
+      // ==========================================
+      // 🚀 NEW: REMEMBER ME LOGIC
+      // ==========================================
+      const rememberCheckbox = document.getElementById("remember-me");
+      const usernameInput = document.getElementById("username").value.trim();
+
+      if (rememberCheckbox && rememberCheckbox.checked) {
+        // Save the username to permanent browser storage
+        localStorage.setItem("roadwise_remembered_username", usernameInput);
+      } else {
+        // Clear it if they unchecked the box
+        localStorage.removeItem("roadwise_remembered_username");
+      }
+      // ==========================================
+
       showToast("Access Granted!", "success");
 
       // Secure Dynamic Routing
@@ -2597,7 +2810,13 @@ function handleVerifyMfa() {
       }, 1000);
     })
     .catch(error => {
-      showToast(error.message, "error");
+      // 🚀 SMART CHECK: User-friendly Network Error
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        showToast("System is currently offline or unreachable. Please try again later.", "error");
+      } else {
+        showToast(error.message, "error");
+      }
+
       if (verifyBtn) {
         verifyBtn.innerHTML = "Verify Code ➔";
         verifyBtn.disabled = false;
@@ -2620,7 +2839,6 @@ function showForgotPassword() {
 // FORGOT PASSWORD: SEND OTP TO EMAIL
 // ==========================================
 function handleForgotPasswordRequest() {
-  // 🚀 UPDATED: Grab Email instead of Username
   const email = document.getElementById("reset-email").value.trim();
 
   if (!email) {
@@ -2635,7 +2853,7 @@ function handleForgotPasswordRequest() {
   fetch(`${API_BASE_URL}/api/auth/forgot-password/request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email }) // 🚀 Send email to backend
+    body: JSON.stringify({ email: email })
   })
     .then(async response => {
       if (!response.ok) {
@@ -2655,7 +2873,13 @@ function handleForgotPasswordRequest() {
       btn.disabled = false;
     })
     .catch(error => {
-      showToast(error.message, "error");
+      // 🚀 SMART CHECK: User-friendly Network Error
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        showToast("System is currently offline or unreachable. Please try again later.", "error");
+      } else {
+        showToast(error.message, "error");
+      }
+
       btn.innerHTML = "Send Code ➔";
       btn.disabled = false;
     });
@@ -2716,13 +2940,20 @@ function handlePasswordReset() {
       btn.disabled = false;
     })
     .catch(error => {
-      showToast(error.message, "error");
+      // 🚀 SMART CHECK: User-friendly Network Error
+      if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+        showToast("System is currently offline or unreachable. Please try again later.", "error");
+      } else {
+        showToast(error.message, "error");
+      }
+
       btn.innerHTML = "Confirm & Reset ➔";
       btn.disabled = false;
     });
 }
+
 // ==========================================
-// UI HELPER: GO BACK TO LOGIN SCREEN (UPDATED)
+// UI HELPER: GO BACK TO LOGIN SCREEN
 // ==========================================
 function backToLogin() {
   // Hide all secondary steps
@@ -2735,15 +2966,29 @@ function backToLogin() {
 
   // Wipe inputs clean for security
   if (document.getElementById("mfa-code")) document.getElementById("mfa-code").value = "";
-  if (document.getElementById("reset-email")) document.getElementById("reset-email").value = ""; // 🚀 FIXED
+  if (document.getElementById("reset-email")) document.getElementById("reset-email").value = "";
   if (document.getElementById("reset-code")) document.getElementById("reset-code").value = "";
   if (document.getElementById("new-password")) document.getElementById("new-password").value = "";
-  if (document.getElementById("confirm-new-password")) document.getElementById("confirm-new-password").value = ""; // 🚀 FIXED
+  if (document.getElementById("confirm-new-password")) document.getElementById("confirm-new-password").value = "";
 
   // Wipe temporary memory
   sessionStorage.removeItem("tempUserId");
   sessionStorage.removeItem("resetUserId");
 }
+
+// =======================================================
+// 🧠 REMEMBER ME: AUTO-FILL ON PAGE LOAD
+// =======================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const savedUsername = localStorage.getItem("roadwise_remembered_username");
+  const usernameInput = document.getElementById("username");
+  const rememberCheckbox = document.getElementById("remember-me");
+
+  if (savedUsername && usernameInput && rememberCheckbox) {
+    usernameInput.value = savedUsername;
+    rememberCheckbox.checked = true; // Keep the box checked if we remembered them
+  }
+});
 
 // ==========================================
 // ADMIN DASHBOARD: LOAD ALL REPORTS (INBOX)
@@ -3922,71 +4167,6 @@ window.executePriorityDispatch = function(event) {
         btnApproveDispatch.innerText = "🚀 Approve & Dispatch to CEO";
         btnApproveDispatch.disabled = false;
       }
-    });
-};
-
-// ==========================================
-// 🏗️ CEO ACTION: BATCH DEFER (PENDING BUDGET)
-// ==========================================
-window.openBatchDeferModal = function() {
-  // Clear the textarea and show our beautiful new modal
-  document.getElementById('batch-defer-reason').value = '';
-  document.getElementById('batch-defer-modal').classList.remove('hidden');
-};
-
-window.submitBatchDefer = function() {
-  const reasonInput = document.getElementById('batch-defer-reason');
-  const reason = reasonInput.value;
-
-  if (!reason || reason.trim() === '') {
-    showToast("Please provide a reason for the deferral.", "error");
-    reasonInput.style.borderColor = "red";
-    setTimeout(() => reasonInput.style.borderColor = "#cbd5e1", 2000);
-    return;
-  }
-
-  // 2. Gather the IDs from the checked boxes
-  const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
-  const selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
-
-  const btn = document.getElementById('btn-confirm-batch-defer');
-  const originalText = btn.innerText;
-  btn.innerText = "Processing Batch...";
-  btn.disabled = true;
-
-  // 3. Send the IDs and the reason to the backend
-  fetch(`${API_BASE_URL}/api/reports/execute-batch-defer`, {  // 🚀 COMPLETELY RENAMED TO BYPASS CACHE
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      repairRemarks: reason,
-      reportIds: selectedIds
-    })
-  })
-    .then(res => res.json())
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        showToast(data.error, "error");
-      } else {
-        showToast(data.message, "success");
-        document.getElementById('batch-defer-modal').classList.add('hidden');
-
-        // Hide the action bar and uncheck the "Select All" box
-        document.getElementById('batch-action-bar').style.display = 'none';
-        const selectAllCb = document.getElementById('select-all-checkbox');
-        if(selectAllCb) selectAllCb.checked = false;
-
-        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
-      }
-    })
-    .catch(err => {
-      console.error("Batch Defer Error:", err);
-      showToast("A network error occurred.", "error");
-    })
-    .finally(() => {
-      btn.innerText = originalText;
-      btn.disabled = false;
     });
 };
 
@@ -6325,45 +6505,6 @@ window.viewAllActivity = function() {
       });
   }
 };
-// ==========================================
-// 🏗️ CEO ACTION: INDIVIDUAL DEFER (FROM MODAL)
-// ==========================================
-window.markAsPendingBudget = function() {
-  const reportId = window.currentCEOProjectID;
-
-  if (!reportId) {
-    showToast("Error: Could not identify the report.", "error");
-    return;
-  }
-
-  const reason = prompt("Enter the reason for deferring this repair:");
-  if (!reason || reason.trim() === "") return;
-
-  const btn = document.getElementById('btn-pending-budget');
-  if(btn) btn.innerText = "Deferring...";
-
-  fetch(`${API_BASE_URL}/api/reports/${reportId}/defer`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ repairRemarks: reason })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) showToast(data.error, "error");
-      else {
-        showToast("Success: " + data.message, "success");
-        document.getElementById('manage-modal').classList.add('hidden');
-        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
-      }
-    })
-    .catch(err => {
-      console.error("Error deferring report:", err);
-      showToast("A network error occurred.", "error");
-    })
-    .finally(() => {
-      if(btn) btn.innerHTML = '<span class="icon">⏳</span> Defer (Pending Budget)';
-    });
-};
 
 // ==========================================
 // 🏗️ CEO ACTION: UNIFIED DEFER SYSTEM
@@ -6374,8 +6515,9 @@ window.deferringSingleId = null;
 
 // 1. OPEN FROM INDIVIDUAL REVIEW MODAL (The Single Button)
 window.markAsPendingBudget = function() {
-  if (!currentCEOProjectID) {
-    showToast("Error: Could not identify the report.", "error");
+  // 🚀 FIXED: Reads the variable exactly as you declared it
+  if (typeof currentCEOProjectID === 'undefined' || !currentCEOProjectID) {
+    if (typeof showToast === 'function') showToast("Error: Could not identify the report.", "error");
     return;
   }
 
@@ -6384,6 +6526,15 @@ window.markAsPendingBudget = function() {
 
   // Hide the review modal so they don't awkwardly overlap
   document.getElementById('manage-modal').classList.add('hidden');
+
+  // 🚀 DYNAMICALLY CHANGE UI FOR A SINGLE PROJECT
+  const titleEl = document.getElementById('defer-modal-title');
+  const warningEl = document.getElementById('defer-modal-warning');
+  const confirmBtn = document.getElementById('btn-confirm-batch-defer');
+
+  if (titleEl) titleEl.innerText = `Defer Project #PRJ-${currentCEOProjectID}`;
+  if (warningEl) warningEl.innerHTML = `You are about to defer this specific repair project to <span class="badge" style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Pending Budget</span>.`;
+  if (confirmBtn) confirmBtn.innerText = "Confirm Deferral";
 
   // Show the beautiful reason modal
   document.getElementById('batch-defer-reason').value = '';
@@ -6395,6 +6546,15 @@ window.openBatchDeferModal = function() {
   // Clear out the single ID tracker so the system knows to look at checkboxes instead
   window.deferringSingleId = null;
 
+  // 🚀 DYNAMICALLY CHANGE UI FOR BATCH PROJECTS
+  const titleEl = document.getElementById('defer-modal-title');
+  const warningEl = document.getElementById('defer-modal-warning');
+  const confirmBtn = document.getElementById('btn-confirm-batch-defer');
+
+  if (titleEl) titleEl.innerText = "Batch Defer Projects";
+  if (warningEl) warningEl.innerHTML = `This action will instantly sweep up and defer <strong>ALL</strong> selected reports in your queue to <span class="badge" style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Pending Budget</span>.`;
+  if (confirmBtn) confirmBtn.innerText = "Confirm Batch Deferral";
+
   document.getElementById('batch-defer-reason').value = '';
   document.getElementById('batch-defer-modal').classList.remove('hidden');
 };
@@ -6405,26 +6565,34 @@ window.submitBatchDefer = function() {
   const reason = reasonInput.value;
 
   if (!reason || reason.trim() === '') {
-    showToast("Please provide a reason for the deferral.", "error");
+    if (typeof showToast === 'function') showToast("Please provide a reason for the deferral.", "error");
     reasonInput.style.borderColor = "red";
     setTimeout(() => reasonInput.style.borderColor = "#cbd5e1", 2000);
     return;
   }
 
+  const confirmText = document.getElementById('confirm-modal-text');
+  const confirmBtn = document.getElementById('btn-final-confirm');
+
   let count = 0;
 
   if (window.deferringSingleId) {
     count = 1; // We are deferring just 1 from the Manage modal
+    // 🚀 DYNAMIC TEXT FOR SINGLE DEFERRAL
+    if (confirmText) confirmText.innerHTML = `You are about to defer <strong style="color: #dc3545; font-size: 16px;">this specific project</strong>. <br>This will immediately notify the CPDO and the Barangay Officials.`;
+    if (confirmBtn) confirmBtn.innerText = "Yes, Defer Project";
   } else {
     const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
     if (checkedBoxes.length === 0) {
-      showToast("No reports selected.", "error");
+      if (typeof showToast === 'function') showToast("No reports selected.", "error");
       return;
     }
     count = checkedBoxes.length;
+    // 🚀 DYNAMIC TEXT FOR BATCH DEFERRAL
+    if (confirmText) confirmText.innerHTML = `You are about to defer <strong style="color: #dc3545; font-size: 16px;">${count}</strong> selected reports. <br>This will immediately notify the CPDO and the Barangay Officials.`;
+    if (confirmBtn) confirmBtn.innerText = "Yes, Defer Projects";
   }
 
-  document.getElementById('confirm-defer-count').innerText = count;
   document.getElementById('confirm-action-modal').classList.remove('hidden');
 };
 
@@ -6458,9 +6626,9 @@ window.executeBatchDeferral = function() {
     .then(res => res.json())
     .then(data => {
       if (data.error) {
-        showToast(data.error, "error");
+        if (typeof showToast === 'function') showToast(data.error, "error");
       } else {
-        showToast(data.message, "success");
+        if (typeof showToast === 'function') showToast(data.message, "success");
 
         // Hide all modals
         document.getElementById('confirm-action-modal').classList.add('hidden');
@@ -6480,7 +6648,7 @@ window.executeBatchDeferral = function() {
     })
     .catch(err => {
       console.error("Defer Error:", err);
-      showToast("A network error occurred.", "error");
+      if (typeof showToast === 'function') showToast("A network error occurred.", "error");
     })
     .finally(() => {
       btn.innerText = originalText;
@@ -6498,7 +6666,7 @@ window.toggleBatchActionBar = function() {
 
   if (checkedBoxes.length > 0) {
     actionBar.style.display = 'flex';
-    countText.innerText = checkedBoxes.length;
+    if (countText) countText.innerText = checkedBoxes.length;
   } else {
     actionBar.style.display = 'none';
   }
@@ -6884,10 +7052,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =======================================================
-// 📑 ADMIN CITY ROAD INVENTORY CONTROLLER
+// 📑 ADMIN CITY ROAD INVENTORY CONTROLLER (ACTIVE VIEW)
 // =======================================================
 
 let adminCachedInventory = [];
+window.activeInventoryYear = new Date().getFullYear(); // Fallback to current calendar year
 
 // Helper: Convert length values to kilometers
 function parseToKilometers(val) {
@@ -6905,7 +7074,7 @@ function formatTerrainType(terrain) {
   return t;
 }
 
-// Helper: Extract Inventory Year (handles inventory_year, inventoryYear, or date fallback)
+// Helper: Extract Inventory Year
 function getReportYear(r) {
   if (!r) return "";
   const yearVal = r.inventory_year || r.inventoryYear;
@@ -6938,69 +7107,23 @@ function formatInventoryDate(r) {
   if (!isNaN(parsed.getTime())) {
     return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
-
   return String(rawDate);
 }
 
 // =======================================================
-// 📅 1. DYNAMIC ADMIN INVENTORY YEARS LOADER
-// =======================================================
-window.loadAdminInventoryYears = function() {
-  const yearSelect = document.getElementById("inventory-filter-year");
-  if (!yearSelect) return;
-
-  apiFetch("/api/reports")
-    .then(reports => {
-      if (!Array.isArray(reports)) return;
-
-      const uniqueYears = [...new Set(
-        reports
-          .map(r => getReportYear(r))
-          .filter(y => y !== "")
-      )].sort((a, b) => Number(b) - Number(a)); // Newest cycle first
-
-      const currentSelected = yearSelect.value;
-      yearSelect.innerHTML = `<option value="ALL">All Recorded Years</option>`;
-
-      uniqueYears.forEach(year => {
-        const opt = document.createElement("option");
-        opt.value = year;
-        opt.textContent = `${year} Inventory Cycle`;
-        yearSelect.appendChild(opt);
-      });
-
-      if (currentSelected && uniqueYears.includes(currentSelected)) {
-        yearSelect.value = currentSelected;
-      }
-    })
-    .catch(err => console.error("Failed to load admin inventory years:", err));
-};
-
-// =======================================================
-// 📊 2. LOAD, FILTER, DEDUPLICATE & RENDER INVENTORY TABLE
+// 📊 LOAD, AUTO-FILTER TO ACTIVE YEAR, & RENDER
 // =======================================================
 window.loadAdminRoadInventory = function() {
-  const yearSelect = document.getElementById("inventory-filter-year");
-  const selectedYear = yearSelect ? yearSelect.value : "ALL";
   const tbody = document.getElementById("admin-inventory-table-body");
   const tfoot = document.getElementById("admin-inventory-table-foot");
 
   // Populate Document Meta Labels
   const dateLabel = document.getElementById("admin-inventory-date-label");
-  if (dateLabel) {
-    dateLabel.textContent = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  }
-
-  const yearLabel = document.getElementById("admin-inventory-year-label");
-  if (yearLabel) {
-    yearLabel.textContent = selectedYear === "ALL" ? "ALL RECORDED YEARS" : `${selectedYear} CYCLE`;
-  }
+  if (dateLabel) dateLabel.textContent = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   const adminFullName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim();
   const prepByEl = document.getElementById("admin-inventory-prepared-by");
-  if (prepByEl) {
-    prepByEl.textContent = adminFullName || "CPDO Administrator";
-  }
+  if (prepByEl) prepByEl.textContent = adminFullName || "CPDO Administrator";
 
   apiFetch("/api/reports")
     .then(reports => {
@@ -7010,13 +7133,22 @@ window.loadAdminRoadInventory = function() {
         return;
       }
 
-      // 1. Filter by Selected Inventory Cycle
-      let list = selectedYear === "ALL"
-        ? reports
-        : reports.filter(r => getReportYear(r) === String(selectedYear));
+      // 🚀 AUTO-DETECT ACTIVE YEAR (The most recent year in the database)
+      const uniqueYears = [...new Set(reports.map(r => getReportYear(r)).filter(y => y !== ""))].sort((a, b) => Number(b) - Number(a));
+      window.activeInventoryYear = uniqueYears.length > 0 ? uniqueYears[0] : new Date().getFullYear();
+
+      // Update UI to reflect the locked Active Year
+      const yearLabel = document.getElementById("admin-inventory-year-label");
+      if (yearLabel) yearLabel.textContent = `${window.activeInventoryYear} CYCLE`;
+
+      const badgeLabel = document.getElementById("active-inventory-badge");
+      if (badgeLabel) badgeLabel.textContent = `ACTIVE CYCLE: ${window.activeInventoryYear}`;
+
+      // 1. Strictly filter by the Active Year
+      let list = reports.filter(r => getReportYear(r) === String(window.activeInventoryYear));
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #64748b;">No records found for inventory cycle ${selectedYear}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #64748b;">No active records found for the ${window.activeInventoryYear} cycle.</td></tr>`;
         if (tfoot) tfoot.innerHTML = "";
         return;
       }
@@ -7029,11 +7161,9 @@ window.loadAdminRoadInventory = function() {
           uniqueRoadsMap.set(roadKey, r);
         } else {
           const existing = uniqueRoadsMap.get(roadKey);
-          const currentDate = new Date(r.dateSubmitted || r.dateReported || r.createdAt || 0);
-          const existingDate = new Date(existing.dateSubmitted || existing.dateReported || existing.createdAt || 0);
-          if (currentDate > existingDate) {
-            uniqueRoadsMap.set(roadKey, r);
-          }
+          const currentDate = new Date(r.dateSubmitted || r.createdAt || 0);
+          const existingDate = new Date(existing.dateSubmitted || existing.createdAt || 0);
+          if (currentDate > existingDate) uniqueRoadsMap.set(roadKey, r);
         }
       });
       let deduplicatedList = Array.from(uniqueRoadsMap.values());
@@ -7042,26 +7172,17 @@ window.loadAdminRoadInventory = function() {
       deduplicatedList.sort((a, b) => {
         const idA = String(a.cityRoadId || a.id || '').replace(/\D/g, '');
         const idB = String(b.cityRoadId || b.id || '').replace(/\D/g, '');
-
-        if (idA && idB && !isNaN(Number(idA)) && !isNaN(Number(idB))) {
-          return Number(idA) - Number(idB);
-        }
+        if (idA && idB && !isNaN(Number(idA)) && !isNaN(Number(idB))) return Number(idA) - Number(idB);
         return String(a.cityRoadId || a.id).localeCompare(String(b.cityRoadId || b.id), undefined, { numeric: true, sensitivity: 'base' });
       });
 
       adminCachedInventory = deduplicatedList;
 
       // Surface & Dimension Totals
-      let sumLength = 0;
-      let sumAsphalt = 0;
-      let sumGravel = 0;
-      let sumEarth = 0;
-      let sumConcrete = 0;
-      let sumMixed = 0;
-      let sumCulverts = 0;
-      let sumBridges = 0;
+      let sumLength = 0, sumAsphalt = 0, sumGravel = 0, sumEarth = 0;
+      let sumConcrete = 0, sumMixed = 0, sumCulverts = 0, sumBridges = 0;
 
-      // Render Table Rows (15 Columns, Date at Far Right)
+      // Render Table Rows
       tbody.innerHTML = deduplicatedList.map((r, index) => {
         const roadId = r.cityRoadId || `3142000000${String(r.id).padStart(2, '0')}`;
         const roadName = r.cityRoadName || "Unnamed Road";
@@ -7070,24 +7191,16 @@ window.loadAdminRoadInventory = function() {
         const roadWidth = r.width != null && !isNaN(r.width) && String(r.width).trim() !== "" ? Number(r.width).toFixed(2) : "N/A";
         const roadType = (r.roadType || "").toLowerCase();
 
-        // Surface breakdown logic
         const asphaltVal = roadType.includes("asphalt") ? totalKm : 0;
         const gravelVal = roadType.includes("gravel") ? totalKm : 0;
         const earthVal = roadType.includes("earth") ? totalKm : 0;
         const concreteVal = (roadType.includes("concrete") || roadType.includes("paved") || roadType === "") ? totalKm : 0;
         const mixedVal = roadType.includes("mixed") ? totalKm : 0;
-
         const culvertVal = r.lengthOfCulverts != null ? (parseFloat(r.lengthOfCulverts) || 0) : 0;
         const bridgesVal = r.numberOfBridges != null ? (parseInt(r.numberOfBridges, 10) || 0) : 0;
 
-        sumLength += totalKm;
-        sumAsphalt += asphaltVal;
-        sumGravel += gravelVal;
-        sumEarth += earthVal;
-        sumConcrete += concreteVal;
-        sumMixed += mixedVal;
-        sumCulverts += culvertVal;
-        sumBridges += bridgesVal;
+        sumLength += totalKm; sumAsphalt += asphaltVal; sumGravel += gravelVal; sumEarth += earthVal;
+        sumConcrete += concreteVal; sumMixed += mixedVal; sumCulverts += culvertVal; sumBridges += bridgesVal;
 
         const importance = r.roadImportance ? (r.roadImportance.toLowerCase().includes("non") ? "Non-Core" : "Core") : "Core";
         const terrain = formatTerrainType(r.terrainType);
@@ -7135,13 +7248,13 @@ window.loadAdminRoadInventory = function() {
       }
     })
     .catch(err => {
-      console.error("Error loading admin road inventory:", err);
-      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #ef4444;">Failed to fetch road inventory data.</td></tr>`;
+      console.error("Error loading active inventory:", err);
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #ef4444;">Failed to fetch active inventory data.</td></tr>`;
     });
 };
 
 // =======================================================
-// 📥 3. EXPORT CSV (15 COLUMNS WITH INSPECTION DATE AT END)
+// 📥 3. EXPORT CSV (ACTIVE VIEW)
 // =======================================================
 window.downloadAdminInventoryCSV = function() {
   if (!adminCachedInventory || adminCachedInventory.length === 0) {
@@ -7149,72 +7262,1056 @@ window.downloadAdminInventoryCSV = function() {
     return;
   }
 
-  const selectedYear = document.getElementById("inventory-filter-year")?.value || "ALL";
-  const headers = [
-    "Road ID",
-    "Road Name",
-    "Class",
-    "Length (km)",
-    "Width (m)",
-    "Asphalt (km)",
-    "Gravel (km)",
-    "Earth (km)",
-    "Concrete (km)",
-    "Mixed (km)",
-    "Road Importance",
-    "Terrain Type",
-    "Length of Culverts (m)",
-    "Number of Bridges",
-    "Date Inspected"
-  ];
+  const headers = ["Road ID", "Road Name", "Class", "Length (km)", "Width (m)", "Asphalt (km)", "Gravel (km)", "Earth (km)", "Concrete (km)", "Mixed (km)", "Road Importance", "Terrain Type", "Length of Culverts (m)", "Number of Bridges", "Date Inspected"];
 
   const rows = adminCachedInventory.map(r => {
     const roadId = r.cityRoadId || `3142000000${String(r.id).padStart(2, '0')}`;
-    const roadName = r.cityRoadName || "Unnamed Road";
-    const dateInspected = formatInventoryDate(r);
     const totalKm = parseToKilometers(r.length);
-    const roadWidth = r.width != null && !isNaN(r.width) && String(r.width).trim() !== "" ? Number(r.width).toFixed(2) : "";
     const roadType = (r.roadType || "").toLowerCase();
 
-    const asphaltKm = roadType.includes("asphalt") ? totalKm.toFixed(3) : "0";
-    const gravelKm = roadType.includes("gravel") ? totalKm.toFixed(3) : "0";
-    const earthKm = roadType.includes("earth") ? totalKm.toFixed(3) : "0";
-    const concreteKm = (roadType.includes("concrete") || roadType.includes("paved") || roadType === "") ? totalKm.toFixed(3) : "0";
-    const mixedKm = roadType.includes("mixed") ? totalKm.toFixed(3) : "0";
-
-    const importance = r.roadImportance ? (r.roadImportance.toLowerCase().includes("non") ? "Non-Core" : "Core") : "Core";
-    const terrain = formatTerrainType(r.terrainType);
-    const culverts = r.lengthOfCulverts != null ? Number(r.lengthOfCulverts).toFixed(2) : "0";
-    const bridges = r.numberOfBridges != null ? r.numberOfBridges : "0";
-
     return [
-      `"${roadId}"`,
-      `"${roadName.replace(/"/g, '""')}"`,
-      `"City"`,
-      `"${totalKm.toFixed(3)}"`,
-      `"${roadWidth}"`,
-      `"${asphaltKm}"`,
-      `"${gravelKm}"`,
-      `"${earthKm}"`,
-      `"${concreteKm}"`,
-      `"${mixedKm}"`,
-      `"${importance}"`,
-      `"${terrain}"`,
-      `"${culverts}"`,
-      `"${bridges}"`,
-      `"${dateInspected}"`
+      `"${roadId}"`, `"${(r.cityRoadName || "Unnamed").replace(/"/g, '""')}"`, `"City"`, `"${totalKm.toFixed(3)}"`,
+      `"${r.width != null ? Number(r.width).toFixed(2) : ""}"`,
+      `"${roadType.includes("asphalt") ? totalKm.toFixed(3) : "0"}"`,
+      `"${roadType.includes("gravel") ? totalKm.toFixed(3) : "0"}"`,
+      `"${roadType.includes("earth") ? totalKm.toFixed(3) : "0"}"`,
+      `"${(roadType.includes("concrete") || roadType.includes("paved") || roadType === "") ? totalKm.toFixed(3) : "0"}"`,
+      `"${roadType.includes("mixed") ? totalKm.toFixed(3) : "0"}"`,
+      `"${r.roadImportance?.includes("non") ? "Non-Core" : "Core"}"`,
+      `"${formatTerrainType(r.terrainType)}"`,
+      `"${r.lengthOfCulverts != null ? Number(r.lengthOfCulverts).toFixed(2) : "0"}"`,
+      `"${r.numberOfBridges != null ? r.numberOfBridges : "0"}"`,
+      `"${formatInventoryDate(r)}"`
     ].join(",");
   });
 
-  const csvString = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
-  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-  const downloadUrl = URL.createObjectURL(blob);
-
+  const blob = new Blob(["\uFEFF" + [headers.join(","), ...rows].join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  link.href = downloadUrl;
-  link.download = `CSJDM_City_Road_Inventory_${selectedYear}_${Date.now()}.csv`;
+  link.href = URL.createObjectURL(blob);
+  link.download = `CSJDM_Active_Road_Inventory_${window.activeInventoryYear}_${Date.now()}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(downloadUrl);
 };
+
+// =======================================================
+// 🖨️ 4. PRINT REPORTS TAB INVENTORY (ACTIVE VIEW)
+// =======================================================
+window.printAdminRoadInventory = function() {
+  const originalTitle = document.title;
+  document.title = `CSJDM_Active_Road_Inventory_${window.activeInventoryYear}`;
+
+  const printStyle = document.createElement('style');
+  printStyle.id = "temp-active-inventory-print-style";
+  printStyle.innerHTML = `
+    @media print {
+      .sidebar, .top-header, .no-print, .bd-controls { display: none !important; }
+      .main-content, .content-area { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+      #admin-inventory-sheet { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; }
+    }
+  `;
+  document.head.appendChild(printStyle);
+  window.print();
+
+  setTimeout(() => {
+    const styleToRemove = document.getElementById('temp-active-inventory-print-style');
+    if (styleToRemove) document.head.removeChild(styleToRemove);
+    document.title = originalTitle;
+  }, 1000);
+};
+
+// ==========================================
+// ⬅️ BACK TO REPORTS BUTTON CONTROLLER
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const btnCloseInventory = document.getElementById("btn-close-inventory");
+  const viewRoadInventory = document.getElementById("view-road-inventory");
+  const viewReports = document.getElementById("view-reports");
+
+  if (btnCloseInventory) {
+    btnCloseInventory.addEventListener("click", () => {
+      if (viewRoadInventory) { viewRoadInventory.classList.add("hidden"); viewRoadInventory.style.display = "none"; }
+      if (viewReports) { viewReports.classList.remove("hidden"); viewReports.style.display = "block"; }
+    });
+  }
+});
+
+// =======================================================
+// ⚙️ ADMIN SETTINGS & CYCLE TRACKER LOGIC
+// =======================================================
+
+// Helper: Extract Year
+function getReportYearSettings(r) {
+  if (!r) return "";
+  const yearVal = r.inventory_year || r.inventoryYear;
+  if (yearVal && String(yearVal).trim() !== "" && String(yearVal).toLowerCase() !== "null") {
+    return String(yearVal).trim();
+  }
+  const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at || r.dateReported || r.date;
+  if (rawDate) {
+    if (Array.isArray(rawDate) && rawDate.length >= 1) return String(rawDate[0]);
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) return String(parsed.getFullYear());
+  }
+  return "";
+}
+
+// Main Function: Load Dynamic Counts from Database
+window.loadActiveCycleOverview = function() {
+  const currentYear = String(new Date().getFullYear());
+  const yearEl = document.getElementById("settings-active-year");
+  if (yearEl) yearEl.textContent = `${currentYear} Cycle`;
+
+  // ==========================================
+  // 🚀 THE FIX: Check Maintenance Status on Load!
+  // ==========================================
+  if (typeof window.loadMaintenanceStatus === "function") {
+    window.loadMaintenanceStatus();
+  }
+
+  // Fetch actual Total City Roads AND all Reports concurrently
+  Promise.all([
+    apiFetch("/api/city-roads").catch(() => []),
+    apiFetch("/api/reports").catch(() => [])
+  ])
+    .then(([cityRoads, reports]) => {
+      // A. Get Actual Total Road Count from DB (Fallback to 378 if API fails)
+      const totalRoads = (Array.isArray(cityRoads) && cityRoads.length > 0) ? cityRoads.length : 378;
+
+      // B. Filter Reports for the Current Year ONLY
+      const currentYearReports = (Array.isArray(reports) ? reports : []).filter(r => {
+        return getReportYearSettings(r) === currentYear;
+      });
+
+      // C. Deduplicate: Count how many UNIQUE roads have been inspected this year
+      const uniqueRoadsInspected = new Set();
+      currentYearReports.forEach(r => {
+        const roadKey = String(r.cityRoadId || r.cityRoadName || r.id).trim().toLowerCase();
+        if (roadKey) uniqueRoadsInspected.add(roadKey);
+      });
+
+      const inspectedCount = uniqueRoadsInspected.size;
+
+      // D. Calculate Percentage safely
+      let percentage = 0;
+      if (totalRoads > 0) {
+        percentage = Math.round((inspectedCount / totalRoads) * 100);
+      }
+      if (percentage > 100) percentage = 100;
+
+      // E. Update the UI DOM Elements
+      const countEl = document.getElementById("settings-inspected-count");
+      const totalEl = document.getElementById("settings-total-roads");
+      const barEl = document.getElementById("settings-progress-bar");
+      const percentEl = document.getElementById("settings-progress-percent");
+      const badgeEl = document.getElementById("cycle-status-badge");
+
+      if (countEl) countEl.textContent = inspectedCount;
+      if (totalEl) totalEl.textContent = totalRoads;
+      if (percentEl) percentEl.textContent = `${percentage}%`;
+
+      if (barEl) {
+        barEl.style.width = `${percentage}%`;
+
+        // Visual feedback based on completion
+        if (percentage >= 100) {
+          barEl.style.background = "#16a34a"; // Green
+          percentEl.style.color = "#16a34a";
+          if (badgeEl) {
+            badgeEl.textContent = "COMPLETED (READY TO ARCHIVE)";
+            badgeEl.style.background = "#fee2e2";
+            badgeEl.style.color = "#dc2626";
+            badgeEl.style.borderColor = "#fecaca";
+          }
+        } else {
+          barEl.style.background = "#2563eb"; // Blue
+          percentEl.style.color = "#2563eb";
+          if (badgeEl) {
+            badgeEl.textContent = "ACTIVE (OPEN FOR INSPECTION)";
+            badgeEl.style.background = "#dcfce7";
+            badgeEl.style.color = "#16a34a";
+            badgeEl.style.borderColor = "#bbf7d0";
+          }
+        }
+      }
+    })
+    .catch(err => console.error("Failed to load cycle overview data:", err));
+};
+
+// =======================================================
+// 🚨 DANGER ZONE: ANNUAL CYCLE ROLLOVER LOGIC
+// =======================================================
+
+// 1. Open the Verification Modal
+window.openRolloverModal = function() {
+  const modal = document.getElementById("modal-rollover-confirm");
+  const input = document.getElementById("input-rollover-confirm");
+  const btn = document.getElementById("btn-execute-rollover");
+
+  if (modal) {
+    modal.style.display = "flex";
+    modal.classList.remove("hidden");
+  }
+
+  if (input && btn) {
+    input.value = ""; // Reset input
+    input.focus();
+    btn.style.opacity = "0.5";
+    btn.style.pointerEvents = "none";
+    btn.style.cursor = "not-allowed";
+
+    // 2. Real-time typing validation
+    input.oninput = function() {
+      if (this.value.trim().toUpperCase() === "ARCHIVE CYCLE") {
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+        btn.style.cursor = "pointer";
+      } else {
+        btn.style.opacity = "0.5";
+        btn.style.pointerEvents = "none";
+        btn.style.cursor = "not-allowed";
+      }
+    };
+  }
+};
+
+// 3. Close the Modal
+window.closeRolloverModal = function() {
+  const modal = document.getElementById("modal-rollover-confirm");
+  if (modal) {
+    modal.style.display = "none";
+    modal.classList.add("hidden");
+  }
+};
+
+// 4. Fire the Request to the Backend
+window.executeAnnualRollover = function() {
+  const btn = document.getElementById("btn-execute-rollover");
+  if (btn) {
+    btn.innerHTML = "Processing... ⏳";
+    btn.style.pointerEvents = "none";
+    btn.style.opacity = "0.7";
+  }
+
+  // Calls your existing endpoint
+  apiFetch("/api/reports/rollover-annual-cycle", {
+    method: "POST"
+  })
+    .then(res => {
+      // Show success notification
+      if (typeof showToast === "function") {
+        showToast(`Rollover Complete: Archived ${res.archivedCount || 0} reports. Emails sent.`, "success");
+      } else {
+        alert(`Rollover Complete: Archived ${res.archivedCount || 0} reports.`);
+      }
+
+      // Close Modal and Refresh Cycle Stats
+      window.closeRolloverModal();
+      if (typeof window.loadActiveCycleOverview === "function") {
+        window.loadActiveCycleOverview();
+      }
+    })
+    .catch(err => {
+      console.error("Rollover failed:", err);
+      if (typeof showToast === "function") {
+        showToast("Error processing annual rollover.", "error");
+      } else {
+        alert("Error processing annual rollover.");
+      }
+    })
+    .finally(() => {
+      if (btn) {
+        btn.innerHTML = "Execute Rollover"; // Reset button text
+      }
+    });
+};
+
+// =======================================================
+// 🔒 SYSTEM MAINTENANCE LOGIC
+// =======================================================
+
+// 5. Load Maintenance Status on Dashboard Load
+window.loadMaintenanceStatus = function() {
+  apiFetch("/api/settings")
+    .then(settings => {
+      const toggle = document.getElementById("toggle-maintenance");
+      const slider = document.getElementById("maintenance-slider");
+      const knob = document.getElementById("maintenance-knob");
+
+      if (toggle && settings) {
+        toggle.checked = settings.maintenanceMode;
+        if (settings.maintenanceMode) {
+          slider.style.backgroundColor = "#dc2626"; // Red when locked
+          knob.style.transform = "translateX(24px)";
+        } else {
+          slider.style.backgroundColor = "#cbd5e1"; // Gray when unlocked
+          knob.style.transform = "translateX(0)";
+        }
+      }
+    }).catch(err => console.error("Failed to load settings", err));
+};
+
+// 6. Toggle Maintenance Mode
+window.toggleMaintenanceMode = function(isLocked) {
+  apiFetch(`/api/settings/toggle-maintenance?status=${isLocked}`, { method: "POST" })
+    .then(settings => {
+      const slider = document.getElementById("maintenance-slider");
+      const knob = document.getElementById("maintenance-knob");
+
+      if (settings.maintenanceMode) {
+        slider.style.backgroundColor = "#dc2626";
+        knob.style.transform = "translateX(24px)";
+        if (typeof showToast === "function") showToast("System Locked. Non-admins cannot log in.", "warning");
+      } else {
+        slider.style.backgroundColor = "#cbd5e1";
+        knob.style.transform = "translateX(0)";
+        if (typeof showToast === "function") showToast("System Unlocked. Normal logins restored.", "success");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      if (typeof showToast === "function") {
+        showToast("Failed to toggle maintenance mode.", "error");
+      } else {
+        alert("Failed to toggle maintenance mode.");
+      }
+      // Revert the toggle visually if it failed
+      document.getElementById("toggle-maintenance").checked = !isLocked;
+    });
+};
+
+// ==========================================
+// 📅 1. DYNAMIC INVENTORY YEARS LOADER (SMART FILTERED)
+// ==========================================
+window.loadDynamicInventoryYears = function() {
+  const yearSelect = document.getElementById("export-inventory-year");
+  if (!yearSelect) return;
+
+  const barangayId = sessionStorage.getItem("barangayId");
+  const userRole = (sessionStorage.getItem("userRole") || "").toUpperCase();
+
+  let endpoint = "/api/reports";
+  if (userRole.includes("BARANGAY") && barangayId && barangayId !== "null") {
+    endpoint = `/api/reports/barangay/${barangayId}`;
+  }
+
+  fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: { "ngrok-skip-browser-warning": "true" }
+  })
+    .then(res => res.json())
+    .then(reports => {
+      if (!Array.isArray(reports)) return;
+
+      // 🚀 CEO SMART FILTER: Only check years where the CEO actually has projects
+      let validReports = reports;
+      if (userRole.includes("CEO") || userRole.includes("ENGINEER")) {
+        validReports = reports.filter(r => {
+          const stat = (r.status || "").toLowerCase();
+          return stat.includes("dispatched") || stat.includes("in progress") || stat.includes("completed") || stat.includes("pending budget") || stat.includes("defer");
+        });
+      }
+
+      const uniqueYears = [...new Set(
+        validReports
+          .map(r => r.inventoryYear)
+          .filter(y => y && String(y).trim() !== "" && String(y).toLowerCase() !== "null" && String(y).toLowerCase() !== "undefined")
+      )].sort((a, b) => Number(a) - Number(b));
+
+      yearSelect.innerHTML = `<option value="ALL">All Recorded Years</option>`;
+
+      uniqueYears.forEach(year => {
+        const opt = document.createElement("option");
+        opt.value = year;
+        opt.textContent = `${year} Inventory Cycle`;
+        yearSelect.appendChild(opt);
+      });
+    })
+    .catch(err => console.error("Failed to load inventory years:", err));
+};
+
+// ==========================================
+// 👁️ 2. OPEN & POPULATE PREVIEW (BULLETPROOF FIX + CATEGORY SPLIT)
+// ==========================================
+window.openAnnualReportPreview = function() {
+  const yearSelect = document.getElementById("export-inventory-year");
+  const selectedYear = yearSelect ? yearSelect.value : "ALL";
+
+  // 🚀 NEW: Get Selected Report Category
+  const categorySelect = document.getElementById("export-report-category");
+  const selectedCategory = categorySelect ? categorySelect.value : "ALL";
+
+  const barangayId = sessionStorage.getItem("barangayId");
+  const userRole = (sessionStorage.getItem("userRole") || "").toUpperCase();
+  const userName = (sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "Official");
+
+  let endpoint = "/api/reports";
+  if (userRole.includes("BARANGAY") && barangayId && barangayId !== "null") {
+    endpoint = `/api/reports/barangay/${barangayId}`;
+  }
+
+  fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: { "ngrok-skip-browser-warning": "true" }
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to fetch reports.");
+      return res.json();
+    })
+    .then(reports => {
+      if (!Array.isArray(reports) || reports.length === 0) {
+        if (typeof showToast === 'function') showToast("No reports found to generate preview.", "info");
+        return;
+      }
+
+      // 1. Filter by Year
+      let filtered = selectedYear === "ALL"
+        ? reports
+        : reports.filter(r => String(r.inventoryYear) === String(selectedYear));
+
+      // 🚀 2. CEO SMART FILTER & CATEGORY SPLIT
+      if (userRole.includes("CEO") || userRole.includes("ENGINEER")) {
+        filtered = filtered.filter(r => {
+          const stat = (r.status || "").toLowerCase();
+
+          if (selectedCategory === "ACTIVE") {
+            // Only show unfinished business
+            return stat.includes("dispatched") || stat.includes("in progress") || stat.includes("pending budget") || stat.includes("defer");
+          } else if (selectedCategory === "ACCOMPLISHMENT") {
+            // Only show completed/archived jobs
+            return stat.includes("completed") || stat.includes("archived");
+          } else {
+            // "ALL" - Show everything they own
+            return stat.includes("dispatched") || stat.includes("in progress") || stat.includes("completed") || stat.includes("pending budget") || stat.includes("defer") || stat.includes("archived");
+          }
+        });
+      }
+
+      if (filtered.length === 0) {
+        if (typeof showToast === 'function') showToast(`No records found for ${selectedYear} in this category.`, "warning");
+        return;
+      }
+
+      // 🚀 3. CEO SMART SORTING (Hierarchy)
+      const statusWeight = {
+        "in progress": 1,
+        "dispatched": 2,
+        "pending budget": 3,
+        "defer": 3,
+        "completed": 4,
+        "archived": 5
+      };
+
+      filtered.sort((a, b) => {
+        const statA = (a.status || "").toLowerCase();
+        const statB = (b.status || "").toLowerCase();
+
+        // Find the weight (default to 99 if unknown status)
+        const weightA = statusWeight[statA] || 99;
+        const weightB = statusWeight[statB] || 99;
+
+        // Primary Sort: By Status Weight
+        if (weightA !== weightB) {
+          return weightA - weightB;
+        }
+
+        // Secondary Sort: If same status, sort by Project ID
+        return Number(a.id) - Number(b.id);
+      });
+
+      currentPreviewReports = filtered; // Set global array for CSV download
+
+      // =====================================
+      // 🚀 BULLETPROOF DOM UPDATES
+      // =====================================
+      const brgyName = sessionStorage.getItem("barangayName") || "City-Wide Scope";
+
+      // 🚀 DYNAMIC TITLE CHANGE
+      const elTitle = document.querySelector("#printable-report-area h2");
+      if (elTitle) {
+        if (selectedCategory === "ACTIVE") {
+          elTitle.textContent = "ACTIVE ENGINEERING PROJECTS & BACKLOG";
+        } else if (selectedCategory === "ACCOMPLISHMENT") {
+          elTitle.textContent = "ANNUAL ENGINEERING ACCOMPLISHMENT REPORT";
+        } else {
+          elTitle.textContent = "ENGINEERING PROJECT & REPAIR INVENTORY REPORT";
+        }
+      }
+
+      const elSubtitle = document.getElementById("preview-report-subtitle");
+      if (elSubtitle) elSubtitle.textContent = `Inventory Cycle: ${selectedYear === "ALL" ? "All Recorded Years" : selectedYear}`;
+
+      const elGenerated = document.getElementById("preview-generated-by");
+      if (elGenerated) elGenerated.textContent = userName;
+
+      // Update Scope Text dynamically based on Role
+      let scopeText = "All Barangays (City-Wide)";
+      if (userRole.includes("BARANGAY")) scopeText = brgyName;
+      if (userRole.includes("CEO") || userRole.includes("ENGINEER")) scopeText = "City Engineering Office (CEO)";
+
+      const elScope = document.getElementById("preview-scope");
+      if (elScope) elScope.textContent = scopeText;
+
+      const elDate = document.getElementById("preview-date");
+      if (elDate) elDate.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const elCount = document.getElementById("preview-total-count");
+      if (elCount) elCount.textContent = currentPreviewReports.length;
+
+      // Signature Logic
+      const signNameElem = document.getElementById("preview-sign-name");
+      const signRoleElem = document.getElementById("preview-sign-role");
+      if (signNameElem) signNameElem.textContent = userName;
+      if (signRoleElem) {
+        if (userRole.includes("BARANGAY")) signRoleElem.textContent = "Barangay Official";
+        else if (userRole.includes("CEO") || userRole.includes("ENGINEER")) signRoleElem.textContent = "City Engineer";
+        else signRoleElem.textContent = "CPDO Official";
+      }
+
+      // Detailed Table Population
+      const tbody = document.getElementById("preview-report-table-body");
+      if (tbody) {
+        tbody.innerHTML = currentPreviewReports.map((r, index) => {
+          const bName = r.barangay ? (r.barangay.name || r.barangay.barangayName) : (r.barangayName || "N/A");
+
+          // Safe date check
+          let dateStr = new Date(r.createdAt || new Date()).toLocaleDateString();
+          if (typeof formatReportDate === 'function') {
+            try { dateStr = formatReportDate(r); } catch(e) {}
+          }
+
+          const rowBg = index % 2 === 0 ? "#ffffff" : "#f8fafc";
+          const roadType = r.roadType || r.roadImportance || "Standard";
+          const terrain = r.terrainType ? ` • ${r.terrainType}` : "";
+          const dimensions = `L: ${r.length != null ? r.length + 'm' : 'N/A'} | W: ${r.width != null ? r.width + 'm' : 'N/A'}`;
+          const culvertBridge = `Culv: ${r.lengthOfCulverts != null ? r.lengthOfCulverts + 'm' : '0m'}<br>Bridges: ${r.numberOfBridges != null ? r.numberOfBridges : '0'}`;
+          const damageDetails = `<strong>${r.damageType || 'General'}</strong>${r.damageLength ? ` (${r.damageLength}m × ${r.damageWidth || 0}m)` : ''}`;
+
+          return `
+            <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-weight: 700;">PRJ-${r.id}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${bName}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">
+                <strong>${r.cityRoadName || 'N/A'}</strong><br>
+                <span style="font-size: 10px; color: #64748b;">${roadType}${terrain}</span>
+              </td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${dimensions}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${culvertBridge}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${damageDetails}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: ${r.severity === 'High' ? '#dc2626' : (r.severity === 'Medium' ? '#d97706' : '#16a34a')};">${r.severity || 'N/A'}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 10px; font-weight: bold;">${r.status || 'Pending'}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 10px; font-weight: 600;">${dateStr}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      const modal = document.getElementById("annual-report-preview-modal");
+      if(modal) {
+        modal.classList.remove("hidden");
+        modal.style.display = "flex";
+      } else {
+        console.error("Modal ID 'annual-report-preview-modal' not found in HTML!");
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      if (typeof showToast === 'function') showToast("Failed to load report preview.", "error");
+    });
+};
+
+// Ensure it loads dynamically when the page opens!
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof window.loadDynamicInventoryYears === "function") {
+    window.loadDynamicInventoryYears();
+  }
+});
+
+// =======================================================
+// 🗄️ ADMIN ARCHIVE & REPORTS CONTROLLER (100% COMPLETE)
+// =======================================================
+
+let cacheArchiveInventory = [];
+let cacheArchivePriority = [];
+let allArchiveDatabaseReports = [];
+
+// =======================================================
+// 📅 1. INITIALIZE DROPDOWNS & TABLE ON TAB LOAD
+// =======================================================
+window.initArchiveTab = function() {
+  apiFetch("/api/reports")
+    .then(reports => {
+      if (!Array.isArray(reports)) return;
+
+      const uniqueYears = [...new Set(
+        reports.map(r => getReportYear(r)).filter(y => y !== "")
+      )].sort((a, b) => Number(b) - Number(a));
+
+      const optionsHTML = `<option value="ALL">All Recorded Years</option>` +
+        uniqueYears.map(year => `<option value="${year}">${year} Cycle</option>`).join("");
+
+      // Top Cards Dropdowns
+      const invSelect = document.getElementById("archive-inventory-year");
+      const prioSelect = document.getElementById("archive-priority-year");
+      if (invSelect) invSelect.innerHTML = optionsHTML;
+      if (prioSelect) prioSelect.innerHTML = optionsHTML;
+
+      // Bottom Historical Database Table & Filter Dropdown
+      const tableYearSelect = document.getElementById("archive-filter-year");
+      if (tableYearSelect) tableYearSelect.innerHTML = optionsHTML;
+
+      loadArchiveDatabaseTable(reports);
+    })
+    .catch(err => console.error("Failed to load archive dropdown years:", err));
+};
+
+// =======================================================
+// 🗃️ 2. LOAD CONCLUDED RECORDS INTO DATABASE TABLE
+// =======================================================
+window.loadArchiveDatabaseTable = function(reports) {
+  // Isolate concluded/finalized records only
+  allArchiveDatabaseReports = (Array.isArray(reports) ? reports : []).filter(r => {
+    const stat = String(r.status || '').toLowerCase();
+    return stat === 'completed' || stat === 'closed' || stat === 'resolved' || stat === 'archived';
+  });
+
+  renderArchiveTableRows(allArchiveDatabaseReports);
+};
+
+// =======================================================
+// 🔍 3. SEARCH & FILTER ARCHIVE DATABASE TABLE
+// =======================================================
+window.filterArchiveDatabaseTable = function() {
+  const searchTerm = (document.getElementById("archive-search-input")?.value || "").toLowerCase().trim();
+  const selectedYear = document.getElementById("archive-filter-year")?.value || "ALL";
+  const selectedStatus = (document.getElementById("archive-filter-status")?.value || "ALL").toUpperCase();
+
+  const filtered = allArchiveDatabaseReports.filter(r => {
+    const year = getReportYear(r);
+    const rawStat = String(r.status || "").toUpperCase();
+    const id = `PRJ-${String(r.id || "")}`.toLowerCase();
+    const roadName = String(r.cityRoadName || "").toLowerCase();
+    const brgyName = String(r.barangay?.barangayName || r.barangayName || "").toLowerCase();
+
+    // 1. Year Match
+    const matchesYear = (selectedYear === "ALL") || (year === selectedYear);
+
+    // 2. Status Match
+    let matchesStatus = true;
+    if (selectedStatus === "COMPLETED") {
+      matchesStatus = (rawStat === "COMPLETED" || rawStat === "CLOSED" || rawStat === "RESOLVED");
+    } else if (selectedStatus === "ARCHIVED") {
+      matchesStatus = (rawStat === "ARCHIVED");
+    }
+
+    // 3. Search Term Match
+    const matchesSearch = !searchTerm || id.includes(searchTerm) || roadName.includes(searchTerm) || brgyName.includes(searchTerm);
+
+    return matchesYear && matchesStatus && matchesSearch;
+  });
+
+  renderArchiveTableRows(filtered);
+};
+
+// =======================================================
+// 🎨 4. RENDER ARCHIVE TABLE ROWS
+// =======================================================
+function renderArchiveTableRows(records) {
+  const tbody = document.getElementById("archive-database-tbody");
+  const countEl = document.getElementById("archive-database-count");
+  if (!tbody) return;
+
+  if (countEl) {
+    countEl.textContent = `Showing ${records.length} archived ${records.length === 1 ? 'record' : 'records'}`;
+  }
+
+  if (records.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: #64748b; font-style: italic;">No archived records found matching your filters.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = records.map((r, index) => {
+    const formatId = `#PRJ-${String(r.id).padStart(4, '0')}`;
+    const formatName = r.cityRoadName || 'Unnamed Road';
+    const formatBrgy = (r.barangay && r.barangay.barangayName) ? r.barangay.barangayName : (r.barangayName || 'Unknown');
+    const formatDamage = r.damageType || 'General Repair';
+    const year = getReportYear(r) || 'N/A';
+    const rawStatus = (r.status || 'Archived').toUpperCase();
+    const dateLogged = typeof formatInventoryDate === 'function' ? formatInventoryDate(r) : 'N/A';
+
+    let badgeBg = '#f8fafc';
+    let badgeColor = '#475569';
+    let badgeBorder = '#cbd5e1';
+    let displayLabel = 'ARCHIVED';
+
+    if (rawStatus === 'COMPLETED' || rawStatus === 'CLOSED' || rawStatus === 'RESOLVED') {
+      badgeBg = '#f0fdf4'; badgeColor = '#16a34a'; badgeBorder = '#bbf7d0'; displayLabel = 'COMPLETED';
+    }
+
+    const severityColor = r.severity === 'High' ? '#dc2626' : (r.severity === 'Medium' ? '#d97706' : '#16a34a');
+
+    return `
+      <tr style="border-bottom: 1px solid #e2e8f0; background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-weight: 700;">${formatId}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; font-weight: 600; color: #0f172a;">${formatName}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; color: #475569;">${formatBrgy}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1;">${formatDamage}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: ${severityColor};">${r.severity || 'N/A'}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-weight: 600;">${year}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center;">
+          <span style="padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder}; display: inline-block;">
+            ${displayLabel}
+          </span>
+        </td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #64748b;">${dateLogged}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// =======================================================
+// 📂 5. EXPORT DROPDOWN MENU CONTROLLER
+// =======================================================
+window.toggleExportMenu = function(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+
+  if (menu.classList.contains('hidden')) {
+    document.querySelectorAll('.export-menu').forEach(m => m.classList.add('hidden'));
+    menu.classList.remove('hidden');
+  } else {
+    menu.classList.add('hidden');
+  }
+};
+
+// =======================================================
+// 👁️ 6. OPEN REPORT PREVIEW MODALS (PDF PREVIEW)
+// =======================================================
+window.generateAdminReport = function(type) {
+  const adminName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim() || "CPDO Administrator";
+  const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  if (type === 'INVENTORY') {
+    const year = document.getElementById('archive-inventory-year')?.value || "ALL";
+    const modal = document.getElementById('archive-inventory-preview-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+    document.getElementById('archive-preview-inventory-year').innerText = year === "ALL" ? "ALL RECORDED YEARS" : `${year} CYCLE`;
+    document.getElementById('archive-preview-inventory-date').innerText = today;
+    document.getElementById('archive-preview-inventory-admin').innerText = adminName;
+    renderArchivePreviewInventory(year);
+  }
+  else if (type === 'PRIORITY') {
+    const year = document.getElementById('archive-priority-year')?.value || "ALL";
+    const modal = document.getElementById('archive-priority-preview-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
+    }
+    document.getElementById('archive-preview-priority-year').innerText = year === "ALL" ? "ALL RECORDED YEARS" : `${year} CYCLE`;
+    document.getElementById('archive-preview-priority-date').innerText = today;
+    document.getElementById('archive-preview-priority-admin').innerText = adminName;
+    renderArchivePreviewPriority(year);
+  }
+};
+
+// =======================================================
+// 📊 7. CARD 1: RENDER ANNUAL ROAD INVENTORY MODAL TABLE
+// =======================================================
+window.renderArchivePreviewInventory = function(selectedYear) {
+  const tbody = document.getElementById('archive-preview-inventory-tbody');
+  const tfoot = document.getElementById('archive-preview-inventory-tfoot');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px; color: #64748b;">Loading City Road Inventory records...</td></tr>`;
+
+  apiFetch("/api/reports").then(reports => {
+    let list = selectedYear === "ALL" ? reports : reports.filter(r => getReportYear(r) === String(selectedYear));
+
+    const uniqueMap = new Map();
+    list.forEach(r => {
+      const key = String(r.cityRoadId || r.cityRoadName || r.id).trim().toLowerCase();
+      if (!uniqueMap.has(key)) uniqueMap.set(key, r);
+      else if (new Date(r.createdAt || 0) > new Date(uniqueMap.get(key).createdAt || 0)) uniqueMap.set(key, r);
+    });
+    let deduped = Array.from(uniqueMap.values());
+    deduped.sort((a, b) => Number(String(a.cityRoadId || a.id).replace(/\D/g, '')) - Number(String(b.cityRoadId || b.id).replace(/\D/g, '')));
+
+    cacheArchiveInventory = deduped;
+
+    if (deduped.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 25px;">No records found for ${selectedYear}.</td></tr>`;
+      if (tfoot) tfoot.innerHTML = "";
+      return;
+    }
+
+    let sums = { len: 0, asp: 0, grv: 0, ert: 0, con: 0, mix: 0, cul: 0, brg: 0 };
+
+    tbody.innerHTML = deduped.map((r, i) => {
+      const id = r.cityRoadId || `31420000${String(r.id).padStart(2, '0')}`;
+      const name = r.cityRoadName || "Unnamed";
+      const km = parseToKilometers(r.length);
+      const typ = (r.roadType || "").toLowerCase();
+      const w = r.width != null && !isNaN(r.width) && String(r.width).trim() !== "" ? Number(r.width).toFixed(2) : "N/A";
+
+      const asp = typ.includes("asphalt") ? km : 0;
+      const grv = typ.includes("gravel") ? km : 0;
+      const ert = typ.includes("earth") ? km : 0;
+      const con = (typ.includes("concrete") || typ.includes("paved") || typ === "") ? km : 0;
+      const mix = typ.includes("mixed") ? km : 0;
+      const cul = parseFloat(r.lengthOfCulverts) || 0;
+      const brg = parseInt(r.numberOfBridges) || 0;
+
+      sums.len += km; sums.asp += asp; sums.grv += grv; sums.ert += ert; sums.con += con; sums.mix += mix; sums.cul += cul; sums.brg += brg;
+
+      return `
+        <tr style="background: ${i % 2 === 0 ? '#fff' : '#f8fafc'}; border-bottom: 1px solid #cbd5e1;">
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-weight: 700;">${id}</td>
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; font-weight: bold;">${name}</td>
+          <td style="padding: 7px 4px; border: 1px solid #cbd5e1; text-align: center;">City</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: right; font-weight: 700;">${km.toFixed(3)}</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: right;">${w}</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${asp > 0 ? asp.toFixed(3) : '0'}</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${grv > 0 ? grv.toFixed(3) : '0'}</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${ert > 0 ? ert.toFixed(3) : '0'}</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${con > 0 ? con.toFixed(3) : '0'}</td>
+          <td style="padding: 7px 5px; border: 1px solid #cbd5e1; text-align: center;">${mix > 0 ? mix.toFixed(3) : '0'}</td>
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${r.roadImportance?.includes("non") ? "Non-Core" : "Core"}</td>
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${typeof formatTerrainType === 'function' ? formatTerrainType(r.terrainType) : (r.terrainType || 'FLAT')}</td>
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: right;">${cul.toFixed(2)}</td>
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center;">${brg}</td>
+          <td style="padding: 7px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 600;">${typeof formatInventoryDate === 'function' ? formatInventoryDate(r) : 'N/A'}</td>
+        </tr>`;
+    }).join("");
+
+    if (tfoot) {
+      tfoot.innerHTML = `
+        <tr style="background: #e2e8f0; color: #0f172a; font-size: 11px;">
+          <td colspan="3" style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: right; font-weight: 800;">TOTALS:</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: right; font-weight: 800;">${sums.len.toFixed(3)}</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; color: #64748b;">-</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sums.asp.toFixed(3)}</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sums.grv.toFixed(3)}</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sums.ert.toFixed(3)}</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sums.con.toFixed(3)}</td>
+          <td style="padding: 8px 5px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sums.mix.toFixed(3)}</td>
+          <td colspan="2" style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: center; font-size: 10px; color: #475569;">${deduped.length} Unique Roads</td>
+          <td style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: right; font-weight: 800;">${sums.cul.toFixed(2)}</td>
+          <td style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: center; font-weight: 800;">${sums.brg}</td>
+          <td style="padding: 8px 6px; border: 1px solid #94a3b8; text-align: center; color: #64748b;">-</td>
+        </tr>`;
+    }
+  });
+};
+
+// =======================================================
+// 🚨 8. CARD 2: RENDER PRIORITY LIST MODAL TABLE
+// =======================================================
+window.renderArchivePreviewPriority = function(selectedYear) {
+  const tbody = document.getElementById('archive-preview-priority-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: #64748b;">Loading Priority List records...</td></tr>`;
+
+  apiFetch('/api/reports')
+    .then(reports => {
+      let backlog = (Array.isArray(reports) ? reports : []).filter(r => {
+        const stat = String(r.status || '').toLowerCase();
+        return stat === 'validated' || stat === 'pending budget' || stat === 'dispatched' || stat === 'defer';
+      });
+
+      if (selectedYear !== 'ALL') {
+        backlog = backlog.filter(r => getReportYear(r) === String(selectedYear));
+      }
+
+      if (backlog.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: #64748b;">No backlog records found for ${selectedYear === 'ALL' ? 'all recorded years' : selectedYear + ' cycle'}.</td></tr>`;
+        cacheArchivePriority = [];
+        return;
+      }
+
+      backlog.forEach(report => {
+        const severity = String(report.severity || 'Unassessed').toLowerCase();
+        const importance = String(report.roadImportance || '').toLowerCase();
+
+        report.tierScore = 0;
+        report.tierLabel = 'PENDING AI';
+        report.tierColor = '#6c757d';
+
+        if (severity === 'high') {
+          report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
+        } else if (severity === 'medium') {
+          if (importance.includes('core')) {
+            report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
+          } else {
+            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
+          }
+        } else if (severity === 'low') {
+          if (importance.includes('core')) {
+            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
+          } else {
+            report.tierScore = 1; report.tierLabel = 'LOW'; report.tierColor = '#28a745';
+          }
+        }
+
+        const dLength = parseFloat(report.damageLength) || 0;
+        const dWidth = parseFloat(report.damageWidth) || 0;
+        report.areaScore = dLength * dWidth;
+      });
+
+      backlog.sort((a, b) => {
+        if (b.tierScore !== a.tierScore) return b.tierScore - a.tierScore;
+        if (b.areaScore !== a.areaScore) return b.areaScore - a.areaScore;
+        return Number(a.id) - Number(b.id);
+      });
+
+      cacheArchivePriority = backlog;
+
+      tbody.innerHTML = backlog.map((report, index) => {
+        const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
+        const formatName = report.cityRoadName || 'Unnamed Road';
+        const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : (report.barangayName || 'Unknown');
+        const formatDamage = report.damageType || 'Unspecified';
+        const dLength = report.damageLength || 0;
+        const dWidth = report.damageWidth || 0;
+
+        return `
+          <tr style="border-bottom: 1px solid #e2e8f0; background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; text-align: center;"><strong>${index + 1}</strong></td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; font-weight: 700;">${formatId}</td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1;">
+              <strong>${formatName}</strong><br>
+              <span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy}</span>
+            </td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1;">${formatDamage}</td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${dLength}m × ${dWidth}m</td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
+          </tr>
+        `;
+      }).join('');
+    })
+    .catch(err => {
+      console.error('Error rendering archive priority list:', err);
+      if (typeof showToast === 'function') showToast('Error loading priority list records.', 'error');
+    });
+};
+
+// =======================================================
+// 📥 9. CSV TRIGGER & DOWNLOAD CONTROLLER (CARD 1 & CARD 2)
+// =======================================================
+window.triggerArchiveCSV = function(type) {
+  if (typeof showToast === "function") showToast("Preparing your spreadsheet...", "success");
+
+  if (type === 'INVENTORY') {
+    const year = document.getElementById('archive-inventory-year')?.value || "ALL";
+    renderArchivePreviewInventory(year);
+    setTimeout(() => { downloadArchiveCSV('INVENTORY', year); }, 600);
+  } else if (type === 'PRIORITY') {
+    const year = document.getElementById('archive-priority-year')?.value || "ALL";
+    renderArchivePreviewPriority(year);
+    setTimeout(() => { downloadArchiveCSV('PRIORITY', year); }, 600);
+  }
+};
+
+window.downloadArchiveCSV = function(type, year) {
+  let headers, rows, filename;
+
+  if (type === 'INVENTORY') {
+    if (!cacheArchiveInventory || cacheArchiveInventory.length === 0) {
+      if (typeof showToast === "function") showToast("No inventory records to export.", "error");
+      return;
+    }
+    headers = [
+      "Road ID", "Road Name", "Class", "Length (km)", "Width (m)",
+      "Asphalt (km)", "Gravel (km)", "Earth (km)", "Concrete (km)", "Mixed (km)",
+      "Road Importance", "Terrain Type", "Length of Culverts (m)", "Number of Bridges", "Date Inspected"
+    ];
+    rows = cacheArchiveInventory.map(r => {
+      const roadId = r.cityRoadId || `31420000${String(r.id).padStart(2, '0')}`;
+      const totalKm = parseToKilometers(r.length);
+      const roadType = (r.roadType || "").toLowerCase();
+      const roadWidth = r.width != null && !isNaN(r.width) && String(r.width).trim() !== "" ? Number(r.width).toFixed(2) : "";
+
+      return [
+        `"${roadId}"`, `"${(r.cityRoadName || "Unnamed").replace(/"/g, '""')}"`, `"City"`, `"${totalKm.toFixed(3)}"`,
+        `"${roadWidth}"`,
+        `"${roadType.includes("asphalt") ? totalKm.toFixed(3) : "0"}"`,
+        `"${roadType.includes("gravel") ? totalKm.toFixed(3) : "0"}"`,
+        `"${roadType.includes("earth") ? totalKm.toFixed(3) : "0"}"`,
+        `"${(roadType.includes("concrete") || roadType.includes("paved") || roadType === "") ? totalKm.toFixed(3) : "0"}"`,
+        `"${roadType.includes("mixed") ? totalKm.toFixed(3) : "0"}"`,
+        `"${r.roadImportance?.includes("non") ? "Non-Core" : "Core"}"`,
+        `"${typeof formatTerrainType === 'function' ? formatTerrainType(r.terrainType) : (r.terrainType || 'FLAT')}"`,
+        `"${r.lengthOfCulverts != null ? Number(r.lengthOfCulverts).toFixed(2) : "0"}"`,
+        `"${r.numberOfBridges != null ? r.numberOfBridges : "0"}"`,
+        `"${typeof formatInventoryDate === 'function' ? formatInventoryDate(r) : 'N/A'}"`
+      ].join(",");
+    });
+    filename = `CSJDM_Archive_Inventory_${year}_${Date.now()}.csv`;
+  }
+  else if (type === 'PRIORITY') {
+    if (!cacheArchivePriority || cacheArchivePriority.length === 0) {
+      if (typeof showToast === "function") showToast("No priority records to export.", "error");
+      return;
+    }
+    headers = ["Rank", "Project ID", "Road Name", "Barangay", "Damage Type", "Est. Area (sq.m)", "Priority Tier"];
+    rows = cacheArchivePriority.map((r, i) => [
+      `"${i + 1}"`,
+      `"PRJ-${String(r.id).padStart(4, '0')}"`,
+      `"${(r.cityRoadName || "Unnamed Road").replace(/"/g, '""')}"`,
+      `"${(r.barangay?.barangayName || r.barangayName || "Unknown").replace(/"/g, '""')}"`,
+      `"${r.damageType || "Unspecified"}"`,
+      `"${(parseFloat(r.damageLength) || 0) * (parseFloat(r.damageWidth) || 0)}"`,
+      `"${r.tierLabel || "LOW"}"`
+    ].join(","));
+    filename = `CSJDM_Archive_Priority_Backlog_${year}_${Date.now()}.csv`;
+  }
+
+  const csvString = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+};
+
+// =======================================================
+// 🖨️ 10. PDF PRINT CONTROLLER
+// =======================================================
+window.printArchiveDocument = function(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  const originalTitle = document.title;
+  const isInventory = modalId.includes('inventory');
+  const yearEl = document.getElementById(isInventory ? 'archive-inventory-year' : 'archive-priority-year');
+  const year = yearEl?.value || "ALL";
+
+  document.title = isInventory
+    ? `CSJDM_Archive_Road_Inventory_${year}`
+    : `CSJDM_Archive_Priority_Masterlist_${year}`;
+
+  window.print();
+
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
+};
+
+// =======================================================
+// 🚀 11. AUTO-INITIALIZE ON TAB LOAD OR CLICK
+// =======================================================
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
+    if (typeof window.initArchiveTab === "function") window.initArchiveTab();
+  }, 500);
+});
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("li[data-target='view-archive']")) {
+    if (typeof window.initArchiveTab === "function") window.initArchiveTab();
+  }
+});

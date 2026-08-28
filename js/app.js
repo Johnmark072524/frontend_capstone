@@ -418,45 +418,73 @@ window.loadSecureImage = function(imgElementId, imageName) {
 };
 
 // ==========================================
-// 🔍 GLOBAL FULLSCREEN IMAGE LIGHTBOX
+// 🔍 BULLETPROOF FULLSCREEN IMAGE LIGHTBOX
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  // Automatically inject the Lightbox HTML into every dashboard
-  if (!document.getElementById("fullscreen-image-modal")) {
+
+// Helper to ensure the modal element exists in the DOM
+function ensureFullscreenModalExists() {
+  let modal = document.getElementById("fullscreen-image-modal");
+  if (!modal) {
     const modalHtml = `
-        <div id="fullscreen-image-modal">
-            <span class="close-fullscreen-btn" onclick="closeFullscreenImage()">&times;</span>
-            <img id="fullscreen-modal-img" src="" alt="Full Size">
-        </div>`;
+      <div id="fullscreen-image-modal" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(6px); justify-content: center; align-items: center; cursor: zoom-out;">
+        <span class="close-fullscreen-btn" onclick="closeFullscreenImage()" style="position: absolute; top: 20px; right: 30px; font-size: 36px; color: #ffffff; cursor: pointer; line-height: 1; z-index: 1000000; font-weight: bold;">&times;</span>
+        <img id="fullscreen-modal-img" src="" alt="Full Size" style="max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); cursor: default;" onclick="event.stopPropagation();">
+      </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+    modal = document.getElementById("fullscreen-image-modal");
+
+    // Close when clicking the dark background overlay
+    modal.addEventListener('click', () => closeFullscreenImage());
   }
-});
+  return modal;
+}
 
-// Function to open the big picture
-function openFullscreenImage(imgElement) {
-  const imgSrc = imgElement.src;
+// Global Open Function
+window.openFullscreenImage = function(imgElement) {
+  if (!imgElement) return;
 
-  // Don't open if it's still the loading placeholder text
-  if (imgSrc.includes('placehold.co') || !imgSrc) return;
+  const imgSrc = typeof imgElement === 'string' ? imgElement : imgElement.src;
 
-  const modal = document.getElementById("fullscreen-image-modal");
+  // Ignore clicks on empty src, error placeholders, or default svg/png placeholders
+  if (!imgSrc ||
+    imgSrc === '' ||
+    imgSrc.includes('placehold.co') ||
+    imgSrc.includes('data:image/svg+xml') ||
+    imgSrc.endsWith('undefined') ||
+    imgSrc.endsWith('null')) {
+    console.warn("Fullscreen viewer skipped: Invalid or placeholder image source.", imgSrc);
+    return;
+  }
+
+  // Guarantee modal exists
+  const modal = ensureFullscreenModalExists();
   const modalImg = document.getElementById("fullscreen-modal-img");
 
-  modalImg.src = imgSrc;
-  modal.style.display = "flex"; // Shows the modal
-}
+  if (modal && modalImg) {
+    modalImg.src = imgSrc;
+    modal.classList.remove('hidden');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('z-index', '999999', 'important');
+  }
+};
 
-// Function to close the big picture
-function closeFullscreenImage() {
+// Global Close Function
+window.closeFullscreenImage = function() {
   const modal = document.getElementById("fullscreen-image-modal");
-  modal.style.display = "none";
-}
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.setProperty('display', 'none', 'important');
+    const modalImg = document.getElementById("fullscreen-modal-img");
+    if (modalImg) modalImg.src = "";
+  }
+};
 
-const addRoadModal = document.getElementById('add-road-modal');
-if (addRoadModal) {
-  document.body.appendChild(addRoadModal);
-  addRoadModal.style.zIndex = "99999"; // Force absolute maximum z-index
-}
+// Close on Escape Key Press
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeFullscreenImage();
+  }
+});
 
 // ==========================================
 // GLOBAL MAP VARIABLES (Must remain empty at first!)
@@ -7832,6 +7860,10 @@ document.addEventListener("DOMContentLoaded", () => {
 let cacheArchiveInventory = [];
 let cacheArchivePriority = [];
 let allArchiveDatabaseReports = [];
+let archiveDetailMap = null;
+let archiveDetailMarker = null;
+let currentArchiveLat = 0;
+let currentArchiveLng = 0;
 
 // =======================================================
 // 📅 1. INITIALIZE DROPDOWNS & TABLE ON TAB LOAD
@@ -7912,7 +7944,7 @@ window.filterArchiveDatabaseTable = function() {
 };
 
 // =======================================================
-// 🎨 4. RENDER ARCHIVE TABLE ROWS
+// 🎨 4. RENDER ARCHIVE TABLE ROWS (WITH 9TH ACTION COLUMN)
 // =======================================================
 function renderArchiveTableRows(records) {
   const tbody = document.getElementById("archive-database-tbody");
@@ -7924,7 +7956,7 @@ function renderArchiveTableRows(records) {
   }
 
   if (records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: #64748b; font-style: italic;">No archived records found matching your filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #64748b; font-style: italic;">No archived records found matching your filters.</td></tr>`;
     return;
   }
 
@@ -7962,13 +7994,248 @@ function renderArchiveTableRows(records) {
           </span>
         </td>
         <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #64748b;">${dateLogged}</td>
+       <td style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">
+          <button onclick="event.stopPropagation(); openArchiveDetailModal(${r.id})" style="padding: 6px 12px; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
+            View
+          </button>
+        </td>
       </tr>
     `;
   }).join('');
 }
+// =======================================================
+// 📋 OPEN INDIVIDUAL PROJECT ARCHIVE DETAIL MODAL
+// =======================================================
+window.openArchiveDetailModal = function(reportId) {
+  if (!reportId) return;
+
+  const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E";
+
+  // Force close any lingering fullscreen image viewer modals
+  document.querySelectorAll('.fullscreen-modal, #image-modal, #fullscreen-image-modal, #image-viewer-modal').forEach(m => {
+    m.classList.add('hidden');
+    m.style.display = 'none';
+  });
+
+  const modal = document.getElementById('archive-detail-modal');
+  if (!modal) return;
+
+  // Reset map container
+  const mapContainer = document.getElementById('archive-detail-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
+  currentArchiveLat = 0;
+  currentArchiveLng = 0;
+
+  // Reset image previews
+  const dmgImg = document.getElementById('archive-modal-damage-image');
+  if (dmgImg) dmgImg.src = NO_IMAGE_PLACEHOLDER;
+  const proofImg = document.getElementById('archive-modal-proof-image');
+  if (proofImg) proofImg.src = '';
+  const proofContainer = document.getElementById('archive-modal-proof-container');
+  if (proofContainer) proofContainer.style.display = 'none';
+
+  // 🚀 DYNAMIC ADMIN NAME INJECTION FOR PRINT SIGNATORY
+  const adminFirst = sessionStorage.getItem("firstName") || "";
+  const adminLast = sessionStorage.getItem("lastName") || "";
+  const adminFullName = (adminFirst + " " + adminLast).trim();
+  const signerEl = document.getElementById("archive-modal-signer-name");
+  if (signerEl) {
+    signerEl.innerText = adminFullName || "CPDO ADMINISTRATOR";
+  }
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+  const scrollableBody = document.getElementById('archive-printable-audit-sheet');
+  if (scrollableBody) scrollableBody.scrollTop = 0;
+
+  document.getElementById('archive-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
+
+  apiFetch(`/api/reports/${reportId}`, { cache: 'no-store' })
+    .then(report => {
+      if (!report) throw new Error('Report data is empty');
+
+      currentArchiveLat = parseFloat(report.latitude) || 0;
+      currentArchiveLng = parseFloat(report.longitude) || 0;
+
+      // Header Banner
+      document.getElementById('archive-modal-prj-id').innerText = `#PRJ-${String(report.id).padStart(4, '0')}`;
+
+      const year = typeof getReportYear === 'function' ? getReportYear(report) : (report.inventoryYear || 'N/A');
+      document.getElementById('archive-modal-year').innerText = year || 'N/A';
+
+      const dateLogged = typeof formatInventoryDate === 'function'
+        ? formatInventoryDate(report)
+        : (report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A');
+      document.getElementById('archive-modal-date').innerText = dateLogged;
+
+      // Status Badge
+      const rawStat = String(report.status || 'Archived').toUpperCase();
+      const statusBadge = document.getElementById('archive-modal-status-badge');
+      if (statusBadge) {
+        if (rawStat.includes('COMPLET') || rawStat.includes('CLOSE') || rawStat.includes('RESOLV')) {
+          statusBadge.innerText = 'COMPLETED';
+          statusBadge.style.cssText = 'padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; display: inline-block;';
+        } else {
+          statusBadge.innerText = 'ARCHIVED';
+          statusBadge.style.cssText = 'padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; display: inline-block;';
+        }
+      }
+
+      // 1. Road Specs
+      document.getElementById('archive-modal-road-name').innerText = report.cityRoadName || 'Unnamed Road';
+      document.getElementById('archive-modal-brgy').innerText = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : (report.barangayName || 'Unknown');
+      document.getElementById('archive-modal-road-id').innerText = report.cityRoadId || `31420000${String(report.id).padStart(2, '0')}`;
+      document.getElementById('archive-modal-importance').innerText = String(report.roadImportance || '').toLowerCase().includes('non') ? 'Non-Core' : 'Core';
+
+      const terrain = typeof formatTerrainType === 'function' ? formatTerrainType(report.terrainType) : (report.terrainType || 'FLAT');
+      document.getElementById('archive-modal-terrain').innerText = terrain;
+      document.getElementById('archive-modal-road-type').innerText = report.roadType || 'Concrete';
+
+      const rLen = parseFloat(report.length) || 0;
+      const rWid = parseFloat(report.width) || 0;
+      document.getElementById('archive-modal-road-dims').innerText = `${rLen}m × ${rWid}m`;
+
+      const culverts = report.lengthOfCulverts != null && !isNaN(report.lengthOfCulverts) ? Number(report.lengthOfCulverts).toFixed(2) : '0.00';
+      document.getElementById('archive-modal-culverts').innerText = `${culverts} m`;
+      document.getElementById('archive-modal-bridges').innerText = report.numberOfBridges != null ? report.numberOfBridges : 0;
+
+      // 2. Damage Assessment
+      document.getElementById('archive-modal-damage-type').innerText = report.damageType || 'General Wear';
+
+      const dLen = parseFloat(report.damageLength) || 0;
+      const dWid = parseFloat(report.damageWidth) || 0;
+      const dArea = dLen * dWid;
+      document.getElementById('archive-modal-damage-area').innerText = `${dLen}m × ${dWid}m (${dArea > 0 ? dArea.toFixed(1) : '0.0'} sq.m)`;
+
+      const severity = String(report.severity || 'UNASSESSED').toUpperCase();
+      const priorityBadge = document.getElementById('archive-modal-priority-badge');
+      if (priorityBadge) {
+        priorityBadge.innerText = severity;
+        if (severity === 'HIGH') {
+          priorityBadge.style.cssText = 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+        } else if (severity === 'MEDIUM') {
+          priorityBadge.style.cssText = 'background: #fffbeb; color: #d97706; border: 1px solid #fde68a; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+        } else if (severity === 'LOW') {
+          priorityBadge.style.cssText = 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+        } else {
+          priorityBadge.style.cssText = 'background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+        }
+      }
+
+      document.getElementById('archive-modal-gps').innerText = (currentArchiveLat !== 0 && currentArchiveLng !== 0)
+        ? `${currentArchiveLat.toFixed(6)}°, ${currentArchiveLng.toFixed(6)}°`
+        : 'No GPS Data';
+
+      let submitter = 'Barangay Official';
+      if (report.user && report.user.firstName && report.user.lastName) {
+        submitter = `${report.user.firstName} ${report.user.lastName}`;
+      } else if (report.reportedBy) {
+        submitter = report.reportedBy;
+      }
+      document.getElementById('archive-modal-submitter').innerText = submitter;
+      document.getElementById('archive-modal-description').innerText = report.damageDescription || 'No description provided.';
+
+      // 3. Photographic Evidence
+      if (report.damageImage && report.damageImage !== 'no_image.jpg' && report.damageImage.trim() !== '') {
+        if (typeof loadSecureImage === 'function') {
+          loadSecureImage('archive-modal-damage-image', report.damageImage);
+        } else {
+          const dmgEl = document.getElementById('archive-modal-damage-image');
+          if (dmgEl) dmgEl.src = `/api/reports/image/${encodeURIComponent(report.damageImage)}`;
+        }
+      } else {
+        const dmgEl = document.getElementById('archive-modal-damage-image');
+        if (dmgEl) dmgEl.src = NO_IMAGE_PLACEHOLDER;
+      }
+
+      if (report.proofOfRepairImage && report.proofOfRepairImage !== 'no_image.jpg' && report.proofOfRepairImage.trim() !== '') {
+        if (proofContainer) proofContainer.style.display = 'block';
+        if (typeof loadSecureImage === 'function') {
+          loadSecureImage('archive-modal-proof-image', report.proofOfRepairImage);
+        } else {
+          const proofEl = document.getElementById('archive-modal-proof-image');
+          if (proofEl) proofEl.src = `/api/reports/image/${encodeURIComponent(report.proofOfRepairImage)}`;
+        }
+      } else {
+        if (proofContainer) proofContainer.style.display = 'none';
+      }
+
+      // 4. Remarks
+      document.getElementById('archive-modal-admin-remarks').innerText = report.adminRemarks || 'None logged';
+      document.getElementById('archive-modal-repair-remarks').innerText = report.repairRemarks || 'None logged';
+    })
+    .catch(err => {
+      console.error('Error fetching archive report detail:', err);
+      if (typeof showToast === 'function') showToast('Failed to load project audit details.', 'error');
+    });
+};
 
 // =======================================================
-// 📂 5. EXPORT DROPDOWN MENU CONTROLLER
+// 🗺️ 6. ARCHIVE MODAL SATELLITE MAP TOGGLE
+// =======================================================
+document.addEventListener('DOMContentLoaded', () => {
+  const btnLocate = document.getElementById('archive-btn-locate-map');
+  if (btnLocate) {
+    btnLocate.addEventListener('click', () => {
+      const container = document.getElementById('archive-detail-map-container');
+      if (!container) return;
+
+      if (!currentArchiveLat || !currentArchiveLng || (currentArchiveLat === 0 && currentArchiveLng === 0)) {
+        alert("No GPS coordinates recorded for this project.");
+        return;
+      }
+
+      if (container.style.display === 'none') {
+        container.style.display = 'block';
+
+        const redIcon = new L.Icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+        });
+
+        if (!archiveDetailMap) {
+          archiveDetailMap = L.map('archive-detail-map').setView([currentArchiveLat, currentArchiveLng], 17);
+          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+          }).addTo(archiveDetailMap);
+
+          archiveDetailMarker = L.marker([currentArchiveLat, currentArchiveLng], { icon: redIcon }).addTo(archiveDetailMap);
+        } else {
+          archiveDetailMap.setView([currentArchiveLat, currentArchiveLng], 17);
+          archiveDetailMarker.setLatLng([currentArchiveLat, currentArchiveLng]);
+        }
+
+        setTimeout(() => {
+          archiveDetailMap.invalidateSize();
+        }, 200);
+      } else {
+        container.style.display = 'none';
+      }
+    });
+  }
+});
+
+// =======================================================
+// 🖨️ 7. PRINT SINGLE AUDIT SHEET CONTROLLER
+// =======================================================
+window.printSingleArchiveIncident = function() {
+  const prjId = document.getElementById('archive-modal-prj-id')?.innerText.replace(/\D/g, '') || '0000';
+  const originalTitle = document.title;
+  document.title = `Project_Audit_Sheet_PRJ-${prjId}`;
+
+  window.print();
+
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
+};
+
+// =======================================================
+// 📂 8. EXPORT DROPDOWN MENU CONTROLLER
 // =======================================================
 window.toggleExportMenu = function(menuId) {
   const menu = document.getElementById(menuId);
@@ -7983,7 +8250,7 @@ window.toggleExportMenu = function(menuId) {
 };
 
 // =======================================================
-// 👁️ 6. OPEN REPORT PREVIEW MODALS (PDF PREVIEW)
+// 👁️ 9. OPEN MASTERLIST PREVIEW MODALS
 // =======================================================
 window.generateAdminReport = function(type) {
   const adminName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim() || "CPDO Administrator";
@@ -8016,7 +8283,7 @@ window.generateAdminReport = function(type) {
 };
 
 // =======================================================
-// 📊 7. CARD 1: RENDER ANNUAL ROAD INVENTORY MODAL TABLE
+// 📊 10. RENDER ANNUAL ROAD INVENTORY MODAL TABLE
 // =======================================================
 window.renderArchivePreviewInventory = function(selectedYear) {
   const tbody = document.getElementById('archive-preview-inventory-tbody');
@@ -8105,7 +8372,7 @@ window.renderArchivePreviewInventory = function(selectedYear) {
 };
 
 // =======================================================
-// 🚨 8. CARD 2: RENDER PRIORITY LIST MODAL TABLE
+// 🚨 11. CARD 2: RENDER PRIORITY LIST MODAL TABLE
 // =======================================================
 window.renderArchivePreviewPriority = function(selectedYear) {
   const tbody = document.getElementById('archive-preview-priority-tbody');
@@ -8197,7 +8464,7 @@ window.renderArchivePreviewPriority = function(selectedYear) {
 };
 
 // =======================================================
-// 📥 9. CSV TRIGGER & DOWNLOAD CONTROLLER (CARD 1 & CARD 2)
+// 📥 12. CSV TRIGGER & DOWNLOAD CONTROLLER (CARD 1 & CARD 2)
 // =======================================================
 window.triggerArchiveCSV = function(type) {
   if (typeof showToast === "function") showToast("Preparing your spreadsheet...", "success");
@@ -8279,7 +8546,7 @@ window.downloadArchiveCSV = function(type, year) {
 };
 
 // =======================================================
-// 🖨️ 10. PDF PRINT CONTROLLER
+// 🖨️ 13. PDF PRINT MASTERLISTS CONTROLLER
 // =======================================================
 window.printArchiveDocument = function(modalId) {
   const modal = document.getElementById(modalId);
@@ -8302,7 +8569,7 @@ window.printArchiveDocument = function(modalId) {
 };
 
 // =======================================================
-// 🚀 11. AUTO-INITIALIZE ON TAB LOAD OR CLICK
+// 🚀 14. AUTO-INITIALIZE ON TAB LOAD OR CLICK
 // =======================================================
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {

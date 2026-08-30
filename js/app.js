@@ -862,9 +862,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (targetId === 'view-report-priority') {
       if (typeof window.generatePriorityList === 'function') window.generatePriorityList();
     }
-    // 🚀 NEW: THE SETTINGS TRIGGER
+    // 🚀 SETTINGS TRIGGER
     else if (targetId === 'view-settings') {
       if (typeof window.loadActiveCycleOverview === 'function') window.loadActiveCycleOverview();
+    }
+    // 🚀 NEW: ACTIVITY LOG AUDIT TRAIL TRIGGER
+    else if (targetId === 'view-activity-log') {
+      if (typeof window.loadActivityLogs === 'function') window.loadActivityLogs();
     }
       // ==========================================
       // 🚀 THE MAP FIX: TELL MAPS TO LOAD ON REFRESH
@@ -929,7 +933,6 @@ document.addEventListener('DOMContentLoaded', () => {
     history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
     switchView(finalTarget);
   })();
-
 
 // =======================================================
 // ⚙️ ADMIN SETTINGS & CYCLE TRACKER LOGIC
@@ -8180,8 +8183,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const container = document.getElementById('archive-detail-map-container');
       if (!container) return;
 
+      // 🛡️ Safe check with custom Toast notification
       if (!currentArchiveLat || !currentArchiveLng || (currentArchiveLat === 0 && currentArchiveLng === 0)) {
-        alert("No GPS coordinates recorded for this project.");
+        if (typeof showToast === 'function') {
+          showToast("No GPS coordinates recorded for this project.", "warning");
+        }
         return;
       }
 
@@ -8582,3 +8588,380 @@ document.addEventListener("click", (e) => {
     if (typeof window.initArchiveTab === "function") window.initArchiveTab();
   }
 });
+
+// =======================================================
+// ⏱️ SYSTEM AUDIT & ACTIVITY LOG ENGINE
+// =======================================================
+
+let rawActivityLogs = [];
+let filteredActivityLogs = [];
+
+// 1. Fetch & Initialize Activity Logs
+window.loadActivityLogs = async function() {
+  const tbody = document.getElementById("activity-log-tbody");
+  const countEl = document.getElementById("activity-log-count");
+
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 35px; color: #64748b; font-style: italic;">
+          Loading system activity audit trail...
+        </td>
+      </tr>`;
+  }
+
+  try {
+    const res = await apiFetch('/api/activity-logs', { cache: 'no-store' });
+    if (!res || !Array.isArray(res)) throw new Error("Invalid response format");
+
+    rawActivityLogs = res;
+    filteredActivityLogs = [...rawActivityLogs];
+    renderActivityLogsTable(filteredActivityLogs);
+  } catch (err) {
+    console.error("Failed to load activity logs:", err);
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 30px; color: #ef4444; font-weight: 600;">
+            ⚠️ Failed to load activity logs. Please check server connection.
+          </td>
+        </tr>`;
+    }
+    if (countEl) countEl.innerText = "Showing 0 log entries";
+  }
+};
+
+// 2. Render Table Rows
+function renderActivityLogsTable(logs) {
+  const tbody = document.getElementById("activity-log-tbody");
+  const countEl = document.getElementById("activity-log-count");
+  if (!tbody) return;
+
+  if (countEl) {
+    countEl.innerText = `Showing ${logs.length} of ${rawActivityLogs.length} log entries`;
+  }
+
+  if (logs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 35px; color: #64748b; font-style: italic;">
+          No audit logs match the selected filter criteria.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  tbody.innerHTML = logs.map(log => {
+    const dateFormatted = formatAuditTimestamp(log.timestamp);
+    const categoryBadge = getCategoryBadge(log.category);
+    const statusBadge = getStatusBadge(log.status);
+
+    return `
+      <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <td style="padding: 10px 12px; font-family: monospace; font-size: 11px; text-align: center; color: #475569;">
+          ${dateFormatted}
+        </td>
+        <td style="padding: 10px 12px;">
+          <strong style="color: #0f172a; display: block; font-size: 12px;">${escapeHtml(log.actorName || 'System')}</strong>
+          <span style="font-size: 10.5px; color: #64748b;">${escapeHtml(log.actorRole || 'SYSTEM')} • ${escapeHtml(log.actorOffice || 'Central')}</span>
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          ${categoryBadge}
+        </td>
+        <td style="padding: 10px 12px; text-align: center; font-family: monospace; font-weight: 700; color: #2563eb;">
+          ${escapeHtml(log.targetEntity || 'N/A')}
+        </td>
+        <td style="padding: 10px 12px; color: #334155; line-height: 1.4;">
+          <strong style="font-size: 11px; color: #0f172a; display: block;">${escapeHtml(log.action || 'ACTION')}</strong>
+          <span style="font-size: 11.5px; color: #475569;">${escapeHtml(log.description || '-')}</span>
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          ${statusBadge}
+        </td>
+        <td style="padding: 10px 12px; text-align: center;">
+          <button type="button" onclick="inspectActivityLog(${log.id})" style="padding: 4px 8px; background: #f1f5f9; color: #2563eb; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;" title="Inspect Details">
+            🔍 View
+          </button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// 3. Multi-Filter Logic
+window.filterActivityLogsTable = function() {
+  const query = (document.getElementById("activity-search-input")?.value || "").toLowerCase().trim();
+  const cat = document.getElementById("activity-filter-category")?.value || "ALL";
+  const role = document.getElementById("activity-filter-role")?.value || "ALL";
+  const timeframe = document.getElementById("activity-filter-time")?.value || "ALL";
+
+  const now = new Date();
+
+  filteredActivityLogs = rawActivityLogs.filter(log => {
+    // Search Query Match
+    const matchQuery = !query ||
+      (log.actorName && log.actorName.toLowerCase().includes(query)) ||
+      (log.targetEntity && log.targetEntity.toLowerCase().includes(query)) ||
+      (log.action && log.action.toLowerCase().includes(query)) ||
+      (log.description && log.description.toLowerCase().includes(query)) ||
+      (log.actorRole && log.actorRole.toLowerCase().includes(query));
+
+    // Category Match
+    const matchCat = (cat === "ALL") || (log.category && log.category.toUpperCase() === cat);
+
+    // Role Match
+    const matchRole = (role === "ALL") ||
+      (role === "ADMIN" && String(log.actorRole).toUpperCase().includes("ADMIN")) ||
+      (role === "CEO" && (String(log.actorRole).toUpperCase().includes("ENGINEER") || String(log.actorRole).toUpperCase().includes("CEO"))) ||
+      (role === "BARANGAY" && String(log.actorRole).toUpperCase().includes("BARANGAY")) ||
+      (role === "SYSTEM" && String(log.actorRole).toUpperCase().includes("SYSTEM"));
+
+    // Timeframe Match
+    let matchTime = true;
+    if (timeframe !== "ALL" && log.timestamp) {
+      const logDate = new Date(log.timestamp);
+      const diffHours = (now - logDate) / (1000 * 60 * 60);
+
+      if (timeframe === "TODAY") matchTime = diffHours <= 24;
+      else if (timeframe === "7DAYS") matchTime = diffHours <= (24 * 7);
+      else if (timeframe === "30DAYS") matchTime = diffHours <= (24 * 30);
+    }
+
+    return matchQuery && matchCat && matchRole && matchTime;
+  });
+
+  renderActivityLogsTable(filteredActivityLogs);
+};
+
+// 4. Audit Event Inspector Modal
+window.inspectActivityLog = function(logId) {
+  const log = rawActivityLogs.find(l => l.id === logId);
+  if (!log) return;
+
+  const modal = document.getElementById("activity-detail-modal");
+  if (!modal) return;
+
+  document.getElementById("audit-modal-log-id").innerText = `#LOG-${String(log.id).padStart(4, '0')}`;
+  document.getElementById("audit-modal-timestamp").innerText = formatAuditTimestamp(log.timestamp);
+
+  const statusBadge = document.getElementById("audit-modal-status-badge");
+  if (statusBadge) {
+    statusBadge.innerText = (log.status || "SUCCESS").toUpperCase();
+    if (log.status === "FAILED") {
+      statusBadge.style.cssText = "padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;";
+    } else if (log.status === "WARNING") {
+      statusBadge.style.cssText = "padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; background: #fffbeb; color: #d97706; border: 1px solid #fde68a;";
+    } else {
+      statusBadge.style.cssText = "padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;";
+    }
+  }
+
+  // Actor Details
+  document.getElementById("audit-modal-actor-name").innerText = log.actorName || "System Automation";
+  document.getElementById("audit-modal-actor-role").innerText = log.actorRole || "SYSTEM";
+  document.getElementById("audit-modal-actor-office").innerText = log.actorOffice || "Central";
+  document.getElementById("audit-modal-actor-id").innerText = log.actorId ? `#USR-${log.actorId}` : "SYSTEM";
+
+  // Event Details
+  document.getElementById("audit-modal-category").innerText = log.category || "SYSTEM";
+  document.getElementById("audit-modal-target").innerText = log.targetEntity || "N/A";
+  document.getElementById("audit-modal-action").innerText = log.action || "GENERAL_ACTION";
+  document.getElementById("audit-modal-description").innerText = log.description || "No description logged.";
+
+  // Telemetry Details
+  document.getElementById("audit-modal-ip").innerText = log.ipAddress || "127.0.0.1";
+  document.getElementById("audit-modal-method").innerText = log.httpMethod || "GET";
+  document.getElementById("audit-modal-useragent").innerText = log.userAgent || "Unknown Client / Direct API";
+
+  modal.classList.remove("hidden");
+  modal.style.display = "flex";
+};
+
+// 5. Dropdown Menu Toggle
+window.toggleActivityExportDropdown = function(event) {
+  if (event) event.stopPropagation();
+  const dropdown = document.getElementById("activity-export-dropdown");
+  if (!dropdown) return;
+
+  const isHidden = dropdown.style.display === "none" || dropdown.classList.contains("hidden");
+  dropdown.style.display = isHidden ? "block" : "none";
+  dropdown.classList.toggle("hidden", !isHidden);
+};
+
+// Close dropdown on outside click
+document.addEventListener("click", (e) => {
+  const dropdown = document.getElementById("activity-export-dropdown");
+  const btn = document.getElementById("btn-activity-export-menu");
+  if (dropdown && !dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
+    dropdown.style.display = "none";
+    dropdown.classList.add("hidden");
+  }
+});
+
+// 6. Export to CSV (With Automatic Audit Trail Logging)
+window.exportActivityLogCSV = async function() {
+  const dropdown = document.getElementById("activity-export-dropdown");
+  if (dropdown) { dropdown.style.display = "none"; dropdown.classList.add("hidden"); }
+
+  if (!filteredActivityLogs || filteredActivityLogs.length === 0) {
+    if (typeof showToast === "function") showToast("No activity log records to export.", "warning");
+    return;
+  }
+
+  // Record audit trail event on backend
+  const currentUserId = sessionStorage.getItem("userId");
+  try {
+    await apiFetch('/api/activity-logs/log-action', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: currentUserId,
+        category: 'EXPORT',
+        action: 'EXPORT_AUDIT_LOG_CSV',
+        targetEntity: 'ACTIVITY_LOGS',
+        description: `Exported ${filteredActivityLogs.length} audit trail records to CSV.`
+      })
+    });
+  } catch (e) {
+    console.warn("Could not log export action:", e);
+  }
+
+  // Generate CSV Content
+  const headers = ["Log ID", "Timestamp (PHT)", "Actor Name", "Actor Role", "Actor Office", "Category", "Action", "Target Entity", "Description", "Status", "IP Address"];
+  const rows = filteredActivityLogs.map(l => [
+    `#LOG-${String(l.id).padStart(4, '0')}`,
+    `"${formatAuditTimestamp(l.timestamp)}"`,
+    `"${(l.actorName || '').replace(/"/g, '""')}"`,
+    `"${(l.actorRole || '').replace(/"/g, '""')}"`,
+    `"${(l.actorOffice || '').replace(/"/g, '""')}"`,
+    `"${l.category || ''}"`,
+    `"${l.action || ''}"`,
+    `"${l.targetEntity || ''}"`,
+    `"${(l.description || '').replace(/"/g, '""')}"`,
+    `"${l.status || 'SUCCESS'}"`,
+    `"${l.ipAddress || ''}"`
+  ]);
+
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `RoadWise_System_Audit_Log_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  if (typeof showToast === "function") showToast(`Exported ${filteredActivityLogs.length} log records to CSV!`, "success");
+};
+
+// 7. Printable PDF Report Preview & Action
+window.openActivityLogPrintModal = function() {
+  const dropdown = document.getElementById("activity-export-dropdown");
+  if (dropdown) { dropdown.style.display = "none"; dropdown.classList.add("hidden"); }
+
+  const modal = document.getElementById("activity-log-print-modal");
+  const tbody = document.getElementById("activity-print-tbody");
+  if (!modal || !tbody) return;
+
+  // Metadata injection
+  const dateEl = document.getElementById("activity-print-generated-date");
+  if (dateEl) dateEl.innerText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const catFilter = document.getElementById("activity-filter-category")?.value || "ALL";
+  const catEl = document.getElementById("activity-print-category");
+  if (catEl) catEl.innerText = catFilter === "ALL" ? "ALL CATEGORIES" : catFilter;
+
+  const timeFilter = document.getElementById("activity-filter-time")?.value || "ALL";
+  const timeEl = document.getElementById("activity-print-timeframe");
+  if (timeEl) timeEl.innerText = timeFilter === "ALL" ? "All Records" : (timeFilter === "TODAY" ? "Today" : `Last ${timeFilter.replace('DAYS', ' Days')}`);
+
+  // Dynamic Administrator Signer
+  const adminFirst = sessionStorage.getItem("firstName") || "";
+  const adminMiddle = sessionStorage.getItem("middleName") || "";
+  const adminLast = sessionStorage.getItem("lastName") || "";
+  const signerEl = document.getElementById("activity-print-signer-name");
+  if (signerEl) {
+    if (typeof formatFullName === 'function') {
+      signerEl.innerText = formatFullName(adminFirst, adminMiddle, adminLast).toUpperCase() || "CPDO ADMINISTRATOR";
+    } else {
+      signerEl.innerText = `${adminFirst} ${adminLast}`.trim().toUpperCase() || "CPDO ADMINISTRATOR";
+    }
+  }
+
+  // Populate Printable Rows
+  if (filteredActivityLogs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: #64748b;">No log records matching filter selection.</td></tr>`;
+  } else {
+    tbody.innerHTML = filteredActivityLogs.map(l => `
+      <tr style="border-bottom: 1px solid #cbd5e1;">
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; font-size: 9.5px; border: 1px solid #cbd5e1;">${formatAuditTimestamp(l.timestamp)}</td>
+        <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+          <strong>${escapeHtml(l.actorName || 'System')}</strong><br>
+          <span style="font-size: 9px; color: #64748b;">${escapeHtml(l.actorRole || 'SYSTEM')}</span>
+        </td>
+        <td style="padding: 6px 8px; text-align: center; font-weight: 700; border: 1px solid #cbd5e1;">${escapeHtml(l.category || '-')}</td>
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; border: 1px solid #cbd5e1;">${escapeHtml(l.targetEntity || '-')}</td>
+        <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+          <strong>${escapeHtml(l.action || '-')}</strong>: ${escapeHtml(l.description || '-')}
+        </td>
+        <td style="padding: 6px 8px; text-align: center; font-weight: 700; border: 1px solid #cbd5e1;">${escapeHtml(l.status || 'SUCCESS')}</td>
+      </tr>
+    `).join('');
+  }
+
+  modal.classList.remove("hidden");
+  modal.style.display = "flex";
+};
+
+window.printActivityLogSheet = async function() {
+  const currentUserId = sessionStorage.getItem("userId");
+  try {
+    await apiFetch('/api/activity-logs/log-action', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: currentUserId,
+        category: 'EXPORT',
+        action: 'PRINT_AUDIT_LOG_PDF',
+        targetEntity: 'ACTIVITY_LOGS',
+        description: `Generated printable PDF audit report (${filteredActivityLogs.length} records).`
+      })
+    });
+  } catch (e) {
+    console.warn("Could not log print action:", e);
+  }
+
+  window.print();
+};
+
+// --- Formatters & UI Badges ---
+function formatAuditTimestamp(ts) {
+  if (!ts) return "N/A";
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function getCategoryBadge(cat) {
+  const c = String(cat || 'SYSTEM').toUpperCase();
+  if (c === 'PROJECT') return `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">PROJECT</span>`;
+  if (c === 'QA') return `<span style="background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">QA & REVIEW</span>`;
+  if (c === 'EXPORT') return `<span style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">EXPORT</span>`;
+  if (c === 'AUTH') return `<span style="background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">SECURITY</span>`;
+  if (c === 'USER') return `<span style="background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">USER MGMT</span>`;
+  return `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">SYSTEM</span>`;
+}
+
+function getStatusBadge(status) {
+  const s = String(status || 'SUCCESS').toUpperCase();
+  if (s === 'FAILED') return `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 10px;">FAILED</span>`;
+  if (s === 'WARNING') return `<span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 10px;">WARNING</span>`;
+  return `<span style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 10px;">SUCCESS</span>`;
+}
+
+function escapeHtml(text) {
+  if (!text) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}

@@ -34,7 +34,7 @@
         <li data-target="view-user-management"><a href="#"><span class="icon">👥</span> User Management</a></li>
         <li data-target="view-barangay"><a href="#"><span class="icon">🏢</span> Barangay Management</a></li>
         <li data-target="view-archive"><a href="#"><span class="icon">🗄️</span> Archive & Reports</a></li>
-        <li><a href="#"><span class="icon">⏱️</span> Activity Log</a></li>
+        <li data-target="view-activity-log" class="nav-item"><a href="javascript:void(0);"><span class="icon">⏱️</span> Activity Log</a></li>
         <li id="nav-settings" data-target="view-settings"><a href="#"><span class="icon">⚙️</span> Settings</a></li>
       </ul>
     </nav>
@@ -310,6 +310,114 @@
           </div>
 
         </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- ⏱️ SYSTEM AUDIT & ACTIVITY LOG VIEW        -->
+      <!-- ========================================== -->
+      <div id="view-activity-log" class="content-section hidden">
+
+        <!-- Section Header with Dual Export Dropdown -->
+        <div class="section-header" style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+          <div>
+            <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #1e293b;">System Audit & Activity Log</h2>
+            <p style="color: #64748b; font-size: 13px; margin-top: 5px;">
+              Immutable audit trail of administrative actions, project transitions, security authentications, and report exports.
+            </p>
+          </div>
+
+          <!-- Dual Export Dropdown (CSV + PDF) -->
+          <div style="position: relative; display: inline-block;">
+            <button type="button" id="btn-activity-export-menu" onclick="toggleActivityExportDropdown(event)" style="background: #0f172a; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background 0.2s;">
+              <span>📥</span> Export Audit Trail <span style="font-size: 10px;">▼</span>
+            </button>
+
+            <!-- Dropdown Menu items -->
+            <div id="activity-export-dropdown" class="hidden" style="position: absolute; right: 0; top: calc(100% + 6px); background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 220px; z-index: 1000; overflow: hidden; display: none;">
+              <button type="button" onclick="exportActivityLogCSV()" style="width: 100%; text-align: left; padding: 10px 14px; background: none; border: none; border-bottom: 1px solid #f1f5f9; font-size: 12.5px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 15px;">📊</span> Export as CSV (.csv)
+              </button>
+              <button type="button" onclick="openActivityLogPrintModal()" style="width: 100%; text-align: left; padding: 10px 14px; background: none; border: none; font-size: 12.5px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 15px;">🖨️</span> Print / Save to PDF (.pdf)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Log Card Container -->
+        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+
+          <!-- Multi-Filter & Search Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+
+            <!-- Live Search -->
+            <div style="position: relative; flex: 1; min-width: 260px; max-width: 380px;">
+              <input type="text" id="activity-search-input" placeholder="Search Actor, Project ID, Action, Details..." onkeyup="filterActivityLogsTable()" style="width: 100%; padding: 9px 12px 9px 34px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; box-sizing: border-box;">
+              <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px;">🔍</span>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <!-- Category Filter -->
+              <select id="activity-filter-category" onchange="filterActivityLogsTable()" style="padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: white; outline: none; cursor: pointer;">
+                <option value="ALL">All Categories</option>
+                <option value="PROJECT">Project Lifecycle</option>
+                <option value="QA">QA & Verification</option>
+                <option value="EXPORT">Report Exports</option>
+                <option value="AUTH">Auth & Security</option>
+                <option value="USER">User Management</option>
+              </select>
+
+              <!-- Role Filter -->
+              <select id="activity-filter-role" onchange="filterActivityLogsTable()" style="padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: white; outline: none; cursor: pointer;">
+                <option value="ALL">All Roles</option>
+                <option value="ADMIN">CPDO Administrator</option>
+                <option value="CEO">City Engineering Office</option>
+                <option value="BARANGAY">Barangay Official</option>
+                <option value="SYSTEM">System Automations</option>
+              </select>
+
+              <!-- Date / Timeframe Filter -->
+              <select id="activity-filter-time" onchange="filterActivityLogsTable()" style="padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; color: #1e293b; background: white; outline: none; cursor: pointer;">
+                <option value="ALL">All Time</option>
+                <option value="TODAY">Today</option>
+                <option value="7DAYS">Last 7 Days</option>
+                <option value="30DAYS">Last 30 Days</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Activity Audit Data Table -->
+          <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+              <thead>
+              <tr style="background: #0f172a; color: #ffffff; font-weight: 700;">
+                <th style="padding: 11px 12px; border: 1px solid #334155; width: 155px; text-align: center;">Timestamp (PHT)</th>
+                <th style="padding: 11px 12px; border: 1px solid #334155; min-width: 170px;">Actor / Performed By</th>
+                <th style="padding: 11px 12px; border: 1px solid #334155; width: 140px; text-align: center;">Event Category</th>
+                <th style="padding: 11px 12px; border: 1px solid #334155; width: 120px; text-align: center;">Target Entity</th>
+                <th style="padding: 11px 12px; border: 1px solid #334155; min-width: 250px;">Action Description & Remarks</th>
+                <th style="padding: 11px 12px; border: 1px solid #334155; width: 90px; text-align: center;">Status</th>
+                <th style="padding: 11px 12px; border: 1px solid #334155; width: 75px; text-align: center;">Inspect</th>
+              </tr>
+              </thead>
+              <tbody id="activity-log-tbody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 35px; color: #64748b; font-style: italic;">
+                  Loading system activity audit trail...
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table Summary / Record Count Footer -->
+          <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #64748b; font-weight: 600;">
+            <span id="activity-log-count">Showing 0 log entries</span>
+            <span style="font-size: 11px; color: #94a3b8; font-style: italic;">Records are cryptographically bound and tamper-evident</span>
+          </div>
+
+        </div>
+
       </div>
 
       <!-- ========================================== -->
@@ -2281,6 +2389,179 @@
           <strong id="archive-preview-inventory-admin" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block;">CPDO Administrator</strong>
           <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
           <span style="font-size: 11px; color: #475569; font-weight: 600; display: block; margin-top: 2px;">Road Inventory Officer</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- 🔍 MODAL: ACTIVITY LOG DETAILED AUDIT INSPECTOR         -->
+<!-- ======================================================= -->
+<div id="activity-detail-modal" class="modal-overlay hidden" style="z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
+  <div style="background: white; border-radius: 12px; width: 95%; max-width: 680px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+
+    <!-- Modal Header -->
+    <div style="padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3 style="margin: 0; font-size: 17px; color: #1e293b; font-weight: 800;">
+          Audit Event Inspector <span id="audit-modal-log-id" style="color: #2563eb; font-family: monospace; font-size: 15px;">#LOG-0000</span>
+        </h3>
+        <p style="margin: 2px 0 0 0; font-size: 11.5px; color: #64748b;">Read-only metadata breakdown and forensic trail verification.</p>
+      </div>
+      <button onclick="document.getElementById('activity-detail-modal').classList.add('hidden')" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close">✕</button>
+    </div>
+
+    <!-- Scrollable Modal Body -->
+    <div style="flex: 1; padding: 24px 28px; overflow-y: auto; font-size: 12.5px; color: #0f172a; line-height: 1.5;">
+
+      <!-- Event Summary Banner -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+        <div>
+          <span style="font-size: 11px; color: #64748b; font-weight: 600; display: block;">TIMESTAMP (PHT)</span>
+          <strong id="audit-modal-timestamp" style="font-size: 13px; color: #0f172a;">-</strong>
+        </div>
+        <div style="text-align: right;">
+          <span style="font-size: 11px; color: #64748b; font-weight: 600; display: block;">OUTCOME STATUS</span>
+          <span id="audit-modal-status-badge" style="padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; display: inline-block;">
+            SUCCESS
+          </span>
+        </div>
+      </div>
+
+      <!-- Grid 1: Actor Profile -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+          1. Actor Information
+        </h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px;">
+          <div><strong style="color: #64748b;">Full Name:</strong> <span id="audit-modal-actor-name" style="font-weight: 700; color: #0f172a;">-</span></div>
+          <div><strong style="color: #64748b;">Role:</strong> <span id="audit-modal-actor-role" style="font-weight: 600;">-</span></div>
+          <div><strong style="color: #64748b;">Office / Barangay:</strong> <span id="audit-modal-actor-office">-</span></div>
+          <div><strong style="color: #64748b;">User ID:</strong> <span id="audit-modal-actor-id" style="font-family: monospace;">-</span></div>
+        </div>
+      </div>
+
+      <!-- Grid 2: Event Details -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+          2. Event Details & Target
+        </h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px;">
+          <div><strong style="color: #64748b;">Action Category:</strong> <span id="audit-modal-category" style="font-weight: 700; color: #2563eb;">-</span></div>
+          <div><strong style="color: #64748b;">Target Entity:</strong> <span id="audit-modal-target" style="font-weight: 700; font-family: monospace;">-</span></div>
+          <div style="grid-column: 1 / -1;"><strong style="color: #64748b;">Action Name / Verb:</strong> <span id="audit-modal-action">-</span></div>
+          <div style="grid-column: 1 / -1;">
+            <strong style="color: #64748b; display: block; margin-bottom: 4px;">Description / Audit Remarks:</strong>
+            <div id="audit-modal-description" style="background: white; border: 1px solid #cbd5e1; padding: 10px; border-radius: 4px; font-family: inherit;">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid 3: Security & Network Metadata -->
+      <div style="margin-bottom: 10px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+          3. Security & Network Telemetry
+        </h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; font-size: 11.5px;">
+          <div><strong style="color: #64748b;">IP Address:</strong> <span id="audit-modal-ip" style="font-family: monospace; font-weight: 700;">-</span></div>
+          <div><strong style="color: #64748b;">HTTP Method:</strong> <span id="audit-modal-method" style="font-family: monospace; font-weight: 700; color: #16a34a;">-</span></div>
+          <div style="grid-column: 1 / -1;"><strong style="color: #64748b;">Device / User-Agent:</strong> <span id="audit-modal-useragent" style="word-break: break-all; color: #475569;">-</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding: 12px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+      <button onclick="document.getElementById('activity-detail-modal').classList.add('hidden')" style="padding: 7px 16px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: 600; font-size: 12.5px; cursor: pointer;">
+        Close Inspector
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- 🖨️ MODAL: OFFICIAL PRINTABLE ACTIVITY AUDIT REPORT       -->
+<!-- ======================================================= -->
+<div id="activity-log-print-modal" class="modal-overlay hidden" style="z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
+  <div style="background: white; border-radius: 12px; width: 95%; max-width: 1050px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+
+    <!-- Print Modal Toolbar (Hidden during Print) -->
+    <div class="no-print" style="padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3 style="margin: 0; font-size: 17px; color: #1e293b; font-weight: 800;">Official System Audit Report Preview</h3>
+        <p style="margin: 2px 0 0 0; font-size: 11.5px; color: #64748b;">Government-compliant printable activity log with official LGU letterhead.</p>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button onclick="printActivityLogSheet()" style="padding: 7px 16px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+          🖨️ Print / Save as PDF
+        </button>
+        <button onclick="document.getElementById('activity-log-print-modal').classList.add('hidden')" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close">✕</button>
+      </div>
+    </div>
+
+    <!-- Scrollable Printable Sheet Area -->
+    <div id="activity-printable-audit-area" style="flex: 1; padding: 25px 35px; overflow-y: auto; background: white; color: #0f172a; font-family: 'Segoe UI', Arial, sans-serif;">
+
+      <!-- Official Letterhead (Print & Preview) -->
+      <div class="audit-letterhead" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 14px;">
+        <img src="img/cpdologo.png" alt="CPDO Logo" style="height: 55px; width: auto;" onerror="this.style.display='none'">
+        <div style="text-align: center; flex: 1; margin: 0 15px;">
+          <p style="margin: 0; font-size: 10px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; font-weight: 600;">Republic of the Philippines • Province of Bulacan</p>
+          <h2 style="margin: 1px 0; font-size: 16px; color: #0f172a; font-weight: 800; text-transform: uppercase;">City of San Jose Del Monte</h2>
+          <h3 style="margin: 0; font-size: 11px; font-weight: 700; color: #dc2626;">CITY PLANNING AND DEVELOPMENT OFFICE</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">OFFICIAL SYSTEM AUDIT & ACTIVITY TRAIL</p>
+        </div>
+        <img src="img/logo.png" alt="RoadWise Logo" style="height: 55px; width: auto;" onerror="this.style.display='none'">
+      </div>
+
+      <!-- Metadata & Filter Summary Banner -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 14px; border-radius: 6px; margin-bottom: 15px; font-size: 11px;">
+        <div>
+          <span style="color: #64748b; font-weight: 600;">REPORT GENERATED:</span>
+          <strong id="activity-print-generated-date" style="color: #0f172a; margin-left: 4px;">-</strong>
+          <span style="margin: 0 8px; color: #cbd5e1;">|</span>
+          <span style="color: #64748b; font-weight: 600;">TIMEFRAME:</span>
+          <strong id="activity-print-timeframe" style="color: #0f172a; margin-left: 4px;">All Records</strong>
+        </div>
+        <div>
+          <span style="color: #64748b; font-weight: 600;">CATEGORY SCOPE:</span>
+          <strong id="activity-print-category" style="color: #0f172a; margin-left: 4px;">ALL CATEGORIES</strong>
+        </div>
+      </div>
+
+      <!-- Printable Table Container -->
+      <table style="width: 100%; border-collapse: collapse; font-size: 10.5px; text-align: left; margin-bottom: 25px;">
+        <thead>
+        <tr style="background: #0f172a; color: #ffffff; font-weight: 700;">
+          <th style="padding: 6px 8px; border: 1px solid #0f172a; width: 125px; text-align: center;">Timestamp (PHT)</th>
+          <th style="padding: 6px 8px; border: 1px solid #0f172a; width: 140px;">Actor (Name / Role)</th>
+          <th style="padding: 6px 8px; border: 1px solid #0f172a; width: 110px; text-align: center;">Category</th>
+          <th style="padding: 6px 8px; border: 1px solid #0f172a; width: 85px; text-align: center;">Target</th>
+          <th style="padding: 6px 8px; border: 1px solid #0f172a;">Action Details & Remarks</th>
+          <th style="padding: 6px 8px; border: 1px solid #0f172a; width: 65px; text-align: center;">Status</th>
+        </tr>
+        </thead>
+        <tbody id="activity-print-tbody">
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 25px; color: #64748b; font-style: italic;">
+            No log entries selected for printing.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <!-- Dynamic Print Signatory Block -->
+      <div class="audit-signature" style="page-break-inside: avoid; margin-top: 25px;">
+        <div style="width: 230px; text-align: center;">
+          <p style="text-align: left; margin: 0 0 3px 0; font-size: 10px; font-weight: 600; color: #334155;">Certified & Verified By:</p>
+          <div style="border-bottom: 1.5px solid #0f172a; height: 22px; margin-bottom: 3px;"></div>
+          <strong id="activity-print-signer-name" style="text-transform: uppercase; font-size: 10.5px; color: #0f172a; display: block; letter-spacing: 0.5px;">CPDO ADMINISTRATOR</strong>
+          <span style="font-size: 8.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
+          <span style="font-size: 9.5px; color: #334155; font-weight: 600; display: block; margin-top: 1px;">City Planning & Development Coordinator</span>
         </div>
       </div>
 

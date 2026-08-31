@@ -1414,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const getSafeStr = (key, fallback) => {
         const val = sessionStorage.getItem(key);
-        return (val && val !== 'null' && val.trim() !== '') ? val : fallback;
+        return (val && val !== 'null' && val !== 'undefined' && val.trim() !== '') ? val : fallback;
       };
 
       const firstName = getSafeStr('firstName', 'Unknown');
@@ -1429,8 +1429,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const barangayName = getSafeStr('barangayName', 'Not Assigned');
       const profilePic = getSafeStr('profilePicture', '');
 
-      // Name & Age Builder
-      let fullName = middleName ? `${firstName} ${middleName} ${lastName}` : `${firstName} ${lastName}`;
+      // 🚀 1. BUILD MIDDLE INITIAL FOR DISPLAY (e.g., "L.")
+      let mi = '';
+      if (middleName && middleName.trim().length > 0) {
+        const cleanedMiddle = middleName.trim().replace(/\./g, '');
+        if (cleanedMiddle.length > 0) {
+          mi = `${cleanedMiddle.charAt(0).toUpperCase()}.`;
+        }
+      }
+
+      // Name Builders:
+      // • displayName -> For Header & Sidebar Badges (First M.I. Last)
+      // • fullName    -> For Full Profile Detail Tab (First Middle Last)
+      const displayName = [firstName, mi, lastName].filter(Boolean).join(' ');
+      const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
+
+      // Age & Birthday Calculation
       let displayAge = "N/A";
       let displayBirthday = "Not Provided";
 
@@ -1462,15 +1476,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.textContent = text;
       };
 
-      // Text Injections
-      setElText('sidebar-display-name', fullName);
+      // 🚀 2. TEXT INJECTIONS (Uses displayName with Middle Initial for Header & Sidebar)
+      setElText('header-display-name', displayName);
+      setElText('header-display-role', displayRole);
+      setElText('sidebar-display-name', displayName);
       setElText('sidebar-display-role', displayRole);
-      setElText('side-profile-name', fullName);
+      setElText('side-profile-name', displayName);
       setElText('side-profile-role', displayRole);
       setElText('side-profile-brgy', barangayName);
-      setElText('header-display-name', fullName);
-      setElText('header-display-role', displayRole);
 
+      // Profile Tab Details (Detailed View)
       setElText('profile-full-name', fullName);
       setElText('profile-email', email);
       setElText('profile-phone', phone);
@@ -1491,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 🖼️ RENDER PROFILE PICTURE IN HEADER & PROFILE TAB
+      // 🖼️ 3. RENDER PROFILE PICTURE IN HEADER & PROFILE TAB
       const headerImg = document.getElementById('header-profile-img');
       const headerFallback = document.getElementById('header-profile-fallback');
       const mainAvatar = document.getElementById('main-profile-avatar');
@@ -1503,14 +1518,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (isValidImage) {
         if (headerImg) {
-          window.loadSecureImage('header-profile-img', profilePic);
+          if (typeof window.loadSecureImage === 'function') {
+            window.loadSecureImage('header-profile-img', profilePic);
+          } else {
+            headerImg.src = profilePic;
+          }
           headerImg.style.display = 'block';
         }
         if (headerFallback) headerFallback.style.display = 'none';
 
         if (mainAvatar) {
           mainAvatar.innerHTML = `<img id="sidebar-avatar-img" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-          window.loadSecureImage('sidebar-avatar-img', profilePic);
+          if (typeof window.loadSecureImage === 'function') {
+            window.loadSecureImage('sidebar-avatar-img', profilePic);
+          } else {
+            const imgEl = document.getElementById('sidebar-avatar-img');
+            if (imgEl) imgEl.src = profilePic;
+          }
         }
       } else {
         if (headerImg) headerImg.style.display = 'none';
@@ -1530,14 +1554,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 🚀 AUTO-LOAD PROFILE HEADER GLOBALLY
 // ==========================================
-// Run this instantly when the dashboard opens, before anyone clicks anything!
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof window.populateProfileData === 'function') {
       window.populateProfileData();
     }
   });
 
-// 🚀 FALLBACK: FORCE THE SCRIPT TO RUN (Bypasses missing DOMContentLoaded triggers)
+// Fallback execution
   setTimeout(() => {
     if (typeof window.populateProfileData === 'function') {
       window.populateProfileData();
@@ -1549,9 +1572,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (profileBtn) {
     profileBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      // 🚀 THE FIX: Use the global router so the browser remembers we are here!
       history.pushState({ target: 'view-profile' }, "", "#view-profile");
-      switchView('view-profile');
+      if (typeof switchView === 'function') switchView('view-profile');
     });
   }
 
@@ -1599,12 +1621,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentPath = window.location.pathname.toLowerCase();
       const dashId = currentPath.includes("admin") ? 'view-admin-dashboard' : 'view-dashboard';
 
-      // 🚀 THE FIX: Route safely back to the dashboard!
       history.pushState({ target: dashId }, "", "#" + dashId);
-      switchView(dashId);
+      if (typeof switchView === 'function') switchView(dashId);
     });
   }
-
 
 // ==========================================
 // 10. OFFICIAL REPORT LOGIC (CEO PRIORITY LIST)
@@ -1612,6 +1632,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnPrintDocument = document.getElementById('btn-print-document');
   const btnCloseReport = document.getElementById('btn-close-report');
   const viewReportPriority = document.getElementById('view-report-priority');
+
+// Helper: Official Name Formatter with Middle Initial
+  function formatOfficialName(firstName, middleName, lastName, prefix = '') {
+    const first = (firstName || '').trim();
+    const last = (lastName || '').trim();
+
+    let mi = '';
+    if (middleName && typeof middleName === 'string') {
+      const cleaned = middleName.trim().replace(/\./g, '');
+      if (cleaned.length > 0 && cleaned.toLowerCase() !== 'null' && cleaned.toLowerCase() !== 'undefined') {
+        mi = `${cleaned.charAt(0).toUpperCase()}. `;
+      }
+    }
+
+    const fullName = `${first} ${mi}${last}`.trim();
+    return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'Designated Official');
+  }
 
 // 1. Print Official Document (Suppresses browser header & footer stamps)
   if (btnPrintDocument) {
@@ -1628,13 +1665,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // 2. Back to Reports / Dashboard
   if (btnCloseReport) {
     btnCloseReport.addEventListener('click', () => {
-      // 1. Hide the Priority Report View
       if (viewReportPriority) {
         viewReportPriority.classList.add('hidden');
         viewReportPriority.style.display = 'none';
       }
 
-      // 2. Return directly to the Reports Inbox if available
       const viewReports = document.getElementById('view-reports');
       if (viewReports) {
         viewReports.classList.remove('hidden');
@@ -1642,7 +1677,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 3. Fallback: Trigger the main dashboard
       const mainDashboardView =
         document.getElementById('view-dashboard') ||
         document.getElementById('view-overview') ||
@@ -1656,22 +1690,57 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 // ==========================================
-// 🧠 THE STRICT PRIORITY ALGORITHM
+// 🧠 THE STRICT PRIORITY ALGORITHM & SIGNATORY LOADER
 // ==========================================
-  function generatePriorityList() {
-    // 🚀 1. SET DATE & ADMIN NAME INSTANTLY (Synchronous - No Waiting)
+  async function generatePriorityList() {
+    // 🚀 1. SET DATE
     const dateEl = document.getElementById('priority-doc-date');
     if (dateEl) {
       dateEl.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
-    const adminName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim();
+    // 🚀 2. POPULATE CPDO ADMIN NAME (WITH MIDDLE INITIAL)
+    const adminFirst = sessionStorage.getItem("firstName") || "";
+    const adminMiddle = sessionStorage.getItem("middleName") || "";
+    const adminLast = sessionStorage.getItem("lastName") || "";
+    const adminFormattedName = formatOfficialName(adminFirst, adminMiddle, adminLast);
+
     const adminNameEl = document.getElementById('priority-admin-name');
     if (adminNameEl) {
-      adminNameEl.textContent = adminName || "CPDO Administrator";
+      adminNameEl.textContent = adminFormattedName || "CPDO Administrator";
     }
 
-    // 🚀 2. FETCH & POPULATE REPORTS TABLE
+    // 🚀 3. DYNAMICALLY FETCH CEO (CITY ENGINEER) NAME
+    const ceoNameEl = document.getElementById('priority-ceo-name');
+    if (ceoNameEl) {
+      try {
+        const userRes = await apiFetch(`/api/users`);
+        if (Array.isArray(userRes)) {
+          const engineerUser = userRes.find(u => {
+            const r = String(u.role || '').toUpperCase().trim();
+            const s = String(u.status || '').toLowerCase().trim();
+            return (r === 'ENGINEER' || r.includes('CEO')) && s !== 'deactivated';
+          });
+
+          if (engineerUser) {
+            const ceoFormatted = formatOfficialName(
+              engineerUser.firstName,
+              engineerUser.middleName,
+              engineerUser.lastName,
+              'Engr.'
+            );
+            ceoNameEl.textContent = ceoFormatted;
+          } else {
+            ceoNameEl.textContent = "City Engineer / Department Head";
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch CEO name, using fallback:", err);
+        ceoNameEl.textContent = "City Engineer / Department Head";
+      }
+    }
+
+    // 🚀 4. FETCH & POPULATE REPORTS TABLE
     apiFetch(`/api/reports`)
       .then(reports => {
         const validatedReports = (Array.isArray(reports) ? reports : []).filter(
@@ -1727,7 +1796,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Render to HTML Table
-        const tbody = document.querySelector('.document-table tbody');
+        const tbody = document.getElementById('priority-table-body') || document.querySelector('.document-table tbody');
         if (!tbody) return;
 
         tbody.innerHTML = '';
@@ -1747,12 +1816,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-          <td style="text-align: center;"><strong>${index + 1}</strong></td>
-          <td>${formatId}</td>
-          <td><strong>${formatName}</strong><br><span style="font-size: 11px; color: #555;">Brgy. ${formatBrgy}</span></td>
-          <td>${formatDamage}</td>
-          <td>${dLength}m x ${dWidth}m</td>
-          <td style="text-align: center; font-weight: bold; color: ${report.tierColor};">${report.tierLabel}</td>
+          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155;"><strong>${index + 1}</strong></td>
+          <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
+          <td style="padding: 8px 6px; border: 1px solid #334155;"><strong>${formatName}</strong><br><span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy}</span></td>
+          <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
+          <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dLength}m × ${dWidth}m</td>
+          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
         `;
           tbody.appendChild(tr);
         });
@@ -2688,7 +2757,7 @@ function resetAddReportForm() {
 }
 
 // ==========================================
-// STEP 1: INITIATE LOGIN & REQUEST MFA CODE
+// 🚀 STEP 1: INITIATE LOGIN & REQUEST MFA CODE
 // ==========================================
 function handleLogin() {
   const usernameInput = document.getElementById("username");
@@ -2696,11 +2765,13 @@ function handleLogin() {
 
   if (!usernameInput || !passwordInput) return;
 
-  const username = usernameInput.value;
+  const username = usernameInput.value.trim();
   const password = passwordInput.value;
 
   if (!username || !password) {
-    showToast("Please enter both your Official ID and password.", "error");
+    if (typeof showToast === "function") {
+      showToast("Please enter both your Official ID and password.", "error");
+    }
     return;
   }
 
@@ -2724,18 +2795,20 @@ function handleLogin() {
       return response.json();
     })
     .then(data => {
-      // 🚀 MFA TRIGGER: If backend says MFA is required, slide to Step 2
+      // 🚀 MFA TRIGGER: Move to Step 2
       if (data.mfaRequired) {
-        // Temporarily store the ID so we can verify it in Step 2
         sessionStorage.setItem("tempUserId", data.userId);
 
-        // Hide login, show MFA
-        document.getElementById("login-step-1").style.display = "none";
-        document.getElementById("login-step-2").style.display = "block";
+        const step1 = document.getElementById("login-step-1");
+        const step2 = document.getElementById("login-step-2");
 
-        showToast(data.message, "success");
+        if (step1) step1.style.display = "none";
+        if (step2) step2.style.display = "block";
 
-        // Reset the login button for next time
+        if (typeof showToast === "function") {
+          showToast(data.message || "A 6-digit code has been sent to your email.", "success");
+        }
+
         if (loginBtn) {
           loginBtn.innerHTML = "Log in ➔";
           loginBtn.disabled = false;
@@ -2744,11 +2817,14 @@ function handleLogin() {
       }
     })
     .catch(error => {
-      // 🚀 SMART CHECK: User-friendly Network Error
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-        showToast("System is currently offline or unreachable. Please try again later.", "error");
+        if (typeof showToast === "function") {
+          showToast("System is currently offline or unreachable. Please try again later.", "error");
+        }
       } else {
-        showToast(error.message, "error");
+        if (typeof showToast === "function") {
+          showToast(error.message, "error");
+        }
       }
 
       if (loginBtn) {
@@ -2760,14 +2836,17 @@ function handleLogin() {
 }
 
 // ==========================================
-// STEP 2: VERIFY 6-DIGIT CODE & GRANT ACCESS
+// 🚀 STEP 2: VERIFY 6-DIGIT CODE & GRANT ACCESS
 // ==========================================
 function handleVerifyMfa() {
-  const otpInput = document.getElementById("mfa-code").value.trim();
+  const otpField = document.getElementById("mfa-code");
+  const otpInput = otpField ? otpField.value.trim() : "";
   const tempUserId = sessionStorage.getItem("tempUserId");
 
   if (!otpInput || otpInput.length !== 6) {
-    showToast("Please enter a valid 6-digit code.", "error");
+    if (typeof showToast === "function") {
+      showToast("Please enter a valid 6-digit code.", "error");
+    }
     return;
   }
 
@@ -2791,14 +2870,20 @@ function handleVerifyMfa() {
       return response.json();
     })
     .then(data => {
-      // 🚀 SUCCESS! Cleanup temp data and save real session data
+      // 1. Cleanup temp MFA state
       sessionStorage.removeItem("tempUserId");
 
+      // 2. Clean middle name (prevent storing "null" string)
+      const cleanMiddleName = (data.middleName && String(data.middleName).toLowerCase() !== "null" && String(data.middleName).toLowerCase() !== "undefined")
+        ? String(data.middleName).trim()
+        : "";
+
+      // 3. Save individual sessionStorage keys
       sessionStorage.setItem("userId", data.userId);
       sessionStorage.setItem("username", data.username || "N/A");
-      sessionStorage.setItem("userRole", data.role);
+      sessionStorage.setItem("userRole", data.role || "");
       sessionStorage.setItem("firstName", data.firstName || "");
-      sessionStorage.setItem("middleName", data.middleName || "");
+      sessionStorage.setItem("middleName", cleanMiddleName);
       sessionStorage.setItem("lastName", data.lastName || "");
       sessionStorage.setItem("email", data.email || "");
       sessionStorage.setItem("phoneNumber", data.phoneNumber || "");
@@ -2811,24 +2896,35 @@ function handleVerifyMfa() {
       }
       sessionStorage.setItem("barangayName", data.barangayName || "City Hall Central");
 
-      // ==========================================
-      // 🚀 NEW: REMEMBER ME LOGIC
-      // ==========================================
-      const rememberCheckbox = document.getElementById("remember-me");
-      const usernameInput = document.getElementById("username").value.trim();
+      // 4. Save synced user object in localStorage for cross-component compatibility
+      const userPayload = {
+        id: data.userId,
+        username: data.username,
+        role: data.role,
+        firstName: data.firstName || "",
+        middleName: cleanMiddleName,
+        lastName: data.lastName || "",
+        barangayId: data.barangayId || null,
+        barangayName: data.barangayName || "City Hall Central"
+      };
+      localStorage.setItem("user", JSON.stringify(userPayload));
+      localStorage.setItem("currentUser", JSON.stringify(userPayload));
 
-      if (rememberCheckbox && rememberCheckbox.checked) {
-        // Save the username to permanent browser storage
+      // 5. Remember Me Logic
+      const rememberCheckbox = document.getElementById("remember-me");
+      const usernameInput = document.getElementById("username")?.value.trim();
+
+      if (rememberCheckbox && rememberCheckbox.checked && usernameInput) {
         localStorage.setItem("roadwise_remembered_username", usernameInput);
       } else {
-        // Clear it if they unchecked the box
         localStorage.removeItem("roadwise_remembered_username");
       }
-      // ==========================================
 
-      showToast("Access Granted!", "success");
+      if (typeof showToast === "function") {
+        showToast("Access Granted!", "success");
+      }
 
-      // Secure Dynamic Routing
+      // 6. Dynamic Routing by Role
       setTimeout(() => {
         const userRole = String(data.role).toLowerCase();
         if (userRole.includes("admin") || userRole.includes("cpdo")) {
@@ -2841,11 +2937,14 @@ function handleVerifyMfa() {
       }, 1000);
     })
     .catch(error => {
-      // 🚀 SMART CHECK: User-friendly Network Error
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-        showToast("System is currently offline or unreachable. Please try again later.", "error");
+        if (typeof showToast === "function") {
+          showToast("System is currently offline or unreachable. Please try again later.", "error");
+        }
       } else {
-        showToast(error.message, "error");
+        if (typeof showToast === "function") {
+          showToast(error.message, "error");
+        }
       }
 
       if (verifyBtn) {
@@ -2855,6 +2954,20 @@ function handleVerifyMfa() {
       }
     });
 }
+
+// ==========================================
+// 🚀 INITIALIZE: AUTO-POPULATE REMEMBERED USERNAME
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const rememberedUsername = localStorage.getItem("roadwise_remembered_username");
+  const usernameInput = document.getElementById("username");
+  const rememberCheckbox = document.getElementById("remember-me");
+
+  if (rememberedUsername && usernameInput) {
+    usernameInput.value = rememberedUsername;
+    if (rememberCheckbox) rememberCheckbox.checked = true;
+  }
+});
 
 
 // ==========================================
@@ -4412,6 +4525,23 @@ function loadTrackingData() {
 // 📊 REPORT GENERATION & LIVE PREVIEW ENGINE
 // ==========================================
 
+// Helper: Official Name Formatter (First M.I. Last)
+function formatOfficialName(firstName, middleName, lastName, prefix = '') {
+  const first = (firstName || '').trim();
+  const last = (lastName || '').trim();
+
+  let mi = '';
+  if (middleName && typeof middleName === 'string') {
+    const cleaned = middleName.trim().replace(/\./g, '');
+    if (cleaned.length > 0 && cleaned.toLowerCase() !== 'null' && cleaned.toLowerCase() !== 'undefined') {
+      mi = `${cleaned.charAt(0).toUpperCase()}. `;
+    }
+  }
+
+  const fullName = `${first} ${mi}${last}`.trim();
+  return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'Designated Official');
+}
+
 // Helper: Safely get active records, with auto-fetch fallback
 async function getActiveTrackingRecords() {
   if (Array.isArray(window.currentFilteredTrackedReports) && window.currentFilteredTrackedReports.length > 0) {
@@ -4459,31 +4589,26 @@ window.openTrackingReportPreview = async function() {
 
   if (!modal || !sheet) return;
 
-  // 🚀 1. DYNAMICALLY FETCH REAL CPDO ADMIN & CITY ENGINEER NAMES
+  // 🚀 1. DYNAMICALLY FETCH REAL CPDO ADMIN & CITY ENGINEER NAMES (WITH M.I.)
   let adminName = 'CPDO Administrator';
   let ceoName = 'City Engineer';
 
   try {
     // A. Resolve Logged-in Admin from Session/Storage
-    const sFirst = sessionStorage.getItem('firstName');
-    const sLast = sessionStorage.getItem('lastName');
-    const sMiddle = sessionStorage.getItem('middleName');
-    const headerNameElem = document.querySelector('.user-name, .admin-profile span, #admin-name');
+    const sFirst = sessionStorage.getItem('firstName') || '';
+    const sMiddle = sessionStorage.getItem('middleName') || '';
+    const sLast = sessionStorage.getItem('lastName') || '';
 
-    if (sFirst && sLast) {
-      adminName = [sFirst, sMiddle, sLast].filter(Boolean).join(' ').trim();
+    if (sFirst || sLast) {
+      adminName = formatOfficialName(sFirst, sMiddle, sLast);
     } else {
       const localUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || '{}');
       if (localUser.firstName || localUser.lastName) {
-        adminName = [localUser.firstName, localUser.middleName, localUser.lastName].filter(Boolean).join(' ').trim();
-      } else if (localUser.name) {
-        adminName = localUser.name;
-      } else if (headerNameElem && headerNameElem.textContent.trim()) {
-        adminName = headerNameElem.textContent.trim();
+        adminName = formatOfficialName(localUser.firstName, localUser.middleName, localUser.lastName);
       }
     }
 
-    // B. Fetch Users from Database to find Role: "ENGINEER"
+    // B. Fetch Users from Database to resolve Role: "ENGINEER" and fallback Admin
     let users = [];
     if (typeof apiFetch === 'function') {
       users = await apiFetch('/api/users').catch(() => []);
@@ -4495,33 +4620,32 @@ window.openTrackingReportPreview = async function() {
     }
 
     if (Array.isArray(users) && users.length > 0) {
+      // Find City Engineer
       const engineerUser = users.find(u => {
         const role = String(u.role || '').toUpperCase().trim();
         const status = String(u.status || '').toLowerCase().trim();
-        return role === 'ENGINEER' && status !== 'deactivated';
+        return (role === 'ENGINEER' || role.includes('CEO')) && status !== 'deactivated';
       });
 
       if (engineerUser) {
-        const fullCeoName = [engineerUser.firstName, engineerUser.middleName, engineerUser.lastName]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-        ceoName = fullCeoName ? `Engr. ${fullCeoName}` : (engineerUser.username || ceoName);
+        ceoName = formatOfficialName(
+          engineerUser.firstName,
+          engineerUser.middleName,
+          engineerUser.lastName,
+          'Engr.'
+        );
       }
 
-      if (adminName === 'CPDO Administrator') {
+      // Fallback for Admin Name if not found in session
+      if (!adminName || adminName === 'CPDO Administrator') {
         const adminUser = users.find(u => {
           const role = String(u.role || '').toUpperCase().trim();
           const status = String(u.status || '').toLowerCase().trim();
-          return role === 'ADMIN' && status !== 'deactivated';
+          return (role === 'ADMIN' || role.includes('CPDO')) && status !== 'deactivated';
         });
 
         if (adminUser) {
-          const fullAdminName = [adminUser.firstName, adminUser.middleName, adminUser.lastName]
-            .filter(Boolean)
-            .join(' ')
-            .trim();
-          adminName = fullAdminName || adminUser.username || adminName;
+          adminName = formatOfficialName(adminUser.firstName, adminUser.middleName, adminUser.lastName);
         }
       }
     }
@@ -4643,11 +4767,11 @@ window.openTrackingReportPreview = async function() {
       </tbody>
     </table>
 
-    <!-- ✍️ SIGNATURE BLOCK -->
+    <!-- ✍️ DUAL SIGNATURE BLOCK -->
     <div style="display: flex; justify-content: space-between; margin-top: 45px; padding-top: 15px; page-break-inside: avoid; background: #ffffff;">
-      <!-- Prepared By (Admin) -->
+      <!-- Prepared By (CPDO Admin) -->
       <div style="text-align: center; width: 260px;">
-        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Prepared By:</p>
+        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Prepared & Generated By:</p>
         <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
         <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${adminName}</strong>
         <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
@@ -4655,14 +4779,14 @@ window.openTrackingReportPreview = async function() {
         <span style="font-size: 10px; color: #64748b; display: block;">City Planning & Development Office</span>
       </div>
 
-      <!-- Approved / Noted By (CEO) -->
+      <!-- Approved / Noted By (City Engineer) -->
       <div style="text-align: center; width: 260px;">
-        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Noted & Verified By:</p>
+        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Noted & Acknowledged By:</p>
         <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
         <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${ceoName}</strong>
         <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-        <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 3px;">City Engineering Office</span>
-        <span style="font-size: 10px; color: #64748b; display: block;">City Engineering Office SJDM</span>
+        <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 3px;">City Engineer</span>
+        <span style="font-size: 10px; color: #64748b; display: block;">City Engineering Office (CEO)</span>
       </div>
     </div>
   `;
@@ -4674,13 +4798,29 @@ window.openTrackingReportPreview = async function() {
 };
 
 // ==========================================
-// 2. UNIFIED PRINT TRIGGER (USES @media print CSS)
+// 2. UNIFIED PRINT TRIGGER (SUPPRESS TITLE HEADER)
 // ==========================================
 window.executeTrackingPrint = function() {
+  const originalTitle = document.title;
+  document.title = " ";
   window.print();
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
 };
 
+// Helper: Close Preview Modal cleanly
+window.closeTrackingReportPreview = function() {
+  const modal = document.getElementById('tracking-report-preview-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+};
+
+// ==========================================
 // 3. EXPORT CSV ENGINE
+// ==========================================
 window.exportTrackingMatrixCSV = async function() {
   const reports = await getActiveTrackingRecords();
 
@@ -7262,16 +7402,33 @@ document.addEventListener("DOMContentLoaded", () => {
 let currentPreviewReports = [];
 
 // ==========================================
-// 🕒 0. ROBUST DATE FORMATTER HELPER
+// 🖋️ 0. OFFICIAL NAME FORMATTER (FIRST M.I. LAST)
+// ==========================================
+function formatOfficialName(firstName, middleName, lastName, prefix = '') {
+  const first = (firstName || '').trim();
+  const last = (lastName || '').trim();
+
+  let mi = '';
+  if (middleName && typeof middleName === 'string') {
+    const cleaned = middleName.trim().replace(/\./g, '');
+    if (cleaned.length > 0 && cleaned.toLowerCase() !== 'null' && cleaned.toLowerCase() !== 'undefined') {
+      mi = `${cleaned.charAt(0).toUpperCase()}.`;
+    }
+  }
+
+  const fullName = [first, mi, last].filter(Boolean).join(' ');
+  return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'Barangay Official');
+}
+
+// ==========================================
+// 🕒 1. ROBUST DATE FORMATTER HELPER
 // ==========================================
 function formatReportDate(r) {
   if (!r) return "N/A";
 
-  // Prioritizes dateSubmitted from your Java entity
   const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at || r.dateReported || r.date;
   if (!rawDate) return "N/A";
 
-  // Handles Jackson array format: [2026, 8, 21]
   if (Array.isArray(rawDate) && rawDate.length >= 3) {
     const year = rawDate[0];
     const month = String(rawDate[1]).padStart(2, '0');
@@ -7279,7 +7436,6 @@ function formatReportDate(r) {
     return new Date(`${year}-${month}-${day}`).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  // Handles ISO date strings: "2026-08-21"
   const parsed = new Date(rawDate);
   if (!isNaN(parsed.getTime())) {
     return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -7289,7 +7445,7 @@ function formatReportDate(r) {
 }
 
 // ==========================================
-// 📅 1. DYNAMIC INVENTORY YEARS LOADER
+// 📅 2. DYNAMIC INVENTORY YEARS LOADER
 // ==========================================
 window.loadDynamicInventoryYears = function() {
   const yearSelect = document.getElementById("export-inventory-year");
@@ -7314,7 +7470,7 @@ window.loadDynamicInventoryYears = function() {
         reports
           .map(r => r.inventoryYear)
           .filter(y => y && String(y).trim() !== "" && String(y).toLowerCase() !== "null" && String(y).toLowerCase() !== "undefined")
-      )].sort((a, b) => Number(a) - Number(b)); // Chronological year order (Earliest to Latest)
+      )].sort((a, b) => Number(a) - Number(b));
 
       yearSelect.innerHTML = `<option value="ALL">All Recorded Years</option>`;
 
@@ -7329,15 +7485,22 @@ window.loadDynamicInventoryYears = function() {
 };
 
 // ==========================================
-// 👁️ 2. OPEN & POPULATE PREVIEW (FIRST TO LATEST)
+// 👁️ 3. OPEN & POPULATE PREVIEW (INDUSTRY STANDARD TRANSMITTAL)
 // ==========================================
 window.openAnnualReportPreview = function() {
   const yearSelect = document.getElementById("export-inventory-year");
   const selectedYear = yearSelect ? yearSelect.value : "ALL";
   const barangayId = sessionStorage.getItem("barangayId");
   const userRole = (sessionStorage.getItem("userRole") || "").toUpperCase();
-  const userName = (sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "Official");
+  const brgyName = sessionStorage.getItem("barangayName") || "City Hall Central";
 
+  // 🚀 1. BUILD OFFICIAL NAME WITH MIDDLE INITIAL (e.g., JM L. POGIII)
+  const firstName = sessionStorage.getItem("firstName") || "";
+  const middleName = sessionStorage.getItem("middleName") || "";
+  const lastName = sessionStorage.getItem("lastName") || "";
+  const officialFormattedName = formatOfficialName(firstName, middleName, lastName);
+
+  // 🚀 2. FETCH REPORT DATA
   let endpoint = "/api/reports";
   if (userRole.includes("BARANGAY") && barangayId && barangayId !== "null") {
     endpoint = `/api/reports/barangay/${barangayId}`;
@@ -7356,7 +7519,6 @@ window.openAnnualReportPreview = function() {
         return;
       }
 
-      // Filter by inventory year
       let filtered = selectedYear === "ALL"
         ? reports
         : reports.filter(r => String(r.inventoryYear) === String(selectedYear));
@@ -7366,59 +7528,75 @@ window.openAnnualReportPreview = function() {
         return;
       }
 
-      // 🚀 CHRONOLOGICAL SORTING: First to Latest (Ascending Project ID)
       filtered.sort((a, b) => Number(a.id) - Number(b.id));
       currentPreviewReports = filtered;
 
-      // Metadata Population
-      const brgyName = sessionStorage.getItem("barangayName") || "City-Wide Scope";
-      document.getElementById("preview-report-subtitle").textContent = `Inventory Cycle: ${selectedYear === "ALL" ? "All Recorded Years" : selectedYear}`;
-      document.getElementById("preview-generated-by").textContent = userName;
-      document.getElementById("preview-scope").textContent = userRole.includes("BARANGAY") ? brgyName : "All Barangays (City-Wide)";
-      document.getElementById("preview-date").textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-      document.getElementById("preview-total-count").textContent = currentPreviewReports.length;
+      // Header Metadata
+      const elSubtitle = document.getElementById("preview-report-subtitle");
+      if (elSubtitle) elSubtitle.textContent = `Inventory Cycle: ${selectedYear === "ALL" ? "All Recorded Years" : selectedYear}`;
 
-      // ✍️ Clean Signature (Name on top, Role below, no parentheses)
+      const elGenerated = document.getElementById("preview-generated-by");
+      if (elGenerated) elGenerated.textContent = officialFormattedName;
+
+      const elScope = document.getElementById("preview-scope");
+      if (elScope) elScope.textContent = userRole.includes("BARANGAY") ? brgyName : "All Barangays (City-Wide)";
+
+      const elDate = document.getElementById("preview-date");
+      if (elDate) elDate.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const elCount = document.getElementById("preview-total-count");
+      if (elCount) elCount.textContent = currentPreviewReports.length;
+
+      // ✍️ 3. DUAL SIGNATURE BLOCKS (STANDARD LGU TRANSMITTAL FORMAT)
+      // Left Side: Originating Barangay Official
       const signNameElem = document.getElementById("preview-sign-name");
       const signRoleElem = document.getElementById("preview-sign-role");
-      if (signNameElem) signNameElem.textContent = userName;
-      if (signRoleElem) signRoleElem.textContent = userRole.includes("BARANGAY") ? "Barangay Official" : "CPDO Official";
+      if (signNameElem) signNameElem.textContent = officialFormattedName;
+      if (signRoleElem) signRoleElem.textContent = "Barangay Official";
 
-      // Detailed Table Population
+      // Right Side: Standard Receiving Office Authority
+      const cpdoSignNameElem = document.getElementById("preview-cpdo-sign-name");
+      const cpdoSignRoleElem = document.getElementById("preview-cpdo-sign-role");
+      if (cpdoSignNameElem) cpdoSignNameElem.textContent = "CPDO LEAD ADMINISTRATOR";
+      if (cpdoSignRoleElem) cpdoSignRoleElem.textContent = "City Planning & Development Office (CPDO)";
+
+      // Populate Table Rows
       const tbody = document.getElementById("preview-report-table-body");
-      tbody.innerHTML = currentPreviewReports.map((r, index) => {
-        const bName = r.barangay ? (r.barangay.name || r.barangay.barangayName) : (r.barangayName || "N/A");
-        const dateStr = formatReportDate(r); // 🚀 Clean date resolution
-        const rowBg = index % 2 === 0 ? "#ffffff" : "#f8fafc";
+      if (tbody) {
+        tbody.innerHTML = currentPreviewReports.map((r, index) => {
+          const bName = r.barangay ? (r.barangay.name || r.barangay.barangayName) : (r.barangayName || "N/A");
+          const dateStr = formatReportDate(r);
+          const rowBg = index % 2 === 0 ? "#ffffff" : "#f8fafc";
+          const roadType = r.roadType || r.roadImportance || "Standard";
+          const terrain = r.terrainType ? ` • ${r.terrainType}` : "";
+          const dimensions = `L: ${r.length != null ? r.length + 'm' : 'N/A'} | W: ${r.width != null ? r.width + 'm' : 'N/A'}`;
+          const culvertBridge = `Culv: ${r.lengthOfCulverts != null ? r.lengthOfCulverts + 'm' : '0m'}<br>Bridges: ${r.numberOfBridges != null ? r.numberOfBridges : '0'}`;
+          const damageDetails = `<strong>${r.damageType || 'General'}</strong>${r.damageLength ? ` (${r.damageLength}m × ${r.damageWidth || 0}m)` : ''}`;
 
-        // Technical Road Details
-        const roadType = r.roadType || r.roadImportance || "Standard";
-        const terrain = r.terrainType ? ` • ${r.terrainType}` : "";
-        const dimensions = `L: ${r.length != null ? r.length + 'm' : 'N/A'} | W: ${r.width != null ? r.width + 'm' : 'N/A'}`;
-        const culvertBridge = `Culv: ${r.lengthOfCulverts != null ? r.lengthOfCulverts + 'm' : '0m'}<br>Bridges: ${r.numberOfBridges != null ? r.numberOfBridges : '0'}`;
-        const damageDetails = `<strong>${r.damageType || 'General'}</strong>${r.damageLength ? ` (${r.damageLength}m × ${r.damageWidth || 0}m)` : ''}`;
-
-        return `
-          <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-weight: 700;">PRJ-${r.id}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${bName}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">
-              <strong>${r.cityRoadName || 'N/A'}</strong><br>
-              <span style="font-size: 10px; color: #64748b;">${roadType}${terrain}</span>
-            </td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${dimensions}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${culvertBridge}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${damageDetails}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: ${r.severity === 'High' ? '#dc2626' : (r.severity === 'Medium' ? '#d97706' : '#16a34a')};">${r.severity || 'N/A'}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 10px;">${r.status || 'Pending'}</td>
-            <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 10px; font-weight: 600;">${dateStr}</td>
-          </tr>
-        `;
-      }).join("");
+          return `
+            <tr style="background: ${rowBg}; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-weight: 700;">PRJ-${r.id}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${bName}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">
+                <strong>${r.cityRoadName || 'N/A'}</strong><br>
+                <span style="font-size: 10px; color: #64748b;">${roadType}${terrain}</span>
+              </td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${dimensions}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; font-size: 10px;">${culvertBridge}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1;">${damageDetails}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: 700; color: ${r.severity === 'High' ? '#dc2626' : (r.severity === 'Medium' ? '#d97706' : '#16a34a')};">${r.severity || 'N/A'}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 10px;">${r.status || 'Pending'}</td>
+              <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: right; font-size: 10px; font-weight: 600;">${dateStr}</td>
+            </tr>
+          `;
+        }).join("");
+      }
 
       const modal = document.getElementById("annual-report-preview-modal");
-      modal.classList.remove("hidden");
-      modal.style.display = "flex";
+      if (modal) {
+        modal.classList.remove("hidden");
+        modal.style.display = "flex";
+      }
     })
     .catch(err => {
       console.error(err);
@@ -7427,45 +7605,30 @@ window.openAnnualReportPreview = function() {
 };
 
 // ==========================================
-// 🖨️ 3. CLEAN PRINT TRIGGER (SUPPRESS TITLE HEADER)
+// 🖨️ 4. CLEAN PRINT TRIGGER (SUPPRESS TITLE HEADER)
 // ==========================================
 window.printReportDocument = function() {
   const originalTitle = document.title;
-
-  // Temporarily clear title to remove the browser header during print
   document.title = " ";
   window.print();
-
   setTimeout(() => {
     document.title = originalTitle;
   }, 1000);
 };
 
 // ==========================================
-// 📥 4. CSV DOWNLOAD (WITH FULL ROAD SPECS & CLEAN DATES)
+// 📥 5. CSV DOWNLOAD (WITH FULL ROAD SPECS & CLEAN DATES)
 // ==========================================
 window.downloadPreviewedCSV = function() {
   if (!currentPreviewReports || currentPreviewReports.length === 0) return;
 
   const selectedYear = document.getElementById("export-inventory-year")?.value || "ALL";
   const headers = [
-    "Project ID",
-    "Inventory Year",
-    "Barangay",
-    "City Road Name",
-    "Road Type",
-    "Terrain Type",
-    "Length (m)",
-    "Width (m)",
-    "Length of Culverts (m)",
-    "Number of Bridges",
-    "Damage Type",
-    "Damage Length (m)",
-    "Damage Width (m)",
-    "Severity",
-    "Status",
-    "Reported By",
-    "Date Reported"
+    "Project ID", "Inventory Year", "Barangay", "City Road Name",
+    "Road Type", "Terrain Type", "Length (m)", "Width (m)",
+    "Length of Culverts (m)", "Number of Bridges", "Damage Type",
+    "Damage Length (m)", "Damage Width (m)", "Severity",
+    "Status", "Reported By", "Date Reported"
   ];
 
   const rows = currentPreviewReports.map(r => {
@@ -7507,7 +7670,7 @@ window.downloadPreviewedCSV = function() {
 };
 
 // ==========================================
-// ❌ 5. CLOSE MODAL
+// ❌ 6. CLOSE MODAL
 // ==========================================
 window.closeReportPreviewModal = function() {
   const modal = document.getElementById("annual-report-preview-modal");
@@ -7518,7 +7681,7 @@ window.closeReportPreviewModal = function() {
 };
 
 // ==========================================
-// 🚀 6. INITIALIZE
+// 🚀 7. INITIALIZE
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof window.loadDynamicInventoryYears === "function") {
@@ -7532,6 +7695,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 let adminCachedInventory = [];
 window.activeInventoryYear = new Date().getFullYear(); // Fallback to current calendar year
+
+// Helper: Official Name Formatter with Middle Initial
+function formatOfficialName(firstName, middleName, lastName, prefix = '') {
+  const first = (firstName || '').trim();
+  const last = (lastName || '').trim();
+
+  let mi = '';
+  if (middleName && typeof middleName === 'string') {
+    const cleaned = middleName.trim().replace(/\./g, '');
+    if (cleaned.length > 0 && cleaned.toLowerCase() !== 'null' && cleaned.toLowerCase() !== 'undefined') {
+      mi = `${cleaned.charAt(0).toUpperCase()}.`;
+    }
+  }
+
+  const fullName = [first, mi, last].filter(Boolean).join(' ');
+  return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'CPDO Administrator');
+}
 
 // Helper: Convert length values to kilometers
 function parseToKilometers(val) {
@@ -7596,9 +7776,14 @@ window.loadAdminRoadInventory = function() {
   const dateLabel = document.getElementById("admin-inventory-date-label");
   if (dateLabel) dateLabel.textContent = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
-  const adminFullName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim();
+  // 🚀 Format Admin Name with Middle Initial (e.g., Juan D. Dela Cruz)
+  const adminFirst = sessionStorage.getItem("firstName") || "";
+  const adminMiddle = sessionStorage.getItem("middleName") || "";
+  const adminLast = sessionStorage.getItem("lastName") || "";
+  const adminFullName = formatOfficialName(adminFirst, adminMiddle, adminLast);
+
   const prepByEl = document.getElementById("admin-inventory-prepared-by");
-  if (prepByEl) prepByEl.textContent = adminFullName || "CPDO Administrator";
+  if (prepByEl) prepByEl.textContent = adminFullName;
 
   apiFetch("/api/reports")
     .then(reports => {
@@ -8105,20 +8290,73 @@ window.loadDynamicInventoryYears = function() {
 };
 
 // ==========================================
-// 👁️ 2. OPEN & POPULATE PREVIEW (BULLETPROOF FIX + CATEGORY SPLIT)
+// 👁️ 2. OPEN & POPULATE PREVIEW (WITH MIDDLE INITIAL + CEO SUPPORT)
 // ==========================================
-window.openAnnualReportPreview = function() {
+window.openAnnualReportPreview = async function() {
   const yearSelect = document.getElementById("export-inventory-year");
   const selectedYear = yearSelect ? yearSelect.value : "ALL";
 
-  // 🚀 NEW: Get Selected Report Category
   const categorySelect = document.getElementById("export-report-category");
   const selectedCategory = categorySelect ? categorySelect.value : "ALL";
 
   const barangayId = sessionStorage.getItem("barangayId");
   const userRole = (sessionStorage.getItem("userRole") || "").toUpperCase();
-  const userName = (sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "Official");
 
+  // 🚀 1. BUILD FORMATTED NAME WITH MIDDLE INITIAL (e.g., JM L. POGIII)
+  const firstName = (sessionStorage.getItem("firstName") || "").trim();
+  const rawMiddle = (sessionStorage.getItem("middleName") || "").trim();
+  const lastName = (sessionStorage.getItem("lastName") || "").trim();
+
+  let mi = "";
+  if (rawMiddle && rawMiddle.toLowerCase() !== "null" && rawMiddle.toLowerCase() !== "undefined") {
+    mi = rawMiddle.charAt(0).toUpperCase() + ". ";
+  }
+  const formattedUserName = `${firstName} ${mi}${lastName}`.trim() || "Designated Official";
+
+  // 🚀 2. DYNAMIC LOOKUP FOR CITY ENGINEER (CEO) & CPDO ADMIN
+  let ceoName = "City Engineer";
+  let cpdoAdminName = "CPDO Lead Administrator";
+
+  try {
+    const userRes = await fetch(`${API_BASE_URL}/api/users`, {
+      headers: { "ngrok-skip-browser-warning": "true" }
+    });
+    if (userRes.ok) {
+      const allUsers = await userRes.json();
+      if (Array.isArray(allUsers)) {
+        // Find City Engineer
+        const engineerUser = allUsers.find(u => {
+          const r = String(u.role || '').toUpperCase().trim();
+          const s = String(u.status || '').toLowerCase().trim();
+          return r === 'ENGINEER' && s !== 'deactivated';
+        });
+        if (engineerUser) {
+          const eMid = (engineerUser.middleName && engineerUser.middleName.toLowerCase() !== 'null')
+            ? `${engineerUser.middleName.charAt(0).toUpperCase()}. `
+            : "";
+          const eFull = `${engineerUser.firstName || ''} ${eMid}${engineerUser.lastName || ''}`.trim();
+          ceoName = eFull ? `Engr. ${eFull}` : ceoName;
+        }
+
+        // Find CPDO Admin
+        const adminUser = allUsers.find(u => {
+          const r = String(u.role || '').toUpperCase().trim();
+          const s = String(u.status || '').toLowerCase().trim();
+          return (r === 'ADMIN' || r.includes('CPDO')) && s !== 'deactivated';
+        });
+        if (adminUser) {
+          const aMid = (adminUser.middleName && adminUser.middleName.toLowerCase() !== 'null')
+            ? `${adminUser.middleName.charAt(0).toUpperCase()}. `
+            : "";
+          cpdoAdminName = `${adminUser.firstName || ''} ${aMid}${adminUser.lastName || ''}`.trim() || cpdoAdminName;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Signatory fetch warning:", e);
+  }
+
+  // 🚀 3. FETCH REPORT DATA
   let endpoint = "/api/reports";
   if (userRole.includes("BARANGAY") && barangayId && barangayId !== "null") {
     endpoint = `/api/reports/barangay/${barangayId}`;
@@ -8137,24 +8375,20 @@ window.openAnnualReportPreview = function() {
         return;
       }
 
-      // 1. Filter by Year
+      // Filter by Year
       let filtered = selectedYear === "ALL"
         ? reports
         : reports.filter(r => String(r.inventoryYear) === String(selectedYear));
 
-      // 🚀 2. CEO SMART FILTER & CATEGORY SPLIT
+      // Category Split for CEO / Engineer
       if (userRole.includes("CEO") || userRole.includes("ENGINEER")) {
         filtered = filtered.filter(r => {
           const stat = (r.status || "").toLowerCase();
-
           if (selectedCategory === "ACTIVE") {
-            // Only show unfinished business
             return stat.includes("dispatched") || stat.includes("in progress") || stat.includes("pending budget") || stat.includes("defer");
           } else if (selectedCategory === "ACCOMPLISHMENT") {
-            // Only show completed/archived jobs
             return stat.includes("completed") || stat.includes("archived");
           } else {
-            // "ALL" - Show everything they own
             return stat.includes("dispatched") || stat.includes("in progress") || stat.includes("completed") || stat.includes("pending budget") || stat.includes("defer") || stat.includes("archived");
           }
         });
@@ -8165,7 +8399,7 @@ window.openAnnualReportPreview = function() {
         return;
       }
 
-      // 🚀 3. CEO SMART SORTING (Hierarchy)
+      // Status Hierarchy Sorting
       const statusWeight = {
         "in progress": 1,
         "dispatched": 2,
@@ -8178,28 +8412,17 @@ window.openAnnualReportPreview = function() {
       filtered.sort((a, b) => {
         const statA = (a.status || "").toLowerCase();
         const statB = (b.status || "").toLowerCase();
-
-        // Find the weight (default to 99 if unknown status)
         const weightA = statusWeight[statA] || 99;
         const weightB = statusWeight[statB] || 99;
-
-        // Primary Sort: By Status Weight
-        if (weightA !== weightB) {
-          return weightA - weightB;
-        }
-
-        // Secondary Sort: If same status, sort by Project ID
+        if (weightA !== weightB) return weightA - weightB;
         return Number(a.id) - Number(b.id);
       });
 
-      currentPreviewReports = filtered; // Set global array for CSV download
+      currentPreviewReports = filtered;
 
-      // =====================================
-      // 🚀 BULLETPROOF DOM UPDATES
-      // =====================================
+      // 🚀 4. DOM METADATA INJECTION
       const brgyName = sessionStorage.getItem("barangayName") || "City-Wide Scope";
 
-      // 🚀 DYNAMIC TITLE CHANGE
       const elTitle = document.querySelector("#printable-report-area h2");
       if (elTitle) {
         if (selectedCategory === "ACTIVE") {
@@ -8215,9 +8438,8 @@ window.openAnnualReportPreview = function() {
       if (elSubtitle) elSubtitle.textContent = `Inventory Cycle: ${selectedYear === "ALL" ? "All Recorded Years" : selectedYear}`;
 
       const elGenerated = document.getElementById("preview-generated-by");
-      if (elGenerated) elGenerated.textContent = userName;
+      if (elGenerated) elGenerated.textContent = formattedUserName;
 
-      // Update Scope Text dynamically based on Role
       let scopeText = "All Barangays (City-Wide)";
       if (userRole.includes("BARANGAY")) scopeText = brgyName;
       if (userRole.includes("CEO") || userRole.includes("ENGINEER")) scopeText = "City Engineering Office (CEO)";
@@ -8231,23 +8453,29 @@ window.openAnnualReportPreview = function() {
       const elCount = document.getElementById("preview-total-count");
       if (elCount) elCount.textContent = currentPreviewReports.length;
 
-      // Signature Logic
+      // ✍️ 5. POPULATE SIGNATURE BLOCKS
       const signNameElem = document.getElementById("preview-sign-name");
       const signRoleElem = document.getElementById("preview-sign-role");
-      if (signNameElem) signNameElem.textContent = userName;
+      if (signNameElem) signNameElem.textContent = formattedUserName;
       if (signRoleElem) {
         if (userRole.includes("BARANGAY")) signRoleElem.textContent = "Barangay Official";
         else if (userRole.includes("CEO") || userRole.includes("ENGINEER")) signRoleElem.textContent = "City Engineer";
-        else signRoleElem.textContent = "CPDO Official";
+        else signRoleElem.textContent = "CPDO Lead Administrator";
       }
 
-      // Detailed Table Population
+      // Dual signature targets (if present in modal)
+      const cpdoSignElem = document.getElementById("preview-cpdo-sign-name");
+      if (cpdoSignElem) cpdoSignElem.textContent = cpdoAdminName;
+
+      const ceoSignElem = document.getElementById("preview-ceo-sign-name");
+      if (ceoSignElem) ceoSignElem.textContent = ceoName;
+
+      // 🚀 6. POPULATE TABLE ROWS
       const tbody = document.getElementById("preview-report-table-body");
       if (tbody) {
         tbody.innerHTML = currentPreviewReports.map((r, index) => {
           const bName = r.barangay ? (r.barangay.name || r.barangay.barangayName) : (r.barangayName || "N/A");
 
-          // Safe date check
           let dateStr = new Date(r.createdAt || new Date()).toLocaleDateString();
           if (typeof formatReportDate === 'function') {
             try { dateStr = formatReportDate(r); } catch(e) {}
@@ -8280,7 +8508,7 @@ window.openAnnualReportPreview = function() {
       }
 
       const modal = document.getElementById("annual-report-preview-modal");
-      if(modal) {
+      if (modal) {
         modal.classList.remove("hidden");
         modal.style.display = "flex";
       } else {
@@ -8293,7 +8521,7 @@ window.openAnnualReportPreview = function() {
     });
 };
 
-// Ensure it loads dynamically when the page opens!
+// Ensure it loads dynamically when the page opens
 document.addEventListener("DOMContentLoaded", () => {
   if (typeof window.loadDynamicInventoryYears === "function") {
     window.loadDynamicInventoryYears();
@@ -8699,11 +8927,33 @@ window.toggleExportMenu = function(menuId) {
   }
 };
 
+// Helper: Official Name Formatter (First M.I. Last)
+function formatOfficialName(firstName, middleName, lastName, prefix = '') {
+  const first = (firstName || '').trim();
+  const last = (lastName || '').trim();
+
+  let mi = '';
+  if (middleName && typeof middleName === 'string') {
+    const cleaned = middleName.trim().replace(/\./g, '');
+    if (cleaned.length > 0 && cleaned.toLowerCase() !== 'null' && cleaned.toLowerCase() !== 'undefined') {
+      mi = `${cleaned.charAt(0).toUpperCase()}. `;
+    }
+  }
+
+  const fullName = `${first} ${mi}${last}`.trim();
+  return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'CPDO Administrator');
+}
+
 // =======================================================
-// 👁️ 9. OPEN MASTERLIST PREVIEW MODALS
+// 👁️ 9. OPEN MASTERLIST PREVIEW MODALS (WITH MIDDLE INITIAL)
 // =======================================================
 window.generateAdminReport = function(type) {
-  const adminName = ((sessionStorage.getItem("firstName") || "") + " " + (sessionStorage.getItem("lastName") || "")).trim() || "CPDO Administrator";
+  // 🚀 1. Build Admin Name with Middle Initial (e.g., JM L. POGIII)
+  const adminFirst = sessionStorage.getItem("firstName") || "";
+  const adminMiddle = sessionStorage.getItem("middleName") || "";
+  const adminLast = sessionStorage.getItem("lastName") || "";
+  const adminFormattedName = formatOfficialName(adminFirst, adminMiddle, adminLast);
+
   const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   if (type === 'INVENTORY') {
@@ -8713,9 +8963,15 @@ window.generateAdminReport = function(type) {
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
     }
-    document.getElementById('archive-preview-inventory-year').innerText = year === "ALL" ? "ALL RECORDED YEARS" : `${year} CYCLE`;
-    document.getElementById('archive-preview-inventory-date').innerText = today;
-    document.getElementById('archive-preview-inventory-admin').innerText = adminName;
+
+    const yearEl = document.getElementById('archive-preview-inventory-year');
+    const dateEl = document.getElementById('archive-preview-inventory-date');
+    const adminEl = document.getElementById('archive-preview-inventory-admin');
+
+    if (yearEl) yearEl.innerText = year === "ALL" ? "ALL RECORDED YEARS" : `${year} CYCLE`;
+    if (dateEl) dateEl.innerText = today;
+    if (adminEl) adminEl.innerText = adminFormattedName;
+
     renderArchivePreviewInventory(year);
   }
   else if (type === 'PRIORITY') {
@@ -8725,9 +8981,15 @@ window.generateAdminReport = function(type) {
       modal.classList.remove('hidden');
       modal.style.display = 'flex';
     }
-    document.getElementById('archive-preview-priority-year').innerText = year === "ALL" ? "ALL RECORDED YEARS" : `${year} CYCLE`;
-    document.getElementById('archive-preview-priority-date').innerText = today;
-    document.getElementById('archive-preview-priority-admin').innerText = adminName;
+
+    const yearEl = document.getElementById('archive-preview-priority-year');
+    const dateEl = document.getElementById('archive-preview-priority-date');
+    const adminEl = document.getElementById('archive-preview-priority-admin');
+
+    if (yearEl) yearEl.innerText = year === "ALL" ? "ALL RECORDED YEARS" : `${year} CYCLE`;
+    if (dateEl) dateEl.innerText = today;
+    if (adminEl) adminEl.innerText = adminFormattedName;
+
     renderArchivePreviewPriority(year);
   }
 };
@@ -9040,12 +9302,28 @@ document.addEventListener("click", (e) => {
 let rawActivityLogs = [];
 let filteredActivityLogs = [];
 
+// Helper: Official Name Formatter (First M.I. Last)
+function formatOfficialName(firstName, middleName, lastName, prefix = '') {
+  const first = (firstName || '').trim();
+  const last = (lastName || '').trim();
+
+  let mi = '';
+  if (middleName && typeof middleName === 'string') {
+    const cleaned = middleName.trim().replace(/\./g, '');
+    if (cleaned.length > 0 && cleaned.toLowerCase() !== 'null' && cleaned.toLowerCase() !== 'undefined') {
+      mi = `${cleaned.charAt(0).toUpperCase()}. `;
+    }
+  }
+
+  const fullName = `${first} ${mi}${last}`.trim();
+  return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'CPDO Administrator');
+}
+
 // 1. Fetch & Initialize Activity Logs
 window.loadActivityLogs = async function() {
   const tbody = document.getElementById("activity-log-tbody");
   const countEl = document.getElementById("activity-log-count");
 
-  // 🚀 Explicitly reset search bar and filter dropdowns to defaults
   const searchInput = document.getElementById("activity-search-input");
   if (searchInput) searchInput.value = "";
 
@@ -9154,7 +9432,6 @@ window.filterActivityLogsTable = function() {
   const now = new Date();
 
   filteredActivityLogs = rawActivityLogs.filter(log => {
-    // Search Query Match
     const matchQuery = !query ||
       (log.actorName && log.actorName.toLowerCase().includes(query)) ||
       (log.targetEntity && log.targetEntity.toLowerCase().includes(query)) ||
@@ -9162,17 +9439,14 @@ window.filterActivityLogsTable = function() {
       (log.description && log.description.toLowerCase().includes(query)) ||
       (log.actorRole && log.actorRole.toLowerCase().includes(query));
 
-    // Category Match
     const matchCat = (cat === "ALL") || (log.category && log.category.toUpperCase() === cat);
 
-    // Role Match
     const matchRole = (role === "ALL") ||
       (role === "ADMIN" && String(log.actorRole).toUpperCase().includes("ADMIN")) ||
       (role === "CEO" && (String(log.actorRole).toUpperCase().includes("ENGINEER") || String(log.actorRole).toUpperCase().includes("CEO"))) ||
       (role === "BARANGAY" && String(log.actorRole).toUpperCase().includes("BARANGAY")) ||
       (role === "SYSTEM" && String(log.actorRole).toUpperCase().includes("SYSTEM"));
 
-    // Timeframe Match
     let matchTime = true;
     if (timeframe !== "ALL" && log.timestamp) {
       const logDate = new Date(log.timestamp);
@@ -9189,7 +9463,7 @@ window.filterActivityLogsTable = function() {
   renderActivityLogsTable(filteredActivityLogs);
 };
 
-// 4. Audit Event Inspector Modal (Guaranteed Scroll Reset)
+// 4. Audit Event Inspector Modal
 window.inspectActivityLog = function(logId) {
   const log = rawActivityLogs.find(l => l.id === logId);
   if (!log) return;
@@ -9197,11 +9471,9 @@ window.inspectActivityLog = function(logId) {
   const modal = document.getElementById("activity-detail-modal");
   if (!modal) return;
 
-  // Header & Timestamp
   document.getElementById("audit-modal-log-id").innerText = `#LOG-${String(log.id).padStart(4, '0')}`;
   document.getElementById("audit-modal-timestamp").innerText = formatAuditTimestamp(log.timestamp);
 
-  // Status Badge
   const statusBadge = document.getElementById("audit-modal-status-badge");
   if (statusBadge) {
     const s = (log.status || "SUCCESS").toUpperCase();
@@ -9215,28 +9487,23 @@ window.inspectActivityLog = function(logId) {
     }
   }
 
-  // Section 1: Actor Details
   document.getElementById("audit-modal-actor-name").innerText = log.actorName || "System Automation";
   document.getElementById("audit-modal-actor-role").innerText = log.actorRole || "SYSTEM";
   document.getElementById("audit-modal-actor-office").innerText = log.actorOffice || "Central";
   document.getElementById("audit-modal-actor-id").innerText = log.actorId ? `#USR-${log.actorId}` : "SYSTEM";
 
-  // Section 2: Event Details
   document.getElementById("audit-modal-category").innerText = log.category || "SYSTEM";
   document.getElementById("audit-modal-target").innerText = log.targetEntity || "N/A";
   document.getElementById("audit-modal-action").innerText = log.action || "GENERAL_ACTION";
   document.getElementById("audit-modal-description").innerText = log.description || "No description logged.";
 
-  // Section 3: Telemetry Details
   document.getElementById("audit-modal-ip").innerText = log.ipAddress || "127.0.0.1";
   document.getElementById("audit-modal-method").innerText = log.httpMethod || "GET";
   document.getElementById("audit-modal-useragent").innerText = log.userAgent || "Unknown Client / Direct API";
 
-  // 🚀 STEP 1: DISPLAY THE MODAL FIRST
   modal.classList.remove("hidden");
   modal.style.display = "flex";
 
-  // 🚀 STEP 2: RESET SCROLL AFTER THE BROWSER COMPUTES GEOMETRY
   requestAnimationFrame(() => {
     const modalBody = document.getElementById("audit-modal-body");
     if (modalBody) {
@@ -9258,7 +9525,6 @@ window.toggleActivityExportDropdown = function(event) {
   dropdown.classList.toggle("hidden", !isHidden);
 };
 
-// Close dropdown on outside click
 document.addEventListener("click", (e) => {
   const dropdown = document.getElementById("activity-export-dropdown");
   const btn = document.getElementById("btn-activity-export-menu");
@@ -9268,7 +9534,7 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// 6. Export to CSV (With Automatic Audit Trail Logging)
+// 6. Export to CSV
 window.exportActivityLogCSV = async function() {
   const dropdown = document.getElementById("activity-export-dropdown");
   if (dropdown) { dropdown.style.display = "none"; dropdown.classList.add("hidden"); }
@@ -9278,7 +9544,6 @@ window.exportActivityLogCSV = async function() {
     return;
   }
 
-  // Record audit trail event on backend
   const currentUserId = sessionStorage.getItem("userId");
   try {
     await apiFetch('/api/activity-logs/log-action', {
@@ -9295,7 +9560,6 @@ window.exportActivityLogCSV = async function() {
     console.warn("Could not log export action:", e);
   }
 
-  // Generate CSV Content
   const headers = ["Log ID", "Timestamp (PHT)", "Actor Name", "Actor Role", "Actor Office", "Category", "Action", "Target Entity", "Description", "Status", "IP Address"];
   const rows = filteredActivityLogs.map(l => [
     `#LOG-${String(l.id).padStart(4, '0')}`,
@@ -9323,7 +9587,7 @@ window.exportActivityLogCSV = async function() {
   if (typeof showToast === "function") showToast(`Exported ${filteredActivityLogs.length} log records to CSV!`, "success");
 };
 
-// 7. Printable PDF Report Preview & Action
+// 7. Printable PDF Report Preview & Action (WITH MIDDLE INITIAL)
 window.openActivityLogPrintModal = function() {
   const dropdown = document.getElementById("activity-export-dropdown");
   if (dropdown) { dropdown.style.display = "none"; dropdown.classList.add("hidden"); }
@@ -9334,7 +9598,15 @@ window.openActivityLogPrintModal = function() {
 
   // Metadata injection
   const dateEl = document.getElementById("activity-print-generated-date");
-  if (dateEl) dateEl.innerText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (dateEl) {
+    dateEl.innerText = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
 
   const catFilter = document.getElementById("activity-filter-category")?.value || "ALL";
   const catEl = document.getElementById("activity-print-category");
@@ -9344,17 +9616,15 @@ window.openActivityLogPrintModal = function() {
   const timeEl = document.getElementById("activity-print-timeframe");
   if (timeEl) timeEl.innerText = timeFilter === "ALL" ? "All Records" : (timeFilter === "TODAY" ? "Today" : `Last ${timeFilter.replace('DAYS', ' Days')}`);
 
-  // Dynamic Administrator Signer
+  // 🚀 Dynamic Administrator Signer (First M.I. Last)
   const adminFirst = sessionStorage.getItem("firstName") || "";
   const adminMiddle = sessionStorage.getItem("middleName") || "";
   const adminLast = sessionStorage.getItem("lastName") || "";
   const signerEl = document.getElementById("activity-print-signer-name");
+
   if (signerEl) {
-    if (typeof formatFullName === 'function') {
-      signerEl.innerText = formatFullName(adminFirst, adminMiddle, adminLast).toUpperCase() || "CPDO ADMINISTRATOR";
-    } else {
-      signerEl.innerText = `${adminFirst} ${adminLast}`.trim().toUpperCase() || "CPDO ADMINISTRATOR";
-    }
+    const formattedSigner = formatOfficialName(adminFirst, adminMiddle, adminLast).toUpperCase();
+    signerEl.innerText = formattedSigner || "CPDO ADMINISTRATOR";
   }
 
   // Populate Printable Rows
@@ -9382,6 +9652,7 @@ window.openActivityLogPrintModal = function() {
   modal.style.display = "flex";
 };
 
+// 8. Clean Print Trigger (Suppresses Browser Header/Footer)
 window.printActivityLogSheet = async function() {
   const currentUserId = sessionStorage.getItem("userId");
   try {
@@ -9399,7 +9670,22 @@ window.printActivityLogSheet = async function() {
     console.warn("Could not log print action:", e);
   }
 
+  const originalTitle = document.title;
+  document.title = " ";
   window.print();
+
+  setTimeout(() => {
+    document.title = originalTitle;
+  }, 1000);
+};
+
+// Helper: Close Activity Print Modal
+window.closeActivityLogPrintModal = function() {
+  const modal = document.getElementById("activity-log-print-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+  }
 };
 
 // --- Formatters & UI Badges ---
@@ -9436,5 +9722,4 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
 

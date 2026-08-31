@@ -287,23 +287,23 @@
           </div>
 
           <!-- Dual Signatures Block (CPDO & CEO) -->
-          <div class="document-signatures" style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
+          <div class="document-signatures" style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid; background: #ffffff;">
 
             <!-- Left: CPDO Admin -->
-            <div class="sig-box" style="text-align: center; width: 240px;">
-              <p style="text-align: left; margin: 0 0 6px 0; font-size: 11.5px; font-weight: 600; color: #334155;">Generated & Verified By:</p>
+            <div class="sig-box" style="text-align: center; width: 250px;">
+              <p style="text-align: left; margin: 0 0 6px 0; font-size: 11.5px; font-weight: 600; color: #475569;">Generated & Verified By:</p>
               <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-              <strong id="priority-admin-name" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block; letter-spacing: 0.5px;">CPDO Admin</strong>
-              <span style="font-size: 10px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-              <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 2px;">City Planning & Development Coordinator</span>
+              <strong id="priority-admin-name" style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">CPDO Admin</strong>
+              <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+              <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 2px;">City Planning & Development Office</span>
             </div>
 
             <!-- Right: CEO Representative -->
-            <div class="sig-box" style="text-align: center; width: 240px;">
-              <p style="text-align: left; margin: 0 0 6px 0; font-size: 11.5px; font-weight: 600; color: #334155;">Received & Acknowledged By:</p>
+            <div class="sig-box" style="text-align: center; width: 250px;">
+              <p style="text-align: left; margin: 0 0 6px 0; font-size: 11.5px; font-weight: 600; color: #475569;">Received & Acknowledged By:</p>
               <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-              <strong style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block; letter-spacing: 0.5px;">Engr. Department Head</strong>
-              <span style="font-size: 10px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
+              <strong id="priority-ceo-name" style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">Engr. Department Head</strong>
+              <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
               <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 2px;">City Engineering Office</span>
             </div>
 
@@ -715,86 +715,6 @@
                 <strong id="archive-modal-signer-name" style="text-transform: uppercase; font-size: 10.5px; color: #0f172a; display: block; letter-spacing: 0.5px;">CPDO ADMINISTRATOR</strong>
                 <span style="font-size: 8.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
                 <span style="font-size: 9.5px; color: #334155; font-weight: 600; display: block; margin-top: 1px;">City Planning & Development Office</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- ======================================================= -->
-      <!-- 📄 ARCHIVE: PRIORITY LIST REPORT PREVIEW MODAL          -->
-      <!-- ======================================================= -->
-      <div id="archive-priority-preview-modal" class="modal-overlay hidden" style="z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
-        <div style="background: white; border-radius: 12px; width: 95%; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
-
-          <!-- Modal Toolbar (Hidden during Print) -->
-          <div class="no-print" style="padding: 15px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <h3 style="margin: 0; font-size: 18px; color: #1e293b;">Historical Priority Masterlist</h3>
-              <p style="margin: 3px 0 0 0; font-size: 12px; color: #64748b;">Review prioritized backlog before saving as PDF.</p>
-            </div>
-            <div style="display: flex; gap: 15px; align-items: center;">
-              <button onclick="printArchiveDocument('archive-priority-preview-modal')" style="padding: 8px 18px; background: #dc2626; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(220,38,38,0.2);">
-                🖨️ Save as PDF
-              </button>
-              <button onclick="document.getElementById('archive-priority-preview-modal').classList.add('hidden')" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close Preview">✕</button>
-            </div>
-          </div>
-
-          <!-- Printable Paper Area -->
-          <div style="flex: 1; padding: 40px; overflow-y: auto; background: white; color: #0f172a; font-family: 'Segoe UI', Arial, sans-serif;">
-
-            <!-- Letterhead -->
-            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 18px;">
-              <img src="img/cpdologo.png" alt="CPDO Logo" style="height: 70px; width: auto;" onerror="this.style.display='none'">
-              <div style="text-align: center; flex: 1; margin: 0 20px;">
-                <p style="margin: 0; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; font-weight: 600;">Republic of the Philippines • Province of Bulacan</p>
-                <h2 style="margin: 3px 0; font-size: 20px; color: #0f172a; font-weight: 800; text-transform: uppercase;">City of San Jose Del Monte</h2>
-                <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #dc2626;">CITY PLANNING AND DEVELOPMENT OFFICE</h3>
-                <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">PRIORITY ROAD REPAIR & BUDGET PLANNING MASTERLIST</p>
-              </div>
-              <img src="img/logo.png" alt="RoadWise Logo" style="height: 70px; width: auto;" onerror="this.style.display='none'">
-            </div>
-
-            <!-- Metadata Strip -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 11.5px; color: #334155; font-weight: 600;">
-              <div>CITY/MUNICIPALITY: <span style="font-weight: 800; color: #0f172a;">SAN JOSE DEL MONTE CITY</span></div>
-              <div>RECORD CYCLE: <span id="archive-preview-priority-year" style="font-weight: 800; color: #dc2626;">ALL RECORDED YEARS</span></div>
-              <div>DATE GENERATED: <span id="archive-preview-priority-date" style="font-weight: 800; color: #0f172a;"></span></div>
-            </div>
-
-            <!-- Priority Data Table -->
-            <div style="overflow-x: auto; width: 100%;">
-              <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left; border: 1.5px solid #0f172a;">
-                <thead>
-                <tr style="background: #0f172a; color: #ffffff; text-align: center; font-weight: 700;">
-                  <th style="padding: 10px 8px; border: 1px solid #334155; width: 50px;">Rank</th>
-                  <th style="padding: 10px 8px; border: 1px solid #334155; width: 100px;">Project ID</th>
-                  <th style="padding: 10px 8px; border: 1px solid #334155; text-align: left;">Road Name & Barangay</th>
-                  <th style="padding: 10px 8px; border: 1px solid #334155; width: 150px;">Damage Type</th>
-                  <th style="padding: 10px 8px; border: 1px solid #334155; width: 120px;">Est. Area (L x W)</th>
-                  <th style="padding: 10px 8px; border: 1px solid #334155; width: 100px;">Priority Tier</th>
-                </tr>
-                </thead>
-                <tbody id="archive-preview-priority-tbody">
-                <tr>
-                  <td colspan="6" style="text-align: center; padding: 25px; color: #64748b; font-style: italic;">
-                    Loading Priority List records...
-                  </td>
-                </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Signatures (Standard Left-Aligned LGU Layout) -->
-            <div style="display: flex; justify-content: flex-start; margin-top: 45px; padding-top: 15px; page-break-inside: avoid;">
-              <div style="width: 250px; text-align: center;">
-                <p style="text-align: left; margin: 0 0 6px 0; font-size: 11.5px; font-weight: 600; color: #334155;">Prepared & Verified By:</p>
-                <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-                <strong id="archive-preview-priority-admin" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block; letter-spacing: 0.5px;">CPDO Administrator</strong>
-                <span style="font-size: 10px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-                <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 2px;">City Planning & Development Coordinator</span>
               </div>
             </div>
 
@@ -1282,13 +1202,23 @@
           </div>
 
           <!-- Signatures -->
-          <div style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
-            <div style="text-align: center; width: 240px;">
-              <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569;">Prepared By:</p>
+          <div style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid; background: #ffffff;">
+            <!-- Left Side: Prepared by Admin/Officer -->
+            <div style="text-align: center; width: 250px;">
+              <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Prepared By:</p>
               <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-              <strong id="admin-inventory-prepared-by" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block;">CPDO Administrator</strong>
-              <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-              <span style="font-size: 11px; color: #475569; font-weight: 600; display: block; margin-top: 2px;">Road Inventory Officer</span>
+              <strong id="admin-inventory-prepared-by" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block; letter-spacing: 0.3px;">CPDO Administrator</strong>
+              <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+              <span style="font-size: 11px; color: #475569; font-weight: 600; display: block; margin-top: 2px;">Administrator</span>
+            </div>
+
+            <!-- Right Side: Certified Correct / Head of Office -->
+            <div style="text-align: center; width: 250px;">
+              <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Certified Correct & Approved:</p>
+              <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+              <strong style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block; letter-spacing: 0.3px;">City Planning & Development Office</strong>
+              <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+              <span style="font-size: 11px; color: #475569; font-weight: 600; display: block; margin-top: 2px;">Head of CPDO</span>
             </div>
           </div>
 
@@ -2324,9 +2254,9 @@
 
 
 <!-- ======================================================= -->
-<!-- 📄 1. ARCHIVE: INVENTORY REPORT PREVIEW MODAL           -->
+<!-- 📄 ARCHIVE 1: HISTORICAL ROAD INVENTORY MODAL           -->
 <!-- ======================================================= -->
-<div id="archive-inventory-preview-modal" class="modal-overlay hidden" style="z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
+<div id="archive-inventory-preview-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center;">
   <div style="background: white; border-radius: 12px; width: 95%; max-width: 1200px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
 
     <!-- Modal Toolbar (Hidden during actual print) -->
@@ -2339,7 +2269,7 @@
         <button onclick="printArchiveDocument('archive-inventory-preview-modal')" style="padding: 8px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
           🖨️ Save as PDF
         </button>
-        <button onclick="document.getElementById('archive-inventory-preview-modal').classList.add('hidden')" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close Preview">✕</button>
+        <button onclick="document.getElementById('archive-inventory-preview-modal').classList.add('hidden'); document.getElementById('archive-inventory-preview-modal').style.display='none';" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close Preview">✕</button>
       </div>
     </div>
 
@@ -2395,19 +2325,98 @@
           </tr>
           </tbody>
           <tfoot id="archive-preview-inventory-tfoot" style="background: #f1f5f9; font-weight: 700; border-top: 2px solid #0f172a;">
-          <!-- Column Sum Totals will inject here -->
           </tfoot>
         </table>
       </div>
 
       <!-- Signatures -->
-      <div style="display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
-        <div style="text-align: center; width: 240px;">
-          <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569;">Prepared By:</p>
+      <div style="display: flex; justify-content: flex-start; margin-top: 50px; padding-top: 20px; page-break-inside: avoid;">
+        <div style="text-align: center; width: 250px;">
+          <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Prepared By:</p>
           <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-          <strong id="archive-preview-inventory-admin" style="text-transform: uppercase; font-size: 12px; color: #0f172a; display: block;">CPDO Administrator</strong>
-          <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-          <span style="font-size: 11px; color: #475569; font-weight: 600; display: block; margin-top: 2px;">Road Inventory Officer</span>
+          <strong id="archive-preview-inventory-admin" style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">CPDO Administrator</strong>
+          <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+          <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 2px;">City Planning & Development Office</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- 📄 ARCHIVE 2: HISTORICAL PRIORITY MASTERLIST MODAL      -->
+<!-- ======================================================= -->
+<div id="archive-priority-preview-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center;">
+  <div style="background: white; border-radius: 12px; width: 95%; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+
+    <!-- Modal Toolbar -->
+    <div class="no-print" style="padding: 15px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3 style="margin: 0; font-size: 18px; color: #1e293b;">Historical Priority Masterlist</h3>
+        <p style="margin: 3px 0 0 0; font-size: 12px; color: #64748b;">Review prioritized backlog before saving as PDF.</p>
+      </div>
+      <div style="display: flex; gap: 15px; align-items: center;">
+        <button onclick="printArchiveDocument('archive-priority-preview-modal')" style="padding: 8px 18px; background: #dc2626; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(220,38,38,0.2);">
+          🖨️ Save as PDF
+        </button>
+        <button onclick="document.getElementById('archive-priority-preview-modal').classList.add('hidden'); document.getElementById('archive-priority-preview-modal').style.display='none';" style="background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close Preview">✕</button>
+      </div>
+    </div>
+
+    <!-- Printable Paper Area -->
+    <div style="flex: 1; padding: 40px; overflow-y: auto; background: white; color: #0f172a; font-family: 'Segoe UI', Arial, sans-serif;">
+
+      <!-- Letterhead -->
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 18px;">
+        <img src="img/cpdologo.png" alt="CPDO Logo" style="height: 70px; width: auto;" onerror="this.style.display='none'">
+        <div style="text-align: center; flex: 1; margin: 0 20px;">
+          <p style="margin: 0; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; font-weight: 600;">Republic of the Philippines • Province of Bulacan</p>
+          <h2 style="margin: 3px 0; font-size: 20px; color: #0f172a; font-weight: 800; text-transform: uppercase;">City of San Jose Del Monte</h2>
+          <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #dc2626;">CITY PLANNING AND DEVELOPMENT OFFICE</h3>
+          <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">PRIORITY ROAD REPAIR & BUDGET PLANNING MASTERLIST</p>
+        </div>
+        <img src="img/logo.png" alt="RoadWise Logo" style="height: 70px; width: auto;" onerror="this.style.display='none'">
+      </div>
+
+      <!-- Metadata Strip -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 11.5px; color: #334155; font-weight: 600;">
+        <div>CITY/MUNICIPALITY: <span style="font-weight: 800; color: #0f172a;">SAN JOSE DEL MONTE CITY</span></div>
+        <div>RECORD CYCLE: <span id="archive-preview-priority-year" style="font-weight: 800; color: #dc2626;">ALL RECORDED YEARS</span></div>
+        <div>DATE GENERATED: <span id="archive-preview-priority-date" style="font-weight: 800; color: #0f172a;"></span></div>
+      </div>
+
+      <!-- Priority Data Table -->
+      <div style="overflow-x: auto; width: 100%;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left; border: 1.5px solid #0f172a;">
+          <thead>
+          <tr style="background: #0f172a; color: #ffffff; text-align: center; font-weight: 700;">
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 50px;">Rank</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 100px;">Project ID</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; text-align: left;">Road Name & Barangay</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 150px;">Damage Type</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 120px;">Est. Area (L x W)</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 100px;">Priority Tier</th>
+          </tr>
+          </thead>
+          <tbody id="archive-preview-priority-tbody">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 25px; color: #64748b; font-style: italic;">
+              Loading Priority List records...
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Signatures -->
+      <div style="display: flex; justify-content: flex-start; margin-top: 45px; padding-top: 15px; page-break-inside: avoid;">
+        <div style="width: 250px; text-align: center;">
+          <p style="text-align: left; margin: 0 0 6px 0; font-size: 11.5px; font-weight: 600; color: #334155;">Prepared & Verified By:</p>
+          <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+          <strong id="archive-preview-priority-admin" style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">CPDO Administrator</strong>
+          <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block; margin-top: 2px;">(Signature over Printed Name)</span>
+          <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 2px;">City Planning & Development Office</span>
         </div>
       </div>
 
@@ -2497,7 +2506,7 @@
 <!-- ======================================================= -->
 <!-- 🖨️ MODAL: OFFICIAL PRINTABLE ACTIVITY AUDIT REPORT       -->
 <!-- ======================================================= -->
-<div id="activity-log-print-modal" class="modal-overlay hidden" style="z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
+<div id="activity-log-print-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center;">
   <div style="background: white; border-radius: 12px; width: 95%; max-width: 1050px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
 
     <!-- Print Modal Toolbar (Hidden during Print) -->
@@ -2510,7 +2519,7 @@
         <button onclick="printActivityLogSheet()" style="padding: 7px 16px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
           🖨️ Print / Save as PDF
         </button>
-        <button onclick="document.getElementById('activity-log-print-modal').classList.add('hidden')" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0;" title="Close">✕</button>
+        <button onclick="closeActivityLogPrintModal()" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0 4px;" title="Close">✕</button>
       </div>
     </div>
 
@@ -2567,12 +2576,12 @@
 
       <!-- Dynamic Print Signatory Block -->
       <div class="audit-signature" style="page-break-inside: avoid; margin-top: 25px;">
-        <div style="width: 230px; text-align: center;">
+        <div style="width: 250px; text-align: center;">
           <p style="text-align: left; margin: 0 0 3px 0; font-size: 10px; font-weight: 600; color: #334155;">Certified & Verified By:</p>
           <div style="border-bottom: 1.5px solid #0f172a; height: 22px; margin-bottom: 3px;"></div>
-          <strong id="activity-print-signer-name" style="text-transform: uppercase; font-size: 10.5px; color: #0f172a; display: block; letter-spacing: 0.5px;">CPDO ADMINISTRATOR</strong>
+          <strong id="activity-print-signer-name" style="text-transform: uppercase; font-size: 11px; color: #0f172a; display: block; letter-spacing: 0.3px;">CPDO ADMINISTRATOR</strong>
           <span style="font-size: 8.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-          <span style="font-size: 9.5px; color: #334155; font-weight: 600; display: block; margin-top: 1px;">City Planning & Development Coordinator</span>
+          <span style="font-size: 9.5px; color: #334155; font-weight: 600; display: block; margin-top: 1px;">City Planning & Development Office</span>
         </div>
       </div>
 
@@ -2583,11 +2592,11 @@
 <!-- ========================================== -->
 <!-- 📄 MODAL: REPAIR TRACKING REPORT PREVIEW   -->
 <!-- ========================================== -->
-<div id="tracking-report-preview-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; z-index: 100050; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;">
+<div id="tracking-report-preview-modal" class="modal-overlay hidden" style="position: fixed; inset: 0; z-index: 100050; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center;">
   <div style="background: #ffffff; border-radius: 12px; width: 95%; max-width: 1100px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);">
 
     <!-- Preview Modal Toolbar -->
-    <div style="padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+    <div class="no-print" style="padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 20px;">📄</span>
         <div>
@@ -2604,11 +2613,11 @@
         <button type="button" onclick="executeTrackingPrint()" style="padding: 8px 16px; background: #1e3a8a; border: none; color: #ffffff; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
           <span>🖨️</span> Print / Save as PDF
         </button>
-        <button type="button" onclick="document.getElementById('tracking-report-preview-modal').classList.add('hidden')" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0 4px;" title="Close Preview">✕</button>
+        <button type="button" onclick="closeTrackingReportPreview()" style="background: none; border: none; font-size: 22px; color: #94a3b8; cursor: pointer; line-height: 1; padding: 0 4px;" title="Close Preview">✕</button>
       </div>
     </div>
 
-    <!-- Scrollable Sheet Wrapper (Prevents Cut-off & Gray Spilling) -->
+    <!-- Scrollable Sheet Wrapper -->
     <div id="tracking-report-preview-body" style="flex: 1; overflow-y: auto; background: #64748b; padding: 30px 15px; display: block;">
       <div id="tracking-printable-sheet" style="background: #ffffff; width: 100%; max-width: 980px; margin: 0 auto; padding: 40px; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #0f172a; height: auto;">
         <!-- Dynamic report content injected here -->
@@ -2617,8 +2626,6 @@
 
   </div>
 </div>
-
-
 
 <div id="accept-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">
   <div class="modal-content" style="max-width: 400px; text-align: center; padding: 30px;">

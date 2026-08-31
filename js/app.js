@@ -3040,14 +3040,13 @@ function loadAdminReports() {
       // ==========================================
       // 🚀 SEPARATION OF CONCERNS: Filter out Tracking & Archive items!
       // ==========================================
-      // We DO NOT want to see Dispatched, In Progress, Completed, Closed, or Archived here.
       const inboxReports = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
         return !s.includes('dispatch') &&
           !s.includes('progress') &&
           !s.includes('complet') &&
           !s.includes('clos') &&
-          !s.includes('archiv'); // 🚀 THE FIX: Hide Archived reports from the Inbox!
+          !s.includes('archiv');
       });
 
       if (inboxReports.length === 0) {
@@ -3059,28 +3058,24 @@ function loadAdminReports() {
       // 🚀 SMART PRIORITY SORTING (INDUSTRY STANDARD)
       // ==========================================
       inboxReports.sort((a, b) => {
-        // 1. Assign Priority Weights based on Status Lifecycle
         const getPriority = (status) => {
           const s = String(status || '').toLowerCase();
-
-          if (s.includes('resubmit')) return 1; // 🔥 TIER 1: Resubmissions (Absolute Top)
-          if (s.includes('pending')) return 2;  // 🟡 TIER 2: Regular new reports
-          if (s.includes('validate')) return 3; // 🟢 TIER 3: Validated (Waiting for dispatch)
-          return 4;                             // 🔴 TIER 4: Rejected (Drops to the bottom)
+          if (s.includes('resubmit')) return 1;
+          if (s.includes('pending')) return 2;
+          if (s.includes('validate')) return 3;
+          return 4;
         };
 
         const priorityA = getPriority(a.status);
         const priorityB = getPriority(b.status);
 
-        // 2. Sort by Priority Group First
         if (priorityA !== priorityB) {
           return priorityA - priorityB;
         }
 
-        // 3. 🧠 BULLETPROOF DATE TIE-BREAKER
         const dateA = new Date(a.date_submitted || a.dateSubmitted || 0);
         const dateB = new Date(b.date_submitted || b.dateSubmitted || 0);
-        return dateB - dateA; // Newest first
+        return dateB - dateA;
       });
 
       // ==========================================
@@ -3090,16 +3085,25 @@ function loadAdminReports() {
         const formattedId = `#RPT-${String(report.id || 0).padStart(4, '0')}`;
         const roadId = report.cityRoadId || 'N/A';
         const roadName = report.cityRoadName || 'Unknown Road';
-        const severity = report.severity || 'Unassessed';
         const dateSubmitted = report.date_submitted || report.dateSubmitted || 'N/A';
 
         const barangayDisplay = (report.barangay && report.barangay.barangayName)
           ? report.barangay.barangayName
           : 'Unknown Barangay';
 
-        const severityClass = severity.toLowerCase() === 'high' ? 'high' :
-          severity.toLowerCase() === 'medium' ? 'medium' :
-            severity.toLowerCase() === 'low' ? 'low' : 'secondary';
+        // 🚀 DYNAMIC SEVERITY BADGES (EXPLICIT STYLING FOR UNASSESSED)
+        const rawSeverity = String(report.severity || '').toLowerCase().trim();
+        let severityBadgeHtml = '';
+
+        if (rawSeverity === 'high') {
+          severityBadgeHtml = `<span class="badge high">HIGH</span>`;
+        } else if (rawSeverity === 'medium') {
+          severityBadgeHtml = `<span class="badge medium">MEDIUM</span>`;
+        } else if (rawSeverity === 'low') {
+          severityBadgeHtml = `<span class="badge low">LOW</span>`;
+        } else {
+          severityBadgeHtml = `<span class="badge" style="background-color: #dcfce7; color: #15803d !important; border: 1px solid #86efac; font-weight: 700; padding: 3px 8px; border-radius: 4px; display: inline-block;">UNASSESSED</span>`;
+        }
 
         const status = report.status || 'Pending';
         const sLower = status.toLowerCase();
@@ -3122,32 +3126,27 @@ function loadAdminReports() {
 
         const row = document.createElement('tr');
 
-        // 🎨 UI POLISH: Dim rejected and validated items so they don't distract the Admin
         if (sLower.includes('reject') || sLower.includes('validate')) {
           row.style.opacity = '0.5';
           row.style.backgroundColor = '#f8f9fa';
         }
 
         row.innerHTML = `
-                    <td>${formattedId}</td>
-                    <td>${barangayDisplay}</td>
-                    <td><b>${roadId}</b></td>
-                    <td>${roadName}</td>
-                    <td><span class="badge ${severityClass}">${severity}</span></td>
-                    <td>${dateSubmitted}</td>
-                    <td>${statusHtml}</td>
-                    <td>${buttonHtml}</td>
-                `;
+          <td>${formattedId}</td>
+          <td>${barangayDisplay}</td>
+          <td><b>${roadId}</b></td>
+          <td>${roadName}</td>
+          <td>${severityBadgeHtml}</td>
+          <td>${dateSubmitted}</td>
+          <td>${statusHtml}</td>
+          <td>${buttonHtml}</td>
+        `;
         reportsTableBody.appendChild(row);
       });
 
-      // 🚀 FORCE TABLE SCROLL TO TOP ON LOAD
       const tableContainer = document.querySelector('.table-container') || document.querySelector('.table-responsive');
       if (tableContainer) tableContainer.scrollTop = 0;
 
-      // ==========================================
-      // 🚀 THE FIX: INSTANTLY RE-APPLY THE FILTER!
-      // ==========================================
       if (typeof window.filterAdminReports === 'function') {
         window.filterAdminReports();
       }
@@ -3155,7 +3154,7 @@ function loadAdminReports() {
     })
     .catch(error => {
       console.error("Error loading admin reports:", error);
-      if(reportsTableBody) {
+      if (reportsTableBody) {
         reportsTableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: red; padding: 20px;">Error loading reports from database.</td></tr>';
       }
     });
@@ -4261,6 +4260,12 @@ window.submitCEOCompletion = function() {
     });
 };
 // ==========================================
+// 🛣️ GLOBAL REPAIR TRACKING STATE
+// ==========================================
+window.rawTrackedReports = [];
+window.currentFilteredTrackedReports = [];
+
+// ==========================================
 // ADMIN DASHBOARD: LOAD REPAIR TRACKING
 // ==========================================
 function loadTrackingData() {
@@ -4282,7 +4287,8 @@ function loadTrackingData() {
       });
 
       if (trackedReports.length === 0) {
-        // 🚀 FIX: Updated colspan to 7 to account for the new Checkbox column
+        window.rawTrackedReports = [];
+        window.currentFilteredTrackedReports = [];
         trackingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px;">No active repair projects to track.</td></tr>`;
         return;
       }
@@ -4295,15 +4301,18 @@ function loadTrackingData() {
         else if (status === 'pending budget') report.statusScore = 1;
         else report.statusScore = 0;
 
-        const severity = String(report.severity || 'low').toLowerCase();
-        const importance = String(report.roadImportance || '').toLowerCase();
+        // 🚀 Do NOT default to 'low' here
+        const rawSeverity = String(report.severity || '').toLowerCase().trim();
+        const importance = String(report.roadImportance || '').toLowerCase().trim();
 
-        if (severity === 'high' || (severity === 'medium' && importance.includes('core'))) {
+        if (rawSeverity === 'high' || (rawSeverity === 'medium' && importance.includes('core'))) {
           report.priorityScore = 3;
-        } else if (severity === 'medium' || (severity === 'low' && importance.includes('core'))) {
+        } else if (rawSeverity === 'medium' || (rawSeverity === 'low' && importance.includes('core'))) {
           report.priorityScore = 2;
-        } else {
+        } else if (rawSeverity === 'low') {
           report.priorityScore = 1;
+        } else {
+          report.priorityScore = 0; // Unassessed priority score
         }
       });
 
@@ -4315,28 +4324,38 @@ function loadTrackingData() {
         return idB - idA;
       });
 
+      // Sync for the report generator & export
+      window.rawTrackedReports = trackedReports;
+      window.currentFilteredTrackedReports = [...trackedReports];
+
       trackedReports.forEach(report => {
         const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
         const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
         const roadName = report.cityRoadName || 'Unknown Road';
         const currentStatus = String(report.status || '').toLowerCase().trim();
 
-        const severity = String(report.severity || 'low').toLowerCase();
-        const importance = String(report.roadImportance || '').toLowerCase();
+        const rawSeverity = String(report.severity || '').toLowerCase().trim();
+        const importance = String(report.roadImportance || '').toLowerCase().trim();
 
-        let badgeHtml = `<span class="badge low">LOW</span>`;
-        let borderStyle = '4px solid var(--accent-blue)';
+        // 🚀 PROPER PRIORITY BADGE WITH UNASSESSED SUPPORT
+        let badgeHtml = '';
+        let borderStyle = '4px solid #10b981';
 
-        if (severity === 'high' || (severity === 'medium' && importance.includes('core'))) {
+        if (rawSeverity === 'high' || (rawSeverity === 'medium' && importance.includes('core'))) {
           badgeHtml = `<span class="badge high">HIGH</span>`;
           borderStyle = '4px solid #dc3545';
-        } else if (severity === 'medium' || (severity === 'low' && importance.includes('core'))) {
+        } else if (rawSeverity === 'medium' || (rawSeverity === 'low' && importance.includes('core'))) {
           badgeHtml = `<span class="badge medium">MEDIUM</span>`;
           borderStyle = '4px solid #ffc107';
+        } else if (rawSeverity === 'low') {
+          badgeHtml = `<span class="badge low">LOW</span>`;
+          borderStyle = '4px solid var(--accent-blue, #2563eb)';
+        } else {
+          badgeHtml = `<span class="badge" style="background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 700;">UNASSESSED</span>`;
+          borderStyle = '4px solid #10b981';
         }
 
         let statusHtml = '';
-        // 🚀 NEW: Checkbox HTML logic
         let checkboxHtml = '';
 
         if (currentStatus === 'completed') {
@@ -4347,7 +4366,6 @@ function loadTrackingData() {
         } else if (currentStatus === 'pending budget') {
           statusHtml = `<span class="status-badge" style="background-color: #fef08a; color: #854d0e;">⚠️ Pending Budget</span>`;
           borderStyle = '4px solid #eab308';
-          // 🚀 ONLY inject the checkbox if it is Pending Budget!
           checkboxHtml = `<input type="checkbox" class="archive-checkbox" value="${report.id}" onclick="updateBatchArchiveUI()" style="cursor: pointer; transform: scale(1.2);">`;
         } else if (currentStatus === 'closed') {
           statusHtml = `<span class="status-badge" style="background-color: #e2e3e5; color: #6c757d;">✅ Officially Closed</span>`;
@@ -4379,16 +4397,393 @@ function loadTrackingData() {
         `;
         trackingTableBody.appendChild(row);
       });
+
       if (typeof window.filterTrackingReports === 'function') {
         window.filterTrackingReports();
       }
-
     })
     .catch(error => {
       console.error("Error loading tracking data:", error);
       trackingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Failed to load tracking data.</td></tr>`;
     });
 }
+
+// ==========================================
+// 📊 REPORT GENERATION & LIVE PREVIEW ENGINE
+// ==========================================
+
+// Helper: Safely get active records, with auto-fetch fallback
+async function getActiveTrackingRecords() {
+  if (Array.isArray(window.currentFilteredTrackedReports) && window.currentFilteredTrackedReports.length > 0) {
+    return window.currentFilteredTrackedReports;
+  }
+  if (Array.isArray(window.rawTrackedReports) && window.rawTrackedReports.length > 0) {
+    return window.rawTrackedReports;
+  }
+
+  try {
+    const reports = await apiFetch('/api/reports');
+    if (Array.isArray(reports)) {
+      const tracked = reports.filter(r => {
+        const s = String(r.status || '').toLowerCase().trim();
+        return s === 'dispatched to ceo' ||
+          s === 'in progress' ||
+          s === 'completed' ||
+          s === 'pending budget' ||
+          s === 'closed' ||
+          s === 'archived';
+      });
+      window.rawTrackedReports = tracked;
+      window.currentFilteredTrackedReports = tracked;
+      return tracked;
+    }
+  } catch (err) {
+    console.error("Failed to auto-fetch tracking records for report:", err);
+  }
+
+  return [];
+}
+
+// ==========================================
+// 1. OPEN REPORT PREVIEW MODAL (WITH OFFICIAL DUAL SIGNATURE FORMAT)
+// ==========================================
+window.openTrackingReportPreview = async function() {
+  const reports = await getActiveTrackingRecords();
+  const modal = document.getElementById('tracking-report-preview-modal');
+  const sheet = document.getElementById('tracking-printable-sheet');
+
+  if (!reports || reports.length === 0) {
+    if (typeof showToast === 'function') showToast("No tracking records available to generate report.", "warning");
+    return;
+  }
+
+  if (!modal || !sheet) return;
+
+  // 🚀 1. DYNAMICALLY FETCH REAL CPDO ADMIN & CITY ENGINEER NAMES
+  let adminName = 'CPDO Administrator';
+  let ceoName = 'City Engineer';
+
+  try {
+    // A. Resolve Logged-in Admin from Session/Storage
+    const sFirst = sessionStorage.getItem('firstName');
+    const sLast = sessionStorage.getItem('lastName');
+    const sMiddle = sessionStorage.getItem('middleName');
+    const headerNameElem = document.querySelector('.user-name, .admin-profile span, #admin-name');
+
+    if (sFirst && sLast) {
+      adminName = [sFirst, sMiddle, sLast].filter(Boolean).join(' ').trim();
+    } else {
+      const localUser = JSON.parse(localStorage.getItem('user') || localStorage.getItem('currentUser') || '{}');
+      if (localUser.firstName || localUser.lastName) {
+        adminName = [localUser.firstName, localUser.middleName, localUser.lastName].filter(Boolean).join(' ').trim();
+      } else if (localUser.name) {
+        adminName = localUser.name;
+      } else if (headerNameElem && headerNameElem.textContent.trim()) {
+        adminName = headerNameElem.textContent.trim();
+      }
+    }
+
+    // B. Fetch Users from Database to find Role: "ENGINEER"
+    let users = [];
+    if (typeof apiFetch === 'function') {
+      users = await apiFetch('/api/users').catch(() => []);
+    } else if (typeof API_BASE_URL !== 'undefined') {
+      const res = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      }).catch(() => null);
+      if (res && res.ok) users = await res.json();
+    }
+
+    if (Array.isArray(users) && users.length > 0) {
+      const engineerUser = users.find(u => {
+        const role = String(u.role || '').toUpperCase().trim();
+        const status = String(u.status || '').toLowerCase().trim();
+        return role === 'ENGINEER' && status !== 'deactivated';
+      });
+
+      if (engineerUser) {
+        const fullCeoName = [engineerUser.firstName, engineerUser.middleName, engineerUser.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+        ceoName = fullCeoName ? `Engr. ${fullCeoName}` : (engineerUser.username || ceoName);
+      }
+
+      if (adminName === 'CPDO Administrator') {
+        const adminUser = users.find(u => {
+          const role = String(u.role || '').toUpperCase().trim();
+          const status = String(u.status || '').toLowerCase().trim();
+          return role === 'ADMIN' && status !== 'deactivated';
+        });
+
+        if (adminUser) {
+          const fullAdminName = [adminUser.firstName, adminUser.middleName, adminUser.lastName]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+          adminName = fullAdminName || adminUser.username || adminName;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch signatories from database, using defaults:", err);
+  }
+
+  // 2. TIMESTAMPS
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    timeZone: 'Asia/Manila',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  const currentTime = new Date().toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Manila',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  // 3. KPI CALCULATIONS
+  const inProgressCount = reports.filter(r => String(r.status || '').toLowerCase() === 'in progress').length;
+  const completedCount = reports.filter(r => String(r.status || '').toLowerCase() === 'completed').length;
+  const pendingBudgetCount = reports.filter(r => String(r.status || '').toLowerCase() === 'pending budget').length;
+  const closedCount = reports.filter(r => String(r.status || '').toLowerCase() === 'closed').length;
+
+  // 4. BUILD TABLE ROWS
+  let tableRowsHtml = '';
+  reports.forEach((r, index) => {
+    const formattedId = `#PRJ-${String(r.id).padStart(4, '0')}`;
+    const brgy = r.barangay?.barangayName || (typeof r.barangay === 'string' ? r.barangay : 'Pending Assignment');
+    const road = r.cityRoadName || 'Unknown Road';
+    const currentStatus = String(r.status || 'Dispatched').toUpperCase();
+    const remarks = r.repairRemarks || r.adminRemarks || 'No remarks documented.';
+
+    const rawPriority = String(r.priorityLevel || r.priority || r.severity || '').toUpperCase().trim();
+
+    let priorityBadge = '';
+    if (rawPriority === 'HIGH') {
+      priorityBadge = '<span style="background-color: #ef4444; color: #ffffff !important; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block;">HIGH</span>';
+    } else if (rawPriority === 'MEDIUM') {
+      priorityBadge = '<span style="background-color: #f59e0b; color: #ffffff !important; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block;">MEDIUM</span>';
+    } else if (rawPriority === 'LOW') {
+      priorityBadge = '<span style="background-color: #22c55e; color: #ffffff !important; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block;">LOW</span>';
+    } else {
+      priorityBadge = '<span style="background-color: #dcfce7; color: #15803d !important; border: 1px solid #86efac; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; display: inline-block;">UNASSESSED</span>';
+    }
+
+    tableRowsHtml += `
+      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11.5px; background: #ffffff;">
+        <td style="padding: 10px 8px; text-align: center; color: #64748b;">${index + 1}</td>
+        <td style="padding: 10px 8px; font-weight: 700; font-family: monospace; color: #1e3a8a;">${formattedId}</td>
+        <td style="padding: 10px 8px; color: #0f172a; font-weight: 700;">${brgy}</td>
+        <td style="padding: 10px 8px; color: #334155;">${road}</td>
+        <td style="padding: 10px 8px; text-align: center;">${priorityBadge}</td>
+        <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #0f172a;">${currentStatus}</td>
+        <td style="padding: 10px 8px; color: #475569; font-size: 11px;">${remarks}</td>
+      </tr>
+    `;
+  });
+
+  // 5. RENDER PRINTABLE SHEET
+  sheet.innerHTML = `
+    <!-- Letterhead -->
+    <div style="border-bottom: 2px solid #1e3a8a; padding-bottom: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; background: #ffffff;">
+      <div>
+        <div style="font-size: 10.5px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+          Republic of the Philippines • Province of Bulacan
+        </div>
+        <div style="font-size: 18px; font-weight: 800; color: #1e3a8a; margin-top: 2px;">
+          CITY PLANNING & DEVELOPMENT OFFICE (CPDO)
+        </div>
+        <div style="font-size: 13px; font-weight: 600; color: #334155;">
+          Active Road Damage Repair & Infrastructure Accomplishment Matrix
+        </div>
+      </div>
+      <div style="text-align: right; font-size: 11px; color: #475569; line-height: 1.4;">
+        <strong>Generated:</strong> ${currentDate} (${currentTime} PHT)<br>
+        <strong>Scope:</strong> ${reports.length} Project Record(s) Listed
+      </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; background: #ffffff;">
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center;">
+        <strong style="font-size: 18px; color: #1e3a8a; display: block;">${inProgressCount}</strong>
+        <span style="font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700;">In Progress</span>
+      </div>
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center;">
+        <strong style="font-size: 18px; color: #16a34a; display: block;">${completedCount}</strong>
+        <span style="font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700;">Completed (QA)</span>
+      </div>
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center;">
+        <strong style="font-size: 18px; color: #d97706; display: block;">${pendingBudgetCount}</strong>
+        <span style="font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700;">Pending Budget</span>
+      </div>
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center;">
+        <strong style="font-size: 18px; color: #475569; display: block;">${closedCount}</strong>
+        <span style="font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700;">Verified Closed</span>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 35px; background: #ffffff;">
+      <thead>
+        <tr style="background: #f1f5f9; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+          <th style="padding: 8px; width: 30px; text-align: center; font-size: 10px; color: #334155; text-transform: uppercase;">#</th>
+          <th style="padding: 8px; width: 90px; text-align: left; font-size: 10px; color: #334155; text-transform: uppercase;">Project ID</th>
+          <th style="padding: 8px; width: 140px; text-align: left; font-size: 10px; color: #334155; text-transform: uppercase;">Barangay</th>
+          <th style="padding: 8px; width: 130px; text-align: left; font-size: 10px; color: #334155; text-transform: uppercase;">City Road Name</th>
+          <th style="padding: 8px; width: 100px; text-align: center; font-size: 10px; color: #334155; text-transform: uppercase;">Priority</th>
+          <th style="padding: 8px; width: 130px; text-align: center; font-size: 10px; color: #334155; text-transform: uppercase;">Current Status</th>
+          <th style="padding: 8px; width: 220px; text-align: left; font-size: 10px; color: #334155; text-transform: uppercase;">Engineering / QA Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml}
+      </tbody>
+    </table>
+
+    <!-- ✍️ SIGNATURE BLOCK -->
+    <div style="display: flex; justify-content: space-between; margin-top: 45px; padding-top: 15px; page-break-inside: avoid; background: #ffffff;">
+      <!-- Prepared By (Admin) -->
+      <div style="text-align: center; width: 260px;">
+        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Prepared By:</p>
+        <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+        <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${adminName}</strong>
+        <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
+        <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 3px;">CPDO Lead Administrator</span>
+        <span style="font-size: 10px; color: #64748b; display: block;">City Planning & Development Office</span>
+      </div>
+
+      <!-- Approved / Noted By (CEO) -->
+      <div style="text-align: center; width: 260px;">
+        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Noted & Verified By:</p>
+        <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
+        <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${ceoName}</strong>
+        <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
+        <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 3px;">City Engineering Office</span>
+        <span style="font-size: 10px; color: #64748b; display: block;">City Engineering Office SJDM</span>
+      </div>
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+  const previewBody = document.getElementById('tracking-report-preview-body');
+  if (previewBody) previewBody.scrollTop = 0;
+};
+
+// ==========================================
+// 2. UNIFIED PRINT TRIGGER (USES @media print CSS)
+// ==========================================
+window.executeTrackingPrint = function() {
+  window.print();
+};
+
+// 3. EXPORT CSV ENGINE
+window.exportTrackingMatrixCSV = async function() {
+  const reports = await getActiveTrackingRecords();
+
+  if (!reports || reports.length === 0) {
+    if (typeof showToast === 'function') showToast("No tracking records available to export.", "warning");
+    return;
+  }
+
+  const headers = [
+    "Project ID",
+    "Barangay Jurisdiction",
+    "City Road Name",
+    "Damage Type",
+    "Severity",
+    "Road Importance",
+    "Current Status",
+    "Admin Remarks",
+    "CEO Remarks",
+    "Date Dispatched/Reported"
+  ];
+
+  const csvRows = [];
+  csvRows.push(headers.join(","));
+
+  reports.forEach(r => {
+    const formattedId = `PRJ-${String(r.id).padStart(4, '0')}`;
+    const brgy = (r.barangay?.barangayName || (typeof r.barangay === 'string' ? r.barangay : 'Unassigned')).replace(/"/g, '""');
+    const road = (r.cityRoadName || 'Unknown Road').replace(/"/g, '""');
+    const damageType = (r.damageType || 'Road Damage').replace(/"/g, '""');
+    const severity = (r.severity || 'Low').replace(/"/g, '""');
+    const importance = (r.roadImportance || 'Standard').replace(/"/g, '""');
+    const status = (r.status || 'Dispatched').replace(/"/g, '""');
+    const adminRemarks = (r.adminRemarks || '').replace(/"/g, '""');
+    const ceoRemarks = (r.repairRemarks || '').replace(/"/g, '""');
+    const date = r.dateReported || r.createdAt || '2026';
+
+    const row = [
+      `"${formattedId}"`,
+      `"${brgy}"`,
+      `"${road}"`,
+      `"${damageType}"`,
+      `"${severity}"`,
+      `"${importance}"`,
+      `"${status}"`,
+      `"${adminRemarks}"`,
+      `"${ceoRemarks}"`,
+      `"${date}"`
+    ];
+
+    csvRows.push(row.join(","));
+  });
+
+  const csvContent = "\uFEFF" + csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const currentDate = new Date().toISOString().split('T')[0];
+  const downloadLink = document.createElement("a");
+  downloadLink.setAttribute("href", url);
+  downloadLink.setAttribute("download", `RoadWise_Repair_Accomplishment_${currentDate}.csv`);
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+
+  if (typeof showToast === 'function') showToast("Repair Tracking CSV exported successfully!", "success");
+};
+
+// ==========================================
+// 4. ATTACH DROPDOWN CLICK LISTENERS
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  const btnTrackGenerate = document.getElementById('btn-track-generate');
+  const trackDropdown = document.getElementById('track-print-dropdown');
+  const btnPrintSummary = document.getElementById('btn-print-tracking-summary');
+  const btnExportCsv = document.getElementById('btn-export-tracking-csv');
+
+  if (btnTrackGenerate && trackDropdown) {
+    btnTrackGenerate.addEventListener('click', (e) => {
+      e.stopPropagation();
+      trackDropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!btnTrackGenerate.contains(e.target) && !trackDropdown.contains(e.target)) {
+        trackDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  if (btnPrintSummary) {
+    btnPrintSummary.addEventListener('click', () => {
+      if (trackDropdown) trackDropdown.classList.add('hidden');
+      openTrackingReportPreview();
+    });
+  }
+
+  if (btnExportCsv) {
+    btnExportCsv.addEventListener('click', () => {
+      if (trackDropdown) trackDropdown.classList.add('hidden');
+      exportTrackingMatrixCSV();
+    });
+  }
+});
 
 // ==========================================
 // 🚀 NEW: BATCH ARCHIVE HELPER FUNCTIONS
@@ -9041,3 +9436,5 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+

@@ -788,8 +788,24 @@
 <!-- 🚀 CEO NOTIFICATION MODALS -->
 <!-- ========================================== -->
 
-<!-- 1. SINGLE NOTIFICATION DETAILS MODAL -->
-<div id="single-notif-modal" class="modal-overlay hidden" style="z-index: 99999; background-color: rgba(0, 0, 0, 0.5);">
+<!-- 1. ALL NOTIFICATIONS HISTORY MODAL -->
+<div id="all-notifications-modal" class="modal-overlay hidden" style="z-index: 99999; background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal-content" style="max-width: 550px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; padding: 0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+
+    <div style="padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 12px 12px 0 0;">
+      <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">Notification History</h3>
+      <button onclick="document.getElementById('all-notifications-modal').classList.add('hidden')" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b; padding: 5px;">✖</button>
+    </div>
+
+    <div id="all-notifications-list" style="padding: 0; overflow-y: auto; flex-grow: 1; background: #ffffff; border-radius: 0 0 12px 12px;">
+      <!-- Full notification history will inject here -->
+    </div>
+
+  </div>
+</div>
+
+<!-- 2. SINGLE NOTIFICATION DETAILS MODAL (Higher z-index so it sits on top) -->
+<div id="single-notif-modal" class="modal-overlay hidden" style="z-index: 100001; background-color: rgba(0, 0, 0, 0.5);">
   <div class="modal-content" style="max-width: 450px; padding: 25px; border-radius: 12px; text-align: left; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
 
     <button onclick="document.getElementById('single-notif-modal').classList.add('hidden')" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b; padding: 5px;">✖</button>
@@ -813,22 +829,6 @@
         Close
       </button>
     </div>
-  </div>
-</div>
-
-<!-- 2. ALL NOTIFICATIONS HISTORY MODAL -->
-<div id="all-notifications-modal" class="modal-overlay hidden" style="z-index: 99999; background-color: rgba(0, 0, 0, 0.5);">
-  <div class="modal-content" style="max-width: 550px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; padding: 0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-
-    <div style="padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 12px 12px 0 0;">
-      <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 700;">Notification History</h3>
-      <button onclick="document.getElementById('all-notifications-modal').classList.add('hidden')" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b; padding: 5px;">✖</button>
-    </div>
-
-    <div id="all-notifications-list" style="padding: 0; overflow-y: auto; flex-grow: 1; background: #ffffff; border-radius: 0 0 12px 12px;">
-      <!-- Full notification history will inject here -->
-    </div>
-
   </div>
 </div>
 

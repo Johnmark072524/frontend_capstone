@@ -8,7 +8,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -332,52 +332,139 @@
       </div>
 
       <div id="view-dashboard" class="content-section ad-dashboard-container">
-        <div class="ad-metrics-row" style="grid-template-columns: repeat(3, 1fr);">
 
-          <div class="ad-metric-card" style="border-top-color: #17a2b8;">
-            <div class="ad-metric-title">📨 Total Dispatched</div>
-            <div class="ad-metric-value" style="color: #17a2b8;" id="ceo-metric-total">0</div>
-            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Awaiting CEO Action</div>
+        <!-- 🎯 1. ANNUAL REPAIR ACCOMPLISHMENT PROGRESS BANNER -->
+        <div class="ceo-progress-container">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 800; letter-spacing: -0.3px;">Repair Accomplishment</h3>
+                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 700;">Active Cycle</span>
+              </div>
+              <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13.5px;" id="ceo-progress-text">Calculating road repair accomplishment...</p>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 10.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase; display: block; letter-spacing: 0.5px;">Accomplishment</span>
+              <div style="font-size: 30px; font-weight: 900; color: #16a34a; line-height: 1;" id="ceo-progress-percentage">0%</div>
+            </div>
           </div>
 
-          <div class="ad-metric-card alert-card">
-            <div class="ad-metric-title">🚨 Critical Hazards</div>
-            <div class="ad-metric-value alert-text" id="ceo-metric-critical">0</div>
-            <div style="font-size: 12px; color: #dc3545; margin-top: 5px;">High Priority Dispatches</div>
+          <div style="width: 100%; background-color: #f1f5f9; border-radius: 10px; height: 12px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);">
+            <div id="ceo-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e); border-radius: 10px; transition: width 1.2s ease-in-out;"></div>
+          </div>
+        </div>
+
+        <!-- 📊 2. TOP SECTION: 4-METRICS GRID + WORK ORDER STATUS CHART -->
+        <div class="ceo-top-section">
+
+          <!-- 4 KPI Cards Grid -->
+          <div class="ceo-metrics-grid">
+
+            <!-- 1. Awaiting Action (Dispatched) -->
+            <div class="ceo-metric-card" style="border-top-color: #0284c7;">
+              <div class="ceo-metric-header">
+                <span>Awaiting Action</span>
+                <span class="ceo-metric-icon">📨</span>
+              </div>
+              <div class="ceo-metric-value" style="color: #0284c7;" id="ceo-metric-total">0</div>
+              <div class="ceo-metric-sub">Newly dispatched by CPDO</div>
+            </div>
+
+            <!-- 2. Active Repairs (In Progress) -->
+            <div class="ceo-metric-card" style="border-top-color: #ea580c;">
+              <div class="ceo-metric-header">
+                <span>Active Repairs</span>
+                <span class="ceo-metric-icon">🚧</span>
+              </div>
+              <div class="ceo-metric-value" style="color: #ea580c;" id="ceo-metric-active">0</div>
+              <div class="ceo-metric-sub">Field crews deployed on-site</div>
+            </div>
+
+            <!-- 3. Rework Required (QA Feedback) -->
+            <div class="ceo-metric-card" style="border-top-color: #dc2626;">
+              <div class="ceo-metric-header">
+                <span>Rework Required</span>
+                <span class="ceo-metric-icon">⚠️</span>
+              </div>
+              <div class="ceo-metric-value" style="color: #dc2626;" id="ceo-metric-rework">0</div>
+              <div class="ceo-metric-sub">QA feedback returned by CPDO</div>
+            </div>
+
+            <!-- 4. Pending Budget (Deferred by CEO) -->
+            <div class="ceo-metric-card" style="border-top-color: #d97706;">
+              <div class="ceo-metric-header">
+                <span>Pending Budget</span>
+                <span class="ceo-metric-icon">⏳</span>
+              </div>
+              <div class="ceo-metric-value" style="color: #d97706;" id="ceo-metric-budget">0</div>
+              <div class="ceo-metric-sub">Deferred from current cycle</div>
+            </div>
+
           </div>
 
-          <div class="ad-metric-card" style="border-top-color: #ffc107;">
-            <div class="ad-metric-title">🚧 Active Projects</div>
-            <div class="ad-metric-value" style="color: #ffc107;" id="ceo-metric-active">0</div>
-            <div style="font-size: 12px; color: #6c757d; margin-top: 5px;">Repairs Currently In Progress</div>
+          <!-- Doughnut Chart Container -->
+          <div class="ceo-chart-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h3 style="margin: 0; font-size: 12.5px; color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Work Order Lifecycle</h3>
+              <span style="font-size: 11px; background: #f1f5f9; color: #475569; padding: 2px 7px; border-radius: 4px; font-weight: 600;">Active Queue</span>
+            </div>
+            <div class="ceo-canvas-wrapper">
+              <canvas id="ceoStatusChart"></canvas>
+            </div>
           </div>
 
         </div>
 
-        <div style="background-color: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 25px; margin-top: 25px; border: 1px solid #e2e8f0;">
+        <!-- 📋 3. ACTIVE REPAIR QUEUE TABLE WITH CONTROLS -->
+        <div class="ceo-table-box">
 
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #f8fafc; padding-bottom: 15px;">
-            <h3 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 700;">Active Repair Queue</h3>
-            <button onclick="document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-repair').classList.remove('hidden');" style="background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: #334155; font-weight: 600; font-size: 13px; transition: 0.2s;">
-              View Masterlist ➔
-            </button>
+          <div class="ceo-table-toolbar">
+            <div>
+              <h3 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 800;">Active Repair Queue</h3>
+              <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #64748b;">Actionable repair assignments for the current engineering cycle.</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <!-- Search Input -->
+              <input type="text"
+                     id="ceo-dash-search"
+                     placeholder="🔍 Search road, PRJ ID, or barangay..."
+                     oninput="filterCEODashTable()"
+                     class="ceo-search-input">
+
+              <!-- Status Filter -->
+              <select id="ceo-dash-filter" onchange="filterCEODashTable()" class="ceo-filter-select">
+                <option value="ALL">All Active Statuses</option>
+                <option value="REWORK">⚠️ Rework Required</option>
+                <option value="PROGRESS">🚧 In Progress</option>
+                <option value="DISPATCHED">📨 Dispatched</option>
+                <option value="BUDGET">⏳ Pending Budget</option>
+              </select>
+
+              <!-- View Masterlist Button -->
+              <button onclick="document.getElementById('view-dashboard').classList.add('hidden'); document.getElementById('view-repair').classList.remove('hidden');" class="ceo-btn-masterlist">
+                View Masterlist ➔
+              </button>
+            </div>
           </div>
 
+          <!-- Table Frame -->
           <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px;">
               <thead>
-              <tr style="background-color: #0B2545; color: white; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                <th style="padding: 15px; border-radius: 6px 0 0 0; white-space: nowrap;">Project ID</th>
-                <th style="padding: 15px;">Barangay</th>
-                <th style="padding: 15px;">Road Name</th>
-                <th style="padding: 15px; white-space: nowrap;">Est. Area</th>
-                <th style="padding: 15px;">Priority</th>
-                <th style="padding: 15px; border-radius: 0 6px 0 0; text-align: center;">Action</th>
+              <tr style="background-color: #0b2545; color: white; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <th style="padding: 13px 15px; border-radius: 6px 0 0 0; white-space: nowrap; width: 110px;">Project ID</th>
+                <th style="padding: 13px 15px; width: 130px;">Barangay</th>
+                <th style="padding: 13px 15px;">Road Name & Scope</th>
+                <th style="padding: 13px 15px; white-space: nowrap; width: 100px;">Est. Area</th>
+                <th style="padding: 13px 15px; width: 110px; text-align: center;">Priority</th>
+                <th style="padding: 13px 15px; width: 140px; text-align: center;">Status</th>
+                <th style="padding: 13px 15px; border-radius: 0 6px 0 0; text-align: center; width: 90px;">Action</th>
               </tr>
               </thead>
-              <tbody id="ultimate-ceo-dash-table" style="font-size: 14px; color: #334155;">
+              <tbody id="ultimate-ceo-dash-table" style="color: #334155;">
               <tr>
-                <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic;">
+                <td colspan="7" style="text-align: center; padding: 40px; color: #94a3b8; font-style: italic;">
                   Fetching active repairs...
                 </td>
               </tr>
@@ -446,100 +533,115 @@
       </div>
 
       <!-- ========================================== -->
-      <!-- ⚙️ SETTINGS VIEW (BALANCED FULL-WIDTH GRID) -->
+      <!-- ⚙️ SETTINGS VIEW (CEO ENGINEER THEME)       -->
       <!-- ========================================== -->
       <div id="view-settings" class="content-section hidden">
-        <div class="section-header" style="margin-bottom: 25px;">
-          <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #1e293b;">Data Management & Backups</h2>
-          <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Review, preview, print, and download annual engineering and repair records for official CEO compliance.</p>
+
+        <!-- SECTION HEADER -->
+        <div class="section-header" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px;">
+          <div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;">Data Management & Backups</h2>
+            <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Review, preview, print, and download annual engineering and repair records for official CEO compliance.</p>
+          </div>
+          <span style="background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;">
+      👷 City Engineering Division
+    </span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; width: 100%;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; width: 100%;">
 
-          <!-- 📊 CARD 1: ANNUAL EXPORT & PRINT CENTER (RESTORED WRAPPER) -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between;">
-
+          <!-- 📊 CARD 1: ANNUAL EXPORT & PRINT CENTER -->
+          <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <!-- Card Header -->
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
-                <span style="font-size: 24px; background: #eff6ff; padding: 8px; border-radius: 8px; line-height: 1;">📊</span>
+              <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 16px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; font-size: 22px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; line-height: 1;">📊</span>
                 <div>
-                  <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #1e293b;">Engineering Audit & Export Center</h3>
+                  <h3 style="margin: 0; font-size: 16.5px; font-weight: 800; color: #0f172a;">Engineering Audit & Export Center</h3>
                   <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Filter and export engineering records by audit cycle</p>
                 </div>
               </div>
 
-              <p style="color: #475569; font-size: 13.5px; line-height: 1.6; margin-bottom: 22px;">
+              <p style="color: #475569; font-size: 13.5px; line-height: 1.6; margin-bottom: 20px;">
                 Generate formal road repair inventories, project dimensions, and repair status sheets for local government records and verification.
               </p>
 
-              <!-- 🚀 REPORT CATEGORY DROPDOWN -->
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-                <label for="export-report-category" style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+              <!-- Category Dropdown Container -->
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px;">
+                <label for="export-report-category" style="display: block; font-weight: 700; font-size: 12.5px; color: #334155; margin-bottom: 8px;">
                   Select Report Category:
                 </label>
-                <select id="export-report-category" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #1e293b; background: #fff; cursor: pointer; outline: none;">
+                <select id="export-report-category" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; cursor: pointer; outline: none; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#ea580c'; this.style.boxShadow='0 0 0 3px rgba(234,88,12,0.15)';" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
                   <option value="ALL">Combined (All Assigned Projects)</option>
                   <option value="ACTIVE">Active Backlog (Dispatched, In Progress, Pending)</option>
                   <option value="ACCOMPLISHMENT">Accomplishment Report (Completed Only)</option>
                 </select>
               </div>
 
-              <!-- 🚀 INVENTORY YEAR DROPDOWN -->
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <label for="export-inventory-year" style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+              <!-- Cycle Year Dropdown Container -->
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                <label for="export-inventory-year" style="display: block; font-weight: 700; font-size: 12.5px; color: #334155; margin-bottom: 8px;">
                   Select Inventory Cycle Year:
                 </label>
-                <select id="export-inventory-year" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #1e293b; background: #fff; cursor: pointer; outline: none;">
+                <select id="export-inventory-year" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; cursor: pointer; outline: none; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#ea580c'; this.style.boxShadow='0 0 0 3px rgba(234,88,12,0.15)';" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
                   <option value="ALL">All Recorded Years</option>
                 </select>
               </div>
             </div>
 
-            <!-- 🚀 RESTORED BUTTON -->
+            <!-- Action Button -->
             <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
-              <button type="button" onclick="openAnnualReportPreview()" style="flex: 1; min-width: 180px; padding: 11px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
-                <span>👁️</span> Preview & Print Report
+              <button type="button" onclick="openAnnualReportPreview()" style="flex: 1; min-width: 180px; padding: 12px 20px; background-color: #ea580c; color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.28); transition: background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#c2410c'" onmouseout="this.style.backgroundColor='#ea580c'">
+                Preview & Print Report
               </button>
             </div>
-
           </div>
 
           <!-- 📋 CARD 2: AUDIT & RETENTION COMPLIANCE GUIDE -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
-              <span style="font-size: 24px; background: #f0fdf4; padding: 8px; border-radius: 8px; line-height: 1;">🏛️</span>
-              <div>
-                <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #1e293b;">Audit & Record Compliance</h3>
-                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">San Jose Del Monte RoadWise Engineering Protocol</p>
+          <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 16px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; font-size: 22px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; line-height: 1;">🏛️</span>
+                <div>
+                  <h3 style="margin: 0; font-size: 16.5px; font-weight: 800; color: #0f172a;">Audit & Record Compliance</h3>
+                  <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">San Jose Del Monte RoadWise Engineering Protocol</p>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px; font-size: 13px; color: #475569; line-height: 1.5;">
+
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; flex-shrink: 0;">📅</span>
+                  <div>
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 2px;">Annual Cycle Archiving</strong>
+                    <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.45;">Past validated and resolved road projects remain queryable for historical review and audit verification.</p>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; flex-shrink: 0;">📄</span>
+                  <div>
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 2px;">Print-Ready Document Layout</strong>
+                    <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.45;">Automatically formats reports into a clean, landscape layout with official seals, dates, and account details for PDF export.</p>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; flex-shrink: 0;">📊</span>
+                  <div>
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 2px;">Spreadsheet Compatibility</strong>
+                    <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.45;">Exported CSV files contain complete physical dimensions (length, width, culverts, bridges) formatted for Excel.</p>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: #475569; line-height: 1.5;">
-              <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 16px; line-height: 1.2;">📅</span>
-                <div>
-                  <strong style="color: #1e293b;">Annual Cycle Archiving</strong>
-                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Past validated and resolved road projects remain queryable for historical review and audit verification.</p>
-                </div>
-              </div>
-
-              <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 16px; line-height: 1.2;">📄</span>
-                <div>
-                  <strong style="color: #1e293b;">Print-Ready Document Layout</strong>
-                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Automatically formats reports into a clean, landscape layout with official seals, dates, and account details for PDF export.</p>
-                </div>
-              </div>
-
-              <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 16px; line-height: 1.2;">📊</span>
-                <div>
-                  <strong style="color: #1e293b;">Spreadsheet Compatibility</strong>
-                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Exported CSV files contain complete physical dimensions (length, width, culverts, bridges) formatted for Excel.</p>
-                </div>
-              </div>
+            <!-- Compliance Verification Status Indicator -->
+            <div style="margin-top: 20px; background: #fff7ed; border: 1px solid #fed7aa; padding: 9px 14px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11.5px; font-weight: 700; color: #9a3412;">🔒 Engineering Protocol:</span>
+              <span style="font-size: 11px; font-weight: 800; color: #c2410c; letter-spacing: 0.3px;">CEO VERIFIED & ACTIVE</span>
             </div>
+
           </div>
 
         </div>
@@ -597,7 +699,7 @@
 
             <div><strong>Terrain Type:</strong> <span id="ceo-modal-terrain">Loading...</span></div>
             <div><strong>Road Type:</strong> <span id="ceo-modal-road-type">Loading...</span></div>
-            <div><strong>Road Length (m):</strong> <span id="ceo-modal-length">Loading...</span></div>
+            <div><strong>Road Length (km):</strong> <span id="ceo-modal-length">Loading...</span></div>
             <div><strong>Road Width (m):</strong> <span id="ceo-modal-width">Loading...</span></div>
             <div><strong>Length of Culverts (m):</strong> <span id="ceo-modal-culverts">Loading...</span></div>
             <div><strong>Number of Bridges:</strong> <span id="ceo-modal-bridges">Loading...</span></div>
@@ -645,7 +747,7 @@
             <span class="status-badge pending" id="ceo-modal-current-status">Loading...</span>
             <span style="color: #888;">➔</span>
 
-            <button class="btn-small" id="ceo-btn-start-repair" style="background-color: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer;">
+            <button class="btn-small" id="ceo-btn-start-repair" style="background-color: #ea580c; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600;">
               <span class="icon">👷</span> Mark as "In Progress"
             </button>
 

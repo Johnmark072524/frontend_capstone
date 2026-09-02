@@ -116,134 +116,236 @@
 
       <div id="view-dashboard" class="content-section">
 
-        <div class="bd-progress-container" style="background: white; padding: 25px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border: 1px solid #f1f5f9;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+        <!-- 🎯 1. INSPECTION QUOTA BANNER -->
+        <div class="bd-progress-container">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px;">
             <div>
-              <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">Inspection Quota</h3>
-              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;" id="progress-text">Calculating jurisdiction data...</p>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 800; letter-spacing: -0.3px;">Inspection Quota</h3>
+                <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 800; letter-spacing: -0.3px;">Inspection Quota</h3>
+                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 700;">Active Cycle</span>
+              </div>
+              <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13.5px;" id="progress-text">Calculating jurisdiction road coverage...</p>
             </div>
-            <div style="font-size: 36px; font-weight: 800; color: #28a745; line-height: 1;" id="progress-percentage">0%</div>
+            <div style="text-align: right;">
+              <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; display: block;">Coverage</span>
+              <div style="font-size: 32px; font-weight: 900; color: #16a34a; line-height: 1;" id="progress-percentage">0%</div>
+            </div>
           </div>
 
-          <div style="width: 100%; background-color: #f1f5f9; border-radius: 10px; height: 14px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
-            <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #28a745, #20c997); border-radius: 10px; transition: width 1.5s ease-in-out; box-shadow: 0 2px 4px rgba(40,167,69,0.3);"></div>
+          <div style="width: 100%; background-color: #f1f5f9; border-radius: 10px; height: 12px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);">
+            <div id="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e); border-radius: 10px; transition: width 1.2s ease-in-out;"></div>
           </div>
         </div>
 
+        <!-- 📊 2. METRICS & SEVERITY ANALYTICS -->
         <div class="bd-top-section">
           <div class="bd-metrics-grid">
-            <div class="bd-metric-card"><h3>Total Reports</h3><div class="bd-value" id="metric-total">-</div></div>
-            <div class="bd-metric-card"><h3>Pending</h3><div class="bd-value" id="metric-pending" style="color: #f0ad4e;">-</div></div>
-            <div class="bd-metric-card"><h3>Validated</h3><div class="bd-value" id="metric-validated" style="color: #28a745;">-</div></div>
-            <div class="bd-metric-card"><h3>Rejected</h3><div class="bd-value" id="metric-rejected" style="color: #dc3545;">-</div></div>
+
+            <!-- Total Submissions -->
+            <div class="bd-metric-card total">
+              <div class="bd-metric-header">
+                <span>Total Reports</span>
+                <span class="bd-metric-icon">📋</span>
+              </div>
+              <div class="bd-value" id="metric-total">0</div>
+              <span class="bd-metric-sub">Recorded in jurisdiction</span>
+            </div>
+
+            <!-- Pending Verification -->
+            <div class="bd-metric-card pending">
+              <div class="bd-metric-header">
+                <span>Under Review</span>
+                <span class="bd-metric-icon">⏳</span>
+              </div>
+              <div class="bd-value" id="metric-pending" style="color: #d97706;">0</div>
+              <span class="bd-metric-sub">Awaiting CPDO audit</span>
+            </div>
+
+            <!-- Validated & Active -->
+            <div class="bd-metric-card validated">
+              <div class="bd-metric-header">
+                <span>Validated / Active</span>
+                <span class="bd-metric-icon">✅</span>
+              </div>
+              <div class="bd-value" id="metric-validated" style="color: #16a34a;">0</div>
+              <span class="bd-metric-sub">Approved for engineering</span>
+            </div>
+
+            <!-- Action Required (Rejected) -->
+            <div class="bd-metric-card rejected">
+              <div class="bd-metric-header">
+                <span>Needs Attention</span>
+                <span class="bd-metric-icon">⚠️</span>
+              </div>
+              <div class="bd-value" id="metric-rejected" style="color: #dc2626;">0</div>
+              <span class="bd-metric-sub">Requires edit & resubmit</span>
+            </div>
+
           </div>
+
+          <!-- Severity Donut Chart -->
           <div class="bd-chart-container">
-            <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #666; font-weight: 600; text-transform: uppercase;">Severity Breakdown</h3>
-            <div class="bd-canvas-wrapper"><canvas id="severityChart"></canvas></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 style="margin: 0; font-size: 13px; color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Severity Breakdown</h3>
+              <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">AI Assessed</span>
+            </div>
+            <div class="bd-canvas-wrapper">
+              <canvas id="severityChart"></canvas>
+            </div>
           </div>
         </div>
 
+        <!-- 🔍 3. CONTROLS & REPORT INBOX -->
         <div class="bd-controls">
           <div>
-            <h2 style="margin: 0; color: #333;">Barangay Reports</h2>
+            <h2 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 800;">Barangay Road Submissions</h2>
+            <p style="margin: 3px 0 0 0; font-size: 12.5px; color: #64748b;">Manage field audit submissions, review feedback, and track repair validation.</p>
           </div>
-          <div style="display: flex; gap: 15px; align-items: center;">
 
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
             <input type="text"
                    id="report-search-bar"
                    name="searchQuery"
                    class="bd-search-bar"
-                   placeholder="🔍 Search..."
+                   placeholder="🔍 Search road, project ID, or damage..."
+                   oninput="filterBarangayReports()"
                    aria-label="Search reports">
 
             <select id="report-status-filter"
                     name="statusFilter"
-                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;"
+                    class="bd-status-select"
+                    onchange="filterBarangayReports()"
                     aria-label="Filter by report status">
-              <option value="All">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Validated">Validated</option>
-              <option value="Rejected">Rejected</option>
+              <option value="All">All Statuses</option>
+              <option value="Rejected">⚠️ Action Required (Rejected)</option>
+              <option value="Pending">⏳ Under Review / Pending</option>
+              <option value="Validated">✅ Validated / Active</option>
             </select>
 
+            <button type="button"
+                    onclick="goToAddReport()"
+                    class="bd-btn-new-report">
+              ➕ New Report
+            </button>
           </div>
         </div>
 
+        <!-- 📋 4. DYNAMIC FEED CONTAINER -->
         <div class="bd-report-list" id="barangay-report-list">
         </div>
+
       </div>
 
       <div id="view-reports" class="content-section hidden">
-        <div class="report-card">
-          <div class="report-header">
-            <h2>Add New Report</h2>
-            <div class="header-icons">
-              <span class="icon">📥</span>
-              <span class="icon">➡️</span>
+        <div class="report-card" style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04); overflow: hidden;">
+
+          <!-- CARD HEADER -->
+          <div class="report-header" style="padding: 18px 24px; background: #ffffff; border-bottom: 2px solid #f0fdf4; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; background-color: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 17px;">📝</span>
+              <div>
+                <h2 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 800;">Add New Incident Report</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #64748b;">Submit barangay road damage data for CPDO verification.</p>
+              </div>
+            </div>
+            <div class="header-icons" style="display: flex; gap: 8px; color: #16a34a;">
+              <span class="icon" style="background: #f0fdf4; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; border: 1px solid #dcfce7;">🌿 Barangay Portal</span>
             </div>
           </div>
 
-          <form id="addReportForm" class="report-body" onsubmit="event.preventDefault();">
-            <div class="form-section">
-              <h3 class="section-title">🛣️ Road Details</h3>
-              <div class="form-grid">
-                <div class="form-column">
-                  <div class="form-group">
-                    <label for="cityRoadName">City Road Name <span style="color: red;">*</span></label>
-                    <select id="cityRoadName" name="cityRoadName"><option value="" disabled selected>Select road name</option></select>
-                  </div>
-                  <div class="form-group">
-                    <label for="roadImportance">Road Importance</label>
-                    <select id="roadImportance" name="roadImportance" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
-                  </div>
-                  <div class="form-group">
-                    <label for="roadType">Road Type</label>
-                    <select id="roadType" name="roadType" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
-                  </div>
-                  <div class="form-group">
-                    <label for="width">Width <span style="color: red;">*</span></label>
-                    <input type="number" id="width" name="width" placeholder="Enter width" min="0" step="0.01">
-                  </div>
-                  <div class="form-group">
-                    <label for="numberOfBridges">Number of Bridges</label>
-                    <input type="number" id="numberOfBridges" name="numberOfBridges" placeholder="Enter number of bridges" min="0" step="1">
-                  </div>
-                </div>
+          <form id="addReportForm" class="report-body" onsubmit="event.preventDefault();" style="padding: 24px;">
 
-                <div class="form-column">
+            <!-- SECTION 1: ROAD DETAILS -->
+            <div class="form-section" style="margin-bottom: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;">
+              <h3 class="section-title" style="margin: 0 0 16px; font-size: 14px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #dcfce7; padding-bottom: 8px;">
+                <span>🛣️</span> Road Details & Dimensions
+              </h3>
+
+              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+
+                <!-- Column 1 -->
+                <div class="form-column" style="display: flex; flex-direction: column; gap: 12px;">
                   <div class="form-group">
-                    <label for="cityRoadId">City Road ID</label>
-                    <input type="text" id="cityRoadId" name="cityRoadId" readonly style="background-color: #f0f0f0; color: #555;" placeholder="Auto-filled">
-                  </div>
-                  <div class="form-group">
-                    <label for="terrainType">Terrain Type</label>
-                    <select id="terrainType" name="terrainType" disabled style="background-color: #f0f0f0;"><option value="">Auto-filled</option></select>
-                  </div>
-                  <div class="form-group">
-                    <label for="lengthOfCulverts">Length of Culverts</label>
-                    <input type="number" id="lengthOfCulverts" name="lengthOfCulverts" placeholder="Enter length of culverts" min="0" step="0.01">
-                  </div>
-                  <div class="form-group">
-                    <label for="length">Length <span style="color: red;">*</span></label>
-                    <input type="number" id="length" name="length" placeholder="Enter length in meters" min="0" step="0.01">
+                    <label for="cityRoadName" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">City Road Name <span style="color: #dc2626;">*</span></label>
+                    <select id="cityRoadName" name="cityRoadName" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none; transition: 0.2s;">
+                      <option value="" disabled selected>Select road name</option>
+                    </select>
                   </div>
 
                   <div class="form-group">
-                    <label>Severity Estimate</label>
-                    <input type="text" value="🤖 Pending AI Assessment" disabled style="background-color: #e9ecef; color: #6c757d; font-style: italic; font-weight: 600; cursor: not-allowed;">
+                    <label for="roadImportance" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Importance</label>
+                    <select id="roadImportance" name="roadImportance" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
+                      <option value="">Auto-filled</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="roadType" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Type</label>
+                    <select id="roadType" name="roadType" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
+                      <option value="">Auto-filled</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="width" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Road Width (m) <span style="color: #dc2626;">*</span></label>
+                    <input type="number" id="width" name="width" placeholder="e.g. 6.5" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="numberOfBridges" style="font-weight: 600; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Number of Bridges</label>
+                    <input type="number" id="numberOfBridges" name="numberOfBridges" placeholder="0" min="0" step="1" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
                   </div>
                 </div>
+
+                <!-- Column 2 -->
+                <div class="form-column" style="display: flex; flex-direction: column; gap: 12px;">
+                  <div class="form-group">
+                    <label for="cityRoadId" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">City Road ID</label>
+                    <input type="text" id="cityRoadId" name="cityRoadId" readonly style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #475569; font-family: monospace; font-size: 13px; font-weight: 700; cursor: not-allowed;" placeholder="Auto-filled">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="terrainType" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Terrain Type</label>
+                    <select id="terrainType" name="terrainType" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
+                      <option value="">Auto-filled</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="lengthOfCulverts" style="font-weight: 600; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Length of Culverts (m)</label>
+                    <input type="number" id="lengthOfCulverts" name="lengthOfCulverts" placeholder="0.00" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="length" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Road Length (km) <span style="color: #dc2626;">*</span></label>
+                    <input type="number" id="length" name="length" placeholder="e.g. 0.85" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
+                  </div>
+
+                  <div class="form-group">
+                    <label style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Initial Severity Tier</label>
+                    <div style="background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; font-weight: 800; font-size: 12px; border-radius: 6px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.3px;">
+                      <span>UNASSESSED</span>
+                      <span style="font-size: 11px; font-weight: 600; color: #059669; opacity: 0.9;">🤖 Awaiting AI Analysis</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <div class="form-section">
-              <h3 class="section-title">⚠️ Damage Information</h3>
+            <!-- SECTION 2: DAMAGE INFORMATION -->
+            <div class="form-section" style="margin-bottom: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;">
+              <h3 class="section-title" style="margin: 0 0 16px; font-size: 14px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #dcfce7; padding-bottom: 8px;">
+                <span>⚠️</span> Damage Information & Scope
+              </h3>
 
-              <div class="form-grid" style="margin-bottom: 15px;">
+              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
+
                 <div class="form-column">
                   <div class="form-group">
-                    <label for="damageType">Damage Type</label>
-                    <select id="damageType" name="damageType" onchange="toggleOtherDamageType()" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <label for="damageType" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Type</label>
+                    <select id="damageType" name="damageType" onchange="toggleOtherDamageType()" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
                       <option value="" disabled selected>Select Damage Type</option>
                       <option value="Pothole">Pothole</option>
                       <option value="Surface Cracking">Surface Cracking (Alligator/Longitudinal)</option>
@@ -252,239 +354,176 @@
                       <option value="Other">Other (Please specify)</option>
                     </select>
                   </div>
+
                   <div class="form-group hidden" id="otherDamageTypeGroup" style="margin-top: 10px;">
-                    <input type="text" id="otherDamageType" placeholder="Specify damage type..." style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%;">
+                    <input type="text" id="otherDamageType" placeholder="Specify custom damage type..." style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #16a34a; font-size: 13px; outline: none; background: #f0fdf4;">
                   </div>
                 </div>
+
                 <div class="form-column">
-                  <div style="display: flex; gap: 10px;">
+                  <div style="display: flex; gap: 12px;">
                     <div class="form-group" style="flex: 1;">
-                      <label for="damageLength">Damage Length (m)</label>
-                      <input type="number" id="damageLength" name="damageLength" placeholder="Length" min="0" step="0.01" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                      <label for="damageLength" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Length (m)</label>
+                      <input type="number" id="damageLength" name="damageLength" placeholder="Length in meters" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
                     </div>
                     <div class="form-group" style="flex: 1;">
-                      <label for="damageWidth">Damage Width (m)</label>
-                      <input type="number" id="damageWidth" name="damageWidth" placeholder="Width" min="0" step="0.01" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                      <label for="damageWidth" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Width (m)</label>
+                      <input type="number" id="damageWidth" name="damageWidth" placeholder="Width in meters" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
                     </div>
                   </div>
                 </div>
+
               </div>
 
-              <div class="form-group-vertical">
-                <label for="damageDescription">Damage Description / Additional Notes</label>
-                <textarea id="damageDescription" name="damageDescription" placeholder="Enter description or location notes..."></textarea>
+              <div class="form-group-vertical" style="margin-bottom: 16px;">
+                <label for="damageDescription" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Description / Additional Survey Notes</label>
+                <textarea id="damageDescription" name="damageDescription" rows="3" placeholder="Provide accurate reference markers, landmarks, or specifics regarding the severity..." style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 13px; outline: none;"></textarea>
               </div>
 
-              <div class="form-group-vertical" style="min-height: 150px; border: 2px dashed #ccc; padding: 15px; border-radius: 8px; text-align: center; background-color: #fafafa;">
-                <span style="display: block; font-weight: 600; margin-bottom: 10px; color: #333;">Damage Image</span>
-                <img id="imagePreview" src="" alt="Damage Preview" style="max-width: 100%; max-height: 150px; display: none; margin: 0 auto 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+              <!-- MINT THEMED PHOTO UPLOAD DROPZONE -->
+              <div class="form-group-vertical" style="margin-bottom: 16px; min-height: 150px; border: 2px dashed #86efac; padding: 20px; border-radius: 8px; text-align: center; background-color: #f0fdf4; transition: 0.2s;">
+                <span style="display: block; font-weight: 700; font-size: 13px; margin-bottom: 10px; color: #166534;">📸 Photographic Damage Evidence</span>
+                <img id="imagePreview" src="" alt="Damage Preview" style="max-width: 100%; max-height: 160px; display: none; margin: 0 auto 15px; border-radius: 6px; border: 2px solid #bbf7d0; box-shadow: 0 4px 8px rgba(0,0,0,0.08);">
 
                 <input type="file" id="damageImageFile" name="imageFile" accept="image/*" style="display: none;">
                 <div>
-                  <button type="button" class="btn-action" onclick="document.getElementById('damageImageFile').click()" style="background-color: #eef2f7; color: #333; border: 1px solid #cdd4dc;">
-                    <span class="icon">📤</span> Select Photo
+                  <button type="button" class="btn-action" onclick="document.getElementById('damageImageFile').click()" style="background-color: #ffffff; color: #166534; border: 1.5px solid #86efac; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <span class="icon">📤</span> Select / Upload Photo
                   </button>
                 </div>
-                <p id="fileNameDisplay" style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;"></p>
+                <p id="fileNameDisplay" style="font-size: 12px; color: #15803d; margin-top: 8px; font-weight: 600;"></p>
               </div>
 
-              <div class="form-group-inline" style="align-items: center;">
-                <span style="display: block; font-weight: 600; margin-right: 10px;">GPS Coordinates</span>
+              <!-- GPS MAP DEFINER -->
+              <div class="form-group-inline" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-weight: 700; font-size: 13px; color: #334155;">GPS Location Coordinates:</span>
+                  <span id="coords-display" style="font-size: 12.5px; background: #ecfdf5; color: #047857; border: 1px solid #34d399; padding: 3px 10px; border-radius: 20px; font-weight: 800; font-family: monospace;">Not Selected</span>
+                </div>
 
-                <button type="button" id="btn-define-map"><span class="icon">📍</span> Define on Map</button>
-
-                <span id="coords-display" style="margin-left: 15px; font-size: 13px; color: #28a745; font-weight: bold;">Not Selected</span>
+                <button type="button" id="btn-define-map" style="background-color: #16a34a; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25); transition: 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">
+                  <span class="icon">📍</span> Define on Map
+                </button>
 
                 <input type="hidden" id="latitude" name="latitude">
                 <input type="hidden" id="longitude" name="longitude">
               </div>
             </div>
 
-            <div class="form-actions" style="margin-top: 20px;">
-              <button type="button" id="submit-report-btn" class="btn-submit" onclick="submitRoadReport()">Submit Report</button>
+            <!-- FORM ACTIONS -->
+            <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <button type="button" id="submit-report-btn" class="btn-submit" onclick="submitRoadReport()" style="background-color: #166534; color: #ffffff; border: 1px solid #14532d; padding: 10px 24px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); transition: background-color 0.2s ease; display: inline-flex; align-items: center; gap: 8px;" onmouseover="this.style.backgroundColor='#14532d'" onmouseout="this.style.backgroundColor='#166534'">
+                Submit Report
+              </button>
             </div>
+
           </form>
         </div>
       </div>
-
       <!-- ========================================== -->
-      <!-- ⚙️ SETTINGS VIEW (BALANCED FULL-WIDTH GRID) -->
+      <!-- ⚙️ SETTINGS VIEW (BARANGAY GREEN THEME)     -->
       <!-- ========================================== -->
       <div id="view-settings" class="content-section hidden">
-        <div class="section-header" style="margin-bottom: 25px;">
-          <h2 style="margin: 0; font-size: 24px; font-weight: 800; color: #1e293b;">Data Management & Backups</h2>
-          <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Review, preview, print, and download annual road inspection records for official LGU compliance.</p>
+
+        <!-- SECTION HEADER -->
+        <div class="section-header" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px;">
+          <div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;">Data Management & Backups</h2>
+            <p style="color: #64748b; font-size: 13px; margin: 4px 0 0 0;">Review, preview, print, and download annual road inspection records for official LGU compliance.</p>
+          </div>
+          <span style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+      🌿 Barangay Official Portal
+    </span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; width: 100%;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; width: 100%;">
 
           <!-- 📊 CARD 1: ANNUAL EXPORT & PRINT CENTER -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
-                <span style="font-size: 24px; background: #eff6ff; padding: 8px; border-radius: 8px; line-height: 1;">📊</span>
+              <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 16px;">
+                <!-- Mint/Green Icon Container -->
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; font-size: 22px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; line-height: 1;">📊</span>
                 <div>
-                  <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #1e293b;">Annual Audit & Export Center</h3>
+                  <h3 style="margin: 0; font-size: 16.5px; font-weight: 800; color: #0f172a;">Annual Audit & Export Center</h3>
                   <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Filter and export inspection records by audit cycle</p>
                 </div>
               </div>
 
-              <p style="color: #475569; font-size: 13.5px; line-height: 1.6; margin-bottom: 22px;">
+              <p style="color: #475569; font-size: 13.5px; line-height: 1.6; margin-bottom: 20px;">
                 Generate formal road damage inventories, road dimensions, and repair status sheets for local government records and verification.
               </p>
 
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <label for="export-inventory-year" style="display: block; font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 8px;">
+              <!-- Dropdown Container -->
+              <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+                <label for="export-inventory-year" style="display: block; font-weight: 700; font-size: 12.5px; color: #334155; margin-bottom: 8px;">
                   Select Inventory Cycle Year:
                 </label>
-                <select id="export-inventory-year" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; color: #1e293b; background: #fff; cursor: pointer; outline: none;">
+                <select id="export-inventory-year" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #ffffff; cursor: pointer; outline: none; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#16a34a'; this.style.boxShadow='0 0 0 3px rgba(22,163,74,0.15)';" onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
                   <option value="ALL">All Recorded Years</option>
                 </select>
               </div>
             </div>
 
+            <!-- Action Button (Grounded Forest Green matching the form submit button) -->
             <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px;">
-              <button type="button" onclick="openAnnualReportPreview()" style="flex: 1; min-width: 180px; padding: 11px 20px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+              <button type="button" onclick="openAnnualReportPreview()" style="flex: 1; min-width: 180px; padding: 12px 20px; background-color: #166534; color: #ffffff; border: 1px solid #14532d; border-radius: 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background-color 0.2s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);" onmouseover="this.style.backgroundColor='#14532d'" onmouseout="this.style.backgroundColor='#166534'">
                 <span>👁️</span> Preview & Print Report
               </button>
             </div>
           </div>
 
           <!-- 📋 CARD 2: AUDIT & RETENTION COMPLIANCE GUIDE -->
-          <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px;">
-              <span style="font-size: 24px; background: #f0fdf4; padding: 8px; border-radius: 8px; line-height: 1;">🏛️</span>
-              <div>
-                <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #1e293b;">Audit & Record Compliance</h3>
-                <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">San Jose Del Monte RoadWise Reporting Protocol</p>
+          <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 26px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 16px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; font-size: 22px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; line-height: 1;">🏛️</span>
+                <div>
+                  <h3 style="margin: 0; font-size: 16.5px; font-weight: 800; color: #0f172a;">Audit & Record Compliance</h3>
+                  <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">San Jose Del Monte RoadWise Reporting Protocol</p>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px; font-size: 13px; color: #475569; line-height: 1.5;">
+
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; flex-shrink: 0;">📅</span>
+                  <div>
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 2px;">Annual Cycle Archiving</strong>
+                    <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.45;">Past validated and resolved road projects remain queryable for historical review and audit verification.</p>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; flex-shrink: 0;">📄</span>
+                  <div>
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 2px;">Print-Ready Document Layout</strong>
+                    <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.45;">Automatically formats reports into a clean, landscape layout with official seals, dates, and account details for PDF export.</p>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; align-items: flex-start;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; flex-shrink: 0;">📊</span>
+                  <div>
+                    <strong style="color: #0f172a; font-size: 13px; display: block; margin-bottom: 2px;">Spreadsheet Compatibility</strong>
+                    <p style="margin: 0; color: #64748b; font-size: 12px; line-height: 1.45;">Exported CSV files contain complete physical dimensions (length, width, culverts, bridges) formatted for Excel.</p>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: #475569; line-height: 1.5;">
-              <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 16px; line-height: 1.2;">📅</span>
-                <div>
-                  <strong style="color: #1e293b;">Annual Cycle Archiving</strong>
-                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Past validated and resolved road projects remain queryable for historical review and audit verification.</p>
-                </div>
-              </div>
-
-              <!-- 🚀 REPLACED: CLEAN PRINT & PDF LAYOUT -->
-              <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 16px; line-height: 1.2;">📄</span>
-                <div>
-                  <strong style="color: #1e293b;">Print-Ready Document Layout</strong>
-                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Automatically formats reports into a clean, landscape layout with official seals, dates, and account details for PDF export.</p>
-                </div>
-              </div>
-
-              <div style="display: flex; gap: 12px; align-items: flex-start;">
-                <span style="font-size: 16px; line-height: 1.2;">📊</span>
-                <div>
-                  <strong style="color: #1e293b;">Spreadsheet Compatibility</strong>
-                  <p style="margin: 2px 0 0 0; color: #64748b; font-size: 12px;">Exported CSV files contain complete physical dimensions (length, width, culverts, bridges) formatted for Excel.</p>
-                </div>
-              </div>
+            <!-- Compliance Verification Status Indicator -->
+            <div style="margin-top: 20px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 9px 14px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 11.5px; font-weight: 700; color: #065f46;">🔒 System Integrity:</span>
+              <span style="font-size: 11px; font-weight: 800; color: #047857; letter-spacing: 0.3px;">BARANGAY VERIFIED & ACTIVE</span>
             </div>
+
           </div>
 
         </div>
       </div>
 
-      <!-- ========================================== -->
-      <!-- 👥 USER MANAGEMENT VIEW -->
-      <!-- ========================================== -->
-      <div id="view-user-management" class="content-section hidden">
-
-        <div class="section-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-          <div>
-            <h2 style="margin: 0; font-size: 24px; color: #1e293b;">👥 User Management</h2>
-            <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Provision and manage accounts for Barangay Officials.</p>
-          </div>
-
-          <button id="btn-open-add-user" style="background: #1e40af; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(30,64,175,0.2); transition: 0.2s;">
-            <span class="icon">➕</span> Add New Official
-          </button>
-        </div>
-
-        <!-- THE OFFICIALS DATA TABLE -->
-        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; overflow: hidden;">
-          <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-            <tr>
-              <th style="padding: 15px 20px; color: #475569; font-size: 13px; text-transform: uppercase;">Official Name</th>
-              <th style="padding: 15px 20px; color: #475569; font-size: 13px; text-transform: uppercase;">Username</th>
-              <th style="padding: 15px 20px; color: #475569; font-size: 13px; text-transform: uppercase;">Jurisdiction (Barangay)</th>
-              <th style="padding: 15px 20px; color: #475569; font-size: 13px; text-transform: uppercase;">Status</th>
-              <th style="padding: 15px 20px; color: #475569; font-size: 13px; text-transform: uppercase; text-align: right;">Actions</th>
-            </tr>
-            </thead>
-            <tbody id="user-management-tbody">
-            <!-- Javascript will inject the accounts here -->
-            <tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">Loading officials from database...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ========================================== -->
-      <!-- ➕ ADD NEW OFFICIAL MODAL -->
-      <!-- ========================================== -->
-      <div id="add-user-modal" class="modal-overlay hidden">
-        <div class="modal-content" style="max-width: 500px;">
-
-          <div class="modal-header">
-            <h2 style="margin: 0; font-size: 18px;">➕ Provision New Account</h2>
-            <button class="close-modal-btn" onclick="document.getElementById('add-user-modal').classList.add('hidden')" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
-          </div>
-
-          <div class="modal-body" style="padding: 20px;">
-            <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 20px;">Create a securely generated account for a newly appointed Barangay Official.</p>
-
-            <form id="form-add-user">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                <div class="form-group-vertical">
-                  <label style="font-size: 12px; font-weight: 600; color: #333;">First Name <span style="color:red;">*</span></label>
-                  <input type="text" id="add-user-first" required class="profile-input" placeholder="e.g. Juan">
-                </div>
-                <div class="form-group-vertical">
-                  <label style="font-size: 12px; font-weight: 600; color: #333;">Last Name <span style="color:red;">*</span></label>
-                  <input type="text" id="add-user-last" required class="profile-input" placeholder="e.g. Dela Cruz">
-                </div>
-              </div>
-
-              <div class="form-group-vertical" style="margin-bottom: 15px;">
-                <label style="font-size: 12px; font-weight: 600; color: #333;">Barangay Jurisdiction <span style="color:red;">*</span></label>
-                <select id="add-user-barangay" required class="profile-input" style="background: white;">
-                  <option value="" disabled selected>Loading Barangays...</option>
-                  <!-- Javascript will load the 62 barangays here -->
-                </select>
-              </div>
-
-              <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 25px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 13px; color: #1e40af;">🔑 Auto-Generated Credentials</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                  <div>
-                    <label style="font-size: 11px; font-weight: 600; color: #64748b;">System Username</label>
-                    <input type="text" id="add-user-username" disabled class="profile-input" style="background: #e2e8f0; color: #333; font-weight: bold;">
-                  </div>
-                  <div>
-                    <label style="font-size: 11px; font-weight: 600; color: #64748b;">Temporary Password</label>
-                    <input type="text" id="add-user-password" disabled class="profile-input" style="background: #e2e8f0; color: #333; font-weight: bold;" value="RoadWise2026!">
-                  </div>
-                </div>
-                <p style="font-size: 11px; color: #64748b; margin: 10px 0 0 0;"><i>Note: Hand these credentials to the official. They will be forced to change the password upon first login.</i></p>
-              </div>
-
-              <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" onclick="document.getElementById('add-user-modal').classList.add('hidden')" style="padding: 8px 16px; border-radius: 4px; border: 1px solid #94a3b8; background: white; cursor: pointer; font-weight: 600; color: #475569;">Cancel</button>
-                <button type="submit" style="padding: 8px 20px; border-radius: 4px; background: #1e40af; color: white; border: none; cursor: pointer; font-weight: 600;">💾 Provision Account</button>
-              </div>
-            </form>
-          </div>
-
-        </div>
-      </div>
 
       <!-- 🚀 ADDED 'brgy-profile-theme' CLASS TO WRAPPER -->
       <div id="view-profile" class="content-section hidden brgy-profile-theme">
@@ -688,9 +727,9 @@
           <div><strong>Road Importance:</strong> <span id="view-modal-importance"></span></div>
           <div><strong>Terrain Type:</strong> <span id="view-modal-terrain"></span></div>
           <div><strong>Road Type:</strong> <span id="view-modal-road-type"></span></div>
-          <div><strong>Road Length:</strong> <span id="view-modal-length"></span> m</div>
-          <div><strong>Road Width:</strong> <span id="view-modal-width"></span> m</div>
-          <div><strong>Culverts:</strong> <span id="view-modal-culverts"></span> m</div>
+          <div><strong>Length(km) :</strong> <span id="view-modal-length"></span> km</div>
+          <div><strong>Width(m) :</strong> <span id="view-modal-width"></span> m</div>
+          <div><strong>Length of Culverts:</strong> <span id="view-modal-culverts"></span> m</div>
           <div><strong>Bridges:</strong> <span id="view-modal-bridges"></span></div>
 
           <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px;"></div>
@@ -879,7 +918,7 @@
                 <input type="number" id="edit-modal-culverts" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
               </div>
               <div style="display: flex; flex-direction: column;">
-                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Length (m) <span style="color: red;">*</span></label>
+                <label style="font-weight: bold; font-size: 13px; margin-bottom: 4px;">Length (km) <span style="color: red;">*</span></label>
                 <input type="number" id="edit-modal-length" step="0.01" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
               </div>
               <div style="display: flex; flex-direction: column;">

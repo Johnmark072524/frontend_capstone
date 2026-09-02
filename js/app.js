@@ -1835,146 +1835,282 @@ document.addEventListener('DOMContentLoaded', () => {
 }); // <--- THIS CLOSES THE MAIN DOMContentLoaded EVENT LISTENER ONCE AND FOR ALL!
 
 // ==========================================
-// CEO DATA LOADER (THE MAIN BRAIN)
+// 🚀 CEO DASHBOARD: REAL DATA ENGINE & RENDERER
+// ==========================================
+let rawAllCEOReports = [];
+let rawActiveCEORows = [];
+let ceoStatusChartInstance = null;
+
+// Global variables for Modal Map
+let currentCEOProjectID = null;
+let currentCEOLat = 0;
+let currentCEOLng = 0;
+let ceoManageMap = null;
+let ceoManageMarker = null;
+
+// ==========================================
+// 1. DATA LOADER (MAIN BRAIN)
 // ==========================================
 window.loadCEODashboardData = function() {
-  console.log("🚀 [SAFE FETCH] Grabbing CEO data...");
+  console.log("🚀 [CEO ENGINE] Fetching work orders...");
 
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .catch(err => {
-      console.error("🚨 [CEO API] Failed to fetch:", err);
+      console.error("🚨 [CEO API] Failed to fetch reports:", err);
       return [];
     })
     .then(reports => {
-      console.log(`✅ [SAFE FETCH] Loaded ${reports.length} reports.`);
+      const data = Array.isArray(reports) ? reports : [];
 
-      const allCEOReports = reports.filter(r => {
+      // Include all actionable and finished work orders for this cycle (exclude past archived)
+      rawAllCEOReports = data.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
-        return s === 'dispatched to ceo' || s === 'in progress' || s === 'completed' || s === 'repaired';
+        return s === 'dispatched to ceo' || s === 'in progress' || s === 'completed' || s === 'repaired' || s === 'pending budget';
       });
 
-      // ==========================================
-      // 🧠 THE ULTIMATE CEO SORTING ALGORITHM
-      // ==========================================
-      allCEOReports.forEach(report => {
+      // 🧠 DECISION TREE & TIER SCORING
+      rawAllCEOReports.forEach(report => {
         const severity = String(report.severity || 'Unassessed').toLowerCase();
         const importance = String(report.roadImportance || '').toLowerCase();
         const status = String(report.status || '').trim().toLowerCase();
-        const hasRework = (report.adminRemarks && report.adminRemarks.trim() !== '');
+        const hasRework = Boolean(report.adminRemarks && report.adminRemarks.trim() !== '');
 
-        // --- STEP 1: CEO WORKFLOW STATUS (4 Tiers) ---
-        // 🚀 THE FIX: Swapped the scores so In Progress (3) beats Dispatched (2)!
+        // --- STEP 1: CEO WORKFLOW STATUS TIERS ---
         if (status === 'in progress' && hasRework) {
-          report.statusScore = 4; // URGENT: Bounced back by Admin for Rework! (TOP)
+          report.statusScore = 5; // URGENT: Returned by Admin for Rework (TOP)
         } else if (status === 'in progress') {
-          report.statusScore = 3; // ACTIVE: Currently being worked on normally (High Priority)
+          report.statusScore = 4; // ACTIVE: Currently being repaired on-site
         } else if (status === 'dispatched to ceo') {
-          report.statusScore = 2; // NEW: Needs to be scheduled (Medium Priority)
+          report.statusScore = 3; // NEW: Needs scheduling
+        } else if (status === 'pending budget') {
+          report.statusScore = 2; // DEFERRED: Awaiting Admin acknowledgment
         } else {
-          report.statusScore = 1; // COMPLETED: Waiting for Admin QA (BOTTOM)
+          report.statusScore = 1; // COMPLETED / REPAIRED: Waiting for QA
         }
 
-        // --- STEP 2: YOUR STRICT DECISION TREE (Tier Score) ---
+        // --- STEP 2: PRIORITY BADGE & TIER COLOR (UNASSESSED UNIFIED) ---
         report.tierScore = 0;
-        report.tierLabel = 'PENDING AI';
-        report.tierColor = '#6c757d';
+        report.tierLabel = 'UNASSESSED';
+        report.tierColor = '#ecfdf5';            // Light mint background
+        report.tierTextColor = '#047857';        // Dark green text
+        report.tierBorder = '1px solid #34d399'; // Green outline border
 
         if (severity === 'high') {
-          report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
+          report.tierScore = 3;
+          report.tierLabel = 'HIGH';
+          report.tierColor = '#dc2626';     // Red
+          report.tierTextColor = '#ffffff'; // White text
+          report.tierBorder = '1px solid #dc2626';
         } else if (severity === 'medium') {
           if (importance.includes('core')) {
-            report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
+            report.tierScore = 3;
+            report.tierLabel = 'HIGH';
+            report.tierColor = '#dc2626';
+            report.tierTextColor = '#ffffff';
+            report.tierBorder = '1px solid #dc2626';
           } else {
-            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
+            report.tierScore = 2;
+            report.tierLabel = 'MEDIUM';
+            report.tierColor = '#ffc107';     // Amber/Yellow
+            report.tierTextColor = '#000000'; // Dark text
+            report.tierBorder = '1px solid #eab308';
           }
         } else if (severity === 'low') {
           if (importance.includes('core')) {
-            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
+            report.tierScore = 2;
+            report.tierLabel = 'MEDIUM';
+            report.tierColor = '#ffc107';
+            report.tierTextColor = '#000000';
+            report.tierBorder = '1px solid #eab308';
           } else {
-            report.tierScore = 1; report.tierLabel = 'LOW'; report.tierColor = '#28a745';
+            report.tierScore = 1;
+            report.tierLabel = 'LOW';
+            report.tierColor = '#16a34a';     // Solid Green
+            report.tierTextColor = '#ffffff'; // White text
+            report.tierBorder = '1px solid #16a34a';
           }
         }
 
-        // --- STEP 3: YOUR TIE-BREAKER (Area Score) ---
+        // --- STEP 3: AREA SCORE ---
         const dLength = parseFloat(report.damageLength) || 0;
         const dWidth = parseFloat(report.damageWidth) || 0;
         report.areaScore = dLength * dWidth;
       });
 
-      // --- C. RUN THE HYBRID CEO SORT ---
-      allCEOReports.sort((a, b) => {
-
-        // RULE 1: COMPLETED ITEMS ALWAYS GO TO THE ABSOLUTE BOTTOM
+      // --- HYBRID CEO SORTING ALGORITHM ---
+      rawAllCEOReports.sort((a, b) => {
+        // RULE 1: Completed items go to bottom
         const aIsCompleted = a.statusScore === 1;
         const bIsCompleted = b.statusScore === 1;
-        if (aIsCompleted && !bIsCompleted) return 1;  // Push A down
-        if (!aIsCompleted && bIsCompleted) return -1; // Push B down
+        if (aIsCompleted && !bIsCompleted) return 1;
+        if (!aIsCompleted && bIsCompleted) return -1;
 
-        // RULE 2: REWORKS ALWAYS GO TO THE ABSOLUTE TOP
-        const aIsRework = a.statusScore === 4;
-        const bIsRework = b.statusScore === 4;
-        if (aIsRework && !bIsRework) return -1; // Pull A up
-        if (!aIsRework && bIsRework) return 1;  // Pull B up
+        // RULE 2: Reworks go to the top
+        const aIsRework = a.statusScore === 5;
+        const bIsRework = b.statusScore === 5;
+        if (aIsRework && !bIsRework) return -1;
+        if (!aIsRework && bIsRework) return 1;
 
-        // RULE 3: For the active backlog (Dispatched vs In Progress), SEVERITY WINS
+        // RULE 3: Severity Wins
         if (b.tierScore !== a.tierScore) {
-          return b.tierScore - a.tierScore; // High > Medium > Low
+          return b.tierScore - a.tierScore;
         }
 
-        // RULE 4: If Severity is tied, show 'Dispatched' before 'In Progress'
+        // RULE 4: Dispatched before In Progress if severity tied
         if (b.statusScore !== a.statusScore) {
           return b.statusScore - a.statusScore;
         }
 
-        // RULE 5: Largest Area Tie-Breaker
+        // RULE 5: Largest Area
         if (b.areaScore !== a.areaScore) {
           return b.areaScore - a.areaScore;
         }
 
-        // RULE 6: Oldest Date Tie-Breaker (Using your real database field!)
+        // RULE 6: Oldest Date
         const dateA = new Date(a.date_submitted || a.dateSubmitted || 0);
         const dateB = new Date(b.date_submitted || b.dateSubmitted || 0);
         return dateA - dateB;
       });
-      // ==========================================
 
-      const activeReports = allCEOReports.filter(r => {
+      // Active Queue items (Exclude Completed from dashboard active table)
+      rawActiveCEORows = rawAllCEOReports.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
-        return s === 'dispatched to ceo' || s === 'in progress';
+        return s === 'dispatched to ceo' || s === 'in progress' || s === 'pending budget';
       });
 
-      const pendingDispatch = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
-      const inProgress = activeReports.filter(r => String(r.status || '').trim().toLowerCase() === 'in progress');
-      const criticalHazards = activeReports.filter(r => r.tierLabel === 'HIGH');
+      // KPI Metric Counts
+      let countDispatched = 0;
+      let countInProgress = 0;
+      let countRework = 0;
+      let countPendingBudget = 0;
+      let countCompleted = 0;
 
+      rawAllCEOReports.forEach(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        const hasRework = Boolean(r.adminRemarks && r.adminRemarks.trim() !== '');
+
+        if (s === 'dispatched to ceo') {
+          countDispatched++;
+        } else if (s === 'in progress') {
+          if (hasRework) countRework++;
+          else countInProgress++;
+        } else if (s === 'pending budget') {
+          countPendingBudget++;
+        } else if (s === 'completed' || s === 'repaired' || s === 'closed' || s === 'resolved') {
+          countCompleted++;
+        }
+      });
+
+      // Update KPI Cards
       const totalEl = document.getElementById('ceo-metric-total');
-      const critEl = document.getElementById('ceo-metric-critical');
       const actEl = document.getElementById('ceo-metric-active');
-      if (totalEl) totalEl.innerText = pendingDispatch.length;
-      if (critEl) critEl.innerText = criticalHazards.length;
-      if (actEl) actEl.innerText = inProgress.length;
+      const rewEl = document.getElementById('ceo-metric-rework');
+      const budEl = document.getElementById('ceo-metric-budget');
 
-      // Render tables safely
-      renderCEOTable(activeReports, 'ultimate-ceo-dash-table', true);
-      renderCEOTable(allCEOReports, 'deploy-master-table', false);
+      if (totalEl) totalEl.innerText = countDispatched;
+      if (actEl) actEl.innerText = countInProgress;
+      if (rewEl) rewEl.innerText = countRework;
+      if (budEl) budEl.innerText = countPendingBudget;
+
+      // Update Annual Progress Accomplishment
+      updateCEOProgressBarUI(countCompleted, rawAllCEOReports.length);
+
+      // Update Status Chart
+      updateCEOStatusChart([countInProgress, countRework, countPendingBudget, countCompleted]);
+
+      // Render Tables
+      renderCEOTable(rawActiveCEORows, 'ultimate-ceo-dash-table', true);
+      renderCEOTable(rawAllCEOReports, 'deploy-master-table', false);
     });
 };
 
 // ==========================================
-// REUSABLE TABLE GENERATOR (CLEAN VERSION)
+// 2. ACCOMPLISHMENT PROGRESS BAR (ANNUAL)
+// ==========================================
+function updateCEOProgressBarUI(completedCount, totalAssigned) {
+  const safeTotal = totalAssigned > 0 ? totalAssigned : Math.max(completedCount, 1);
+  let percentage = Math.round((completedCount / safeTotal) * 100);
+  if (percentage > 100) percentage = 100;
+
+  const progressText = document.getElementById('ceo-progress-text');
+  const progressPercent = document.getElementById('ceo-progress-percentage');
+  const barFill = document.getElementById('ceo-progress-bar-fill');
+
+  if (progressText && progressPercent && barFill) {
+    progressText.innerHTML = `<strong>${completedCount}</strong> of <strong>${totalAssigned}</strong> assigned road projects completed.`;
+    progressPercent.innerText = `${percentage}%`;
+    barFill.style.width = `${percentage}%`;
+
+    if (percentage === 100) {
+      barFill.style.background = 'linear-gradient(90deg, #16a34a, #22c55e)';
+      progressPercent.style.color = '#16a34a';
+    } else {
+      barFill.style.background = 'linear-gradient(90deg, #0284c7, #38bdf8)';
+      progressPercent.style.color = '#0284c7';
+    }
+  }
+}
+
+// ==========================================
+// 3. WORK ORDER LIFECYCLE DOUGHNUT CHART
+// ==========================================
+function updateCEOStatusChart(dataArray) {
+  const canvasId = 'ceoStatusChart';
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  if (ceoStatusChartInstance) {
+    ceoStatusChartInstance.destroy();
+  }
+
+  let existingChart = Chart.getChart(canvasId);
+  if (existingChart) existingChart.destroy();
+
+  const total = dataArray.reduce((a, b) => a + b, 0);
+  const isEmpty = total === 0;
+
+  ceoStatusChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: isEmpty ? ['No Active Projects'] : ['In Progress', 'Rework Required', 'Pending Budget', 'Completed'],
+      datasets: [{
+        data: isEmpty ? [1] : dataArray,
+        backgroundColor: isEmpty ? ['#e2e8f0'] : ['#0284c7', '#dc2626', '#f59e0b', '#16a34a'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            boxWidth: 10,
+            font: { size: 10.5, weight: '600' },
+            padding: 8
+          }
+        },
+        tooltip: { enabled: !isEmpty }
+      },
+      cutout: '70%'
+    }
+  });
+}
+
+// ==========================================
+// 4. REUSABLE TABLE GENERATOR (CEO ENGINEER THEME)
 // ==========================================
 window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
   const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
 
-  if (!tbody) return; // Fail silently if table isn't on screen
-
-  // Clear previous entries
   tbody.innerHTML = '';
 
   if (dataArray.length === 0) {
-    // 🚀 DYNAMIC COLSPAN: 7 columns for Masterlist, 6 columns for Dashboard
-    const colCount = isDashboard ? "6" : "7";
-    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 30px; color: #94a3b8;">No active projects found.</td></tr>`;
+    const colCount = isDashboard ? "7" : "7";
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 35px; color: #94a3b8; font-style: italic;">No active projects matching criteria.</td></tr>`;
     return;
   }
 
@@ -1982,112 +2118,126 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
     const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
     const formatName = report.cityRoadName || 'Unnamed Road';
-    const area = (parseFloat(report.damageLength) || 0) * (parseFloat(report.damageWidth) || 0);
+    const damageType = report.damageType || 'Road Damage';
+
+    const dLen = parseFloat(report.damageLength) || 0;
+    const dWid = parseFloat(report.damageWidth) || 0;
+    const area = dLen * dWid;
     const formatArea = area > 0 ? `${area.toFixed(1)} sq.m` : 'Unknown';
 
     const status = String(report.status || '').toLowerCase();
-    const hasRework = (report.adminRemarks && report.adminRemarks.trim() !== ''); // Check for Admin QA feedback
+    const hasRework = Boolean(report.adminRemarks && report.adminRemarks.trim() !== '');
     const onClickAction = isDashboard ? `jumpToCEOMasterlistAndManage(${report.id})` : `openCEOManageModal(${report.id})`;
 
-    let statusHtml = `<span style="background:#dcfce3; color:#166534; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">Dispatched</span>`;
-    let btnHtml = `<button onclick="${onClickAction}" style="background-color: #1e40af; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 2px 4px rgba(30,64,175,0.2);">Manage</button>`;
+    // Status Badge & Action Button Configuration
+    let statusHtml = `<span style="background: #e0f2fe; color: #0369a1; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #bae6fd; white-space: nowrap;">Dispatched</span>`;
+
+    // 🚀 UPDATED: CEO Theme Primary Orange (#ea580c) with smooth hover and shadow
+    let btnHtml = `<button onclick="${onClickAction}" style="background-color: #ea580c; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.28); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#c2410c'" onmouseout="this.style.backgroundColor='#ea580c'">Manage</button>`;
 
     if (status === 'in progress') {
-      // 🚀 BONUS: Highlight reworks in yellow so the CEO knows it was bounced back!
       if (hasRework) {
-        statusHtml = `<span style="background-color: #fef08a; color: #854d0e; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">⚠️ Rework Required</span>`;
+        statusHtml = `<span style="background-color: #fef2f2; color: #dc2626; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #fecaca; white-space: nowrap;">⚠️ Rework Required</span>`;
       } else {
-        statusHtml = `<span style="background-color: #dbeafe; color: #1e40af; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">In Progress</span>`;
+        statusHtml = `<span style="background-color: #ffedd5; color: #c2410c; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #fed7aa; white-space: nowrap;">In Progress</span>`;
       }
+    } else if (status === 'pending budget') {
+      statusHtml = `<span style="background-color: #fef3c7; color: #d97706; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #fde68a; white-space: nowrap;">⏳ Pending Budget</span>`;
     } else if (status.includes('complet') || status.includes('repair')) {
-      statusHtml = `<span style="background-color: #f1f5f9; color: #475569; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700;">✅ Completed</span>`;
-      btnHtml = `<button onclick="${onClickAction}" style="background-color: #16a34a; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; box-shadow: 0 2px 4px rgba(22,163,74,0.2);">View Proof</button>`;
+      statusHtml = `<span style="background-color: #dcfce7; color: #15803d; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #bbf7d0; white-space: nowrap;">✅ Completed</span>`;
+      btnHtml = `<button onclick="${onClickAction}" style="background-color: #16a34a; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.28); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">View Proof</button>`;
     }
 
-    // ==========================================
-    // 🚀 NEW: DYNAMIC BATCH CHECKBOX LOGIC
-    // ==========================================
+    // Checkbox logic for Masterlist view only
     let checkboxHtml = '';
-
-    // Only process checkboxes if this is the Masterlist (NOT the dashboard table)
     if (!isDashboard) {
-      // Only generate a clickable checkbox if the status is exactly "dispatched to ceo"
       if (status === 'dispatched to ceo') {
-        checkboxHtml = `<td style="text-align: center; padding: 15px;">
-                                <input type="checkbox" class="defer-checkbox" value="${report.id}" onchange="toggleBatchActionBar()" style="cursor: pointer; width: 16px; height: 16px;">
-                            </td>`;
+        checkboxHtml = `
+          <td style="text-align: center; padding: 12px;">
+            <input type="checkbox" class="defer-checkbox" value="${report.id}" onchange="toggleBatchActionBar()" style="cursor: pointer; width: 16px; height: 16px;">
+          </td>`;
       } else {
-        // If it's already "In Progress" or "Completed", leave an empty cell to keep the columns aligned
-        checkboxHtml = `<td style="padding: 15px;"></td>`;
+        checkboxHtml = `<td style="padding: 12px;"></td>`;
       }
     }
 
     const tr = document.createElement('tr');
     tr.style.borderBottom = "1px solid #f1f5f9";
-    tr.style.transition = "background-color 0.2s";
-
+    tr.style.transition = "background-color 0.15s";
     tr.onmouseover = () => tr.style.backgroundColor = "#f8fafc";
     tr.onmouseout = () => tr.style.backgroundColor = "transparent";
 
     tr.innerHTML = `
-        ${checkboxHtml} <!-- 🚀 Injects the checkbox column (or leaves it blank for dashboard) -->
-        <td style="padding: 15px; border-left: 4px solid ${report.tierColor}; white-space: nowrap;"><strong>${formatId}</strong></td>
-        <td style="padding: 15px;">${formatBrgy}</td>
-        <td style="padding: 15px; font-weight: 600; color: #0f172a;">${formatName}</td>
-        <td style="padding: 15px; color: #64748b; white-space: nowrap;">${formatArea}</td>
-        <td style="padding: 15px;"><span style="background-color: ${report.tierColor}; color: white; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;">${report.tierLabel}</span></td>
-        <td style="padding: 15px; text-align: center; display: flex; gap: 10px; justify-content: center; align-items: center;">
-            ${statusHtml}
-            ${btnHtml}
-        </td>
+      ${checkboxHtml}
+      <td style="padding: 12px 15px; border-left: 4px solid ${report.tierColor}; white-space: nowrap;">
+        <strong style="font-family: monospace; font-size: 12.5px; color: #0f172a;">${formatId}</strong>
+      </td>
+      <td style="padding: 12px 15px; font-size: 12.5px; color: #475569;">${formatBrgy}</td>
+      <td style="padding: 12px 15px;">
+        <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${formatName}</div>
+        <div style="font-size: 11.5px; color: #64748b; margin-top: 1px;">🛠️ ${damageType} ${dLen > 0 ? `(${dLen}m × ${dWid}m)` : ''}</div>
+      </td>
+      <td style="padding: 12px 15px; color: #475569; font-weight: 600; white-space: nowrap;">${formatArea}</td>
+      <td style="padding: 12px 15px; text-align: center; white-space: nowrap;">
+  <span style="background-color: ${report.tierColor || '#ecfdf5'}; color: ${report.tierTextColor || '#047857'}; border: ${report.tierBorder || '1px solid #34d399'}; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
+    ${report.tierLabel || 'UNASSESSED'}
+  </span>
+</td>
+      <td style="padding: 12px 15px; text-align: center;">
+        ${statusHtml}
+      </td>
+      <td style="padding: 12px 15px; text-align: center;">
+        ${btnHtml}
+      </td>
     `;
     tbody.appendChild(tr);
   });
+
   if (!isDashboard && typeof window.filterCEOReports === 'function') {
     window.filterCEOReports();
   }
-
 };
-
-// Placeholder for opening the specific report
-window.openCEOManageModal = function(reportId) {
-  console.log("Opening Manage Modal for Project: " + reportId);
-  document.getElementById('manage-modal').classList.remove('hidden');
-};
-
-// Shows the text box if the user selects "Other" in the Damage Type dropdown
-function toggleOtherDamageType() {
-  const select = document.getElementById('damageType');
-  const otherGroup = document.getElementById('otherDamageTypeGroup');
-  if (select.value === 'Other') {
-    otherGroup.classList.remove('hidden');
-  } else {
-    otherGroup.classList.add('hidden');
-  }
-}
-
-function toggleEditOtherDamage() {
-  const select = document.getElementById('edit-modal-damage-type');
-  const otherInput = document.getElementById('edit-modal-damage-other');
-  if (select.value === 'Other') {
-    otherInput.classList.remove('hidden');
-  } else {
-    otherInput.classList.add('hidden');
-  }
-}
-
-// Global variables to store data for the CEO Map Button (which we will build next)
-let currentCEOProjectID = null;
-let currentCEOLat = 0;
-let currentCEOLng = 0;
 
 // ==========================================
-// CEO DASHBOARD: OPEN MANAGE MODAL
+// 5. DASHBOARD TABLE SEARCH & FILTER HANDLER
+// ==========================================
+window.filterCEODashTable = function() {
+  const query = (document.getElementById('ceo-dash-search')?.value || '').toLowerCase().trim();
+  const filterVal = document.getElementById('ceo-dash-filter')?.value || 'ALL';
+
+  const filtered = rawActiveCEORows.filter(report => {
+    const prjId = `#prj-${String(report.id).padStart(4, '0')}`.toLowerCase();
+    const road = String(report.cityRoadName || '').toLowerCase();
+    const brgy = String(report.barangay?.barangayName || '').toLowerCase();
+    const damage = String(report.damageType || '').toLowerCase();
+    const status = String(report.status || '').toLowerCase();
+    const hasRework = Boolean(report.adminRemarks && report.adminRemarks.trim() !== '');
+
+    const matchesQuery = !query || prjId.includes(query) || road.includes(query) || brgy.includes(query) || damage.includes(query);
+
+    let matchesFilter = true;
+    if (filterVal === 'REWORK') {
+      matchesFilter = (status === 'in progress' && hasRework);
+    } else if (filterVal === 'PROGRESS') {
+      matchesFilter = (status === 'in progress' && !hasRework);
+    } else if (filterVal === 'DISPATCHED') {
+      matchesFilter = (status === 'dispatched to ceo');
+    } else if (filterVal === 'BUDGET') {
+      matchesFilter = (status === 'pending budget');
+    }
+
+    return matchesQuery && matchesFilter;
+  });
+
+  renderCEOTable(filtered, 'ultimate-ceo-dash-table', true);
+};
+
+// ==========================================
+// 6. MODAL & MAP CONTROLLERS (PRESERVED)
 // ==========================================
 window.openCEOManageModal = function(reportId) {
   currentCEOProjectID = reportId;
 
-  // Automatically switch views from Dashboard to the Repair/Masterlist tab!
   const dashboardView = document.getElementById('view-dashboard');
   const repairView = document.getElementById('view-repair');
 
@@ -2096,74 +2246,45 @@ window.openCEOManageModal = function(reportId) {
     repairView.classList.remove('hidden');
   }
 
-  // Force the map closed every time we open a new project
   const mapContainer = document.getElementById('ceo-manage-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
-  // 1. FIRST: Define and grab the modal
   const modal = document.getElementById('manage-modal');
   if (!modal) return;
 
-  // 2. Unhide the modal
   modal.classList.remove('hidden');
-
-  // 3. Reset the scrollbar!
   const modalBody = modal.querySelector('.modal-body');
   if (modalBody) modalBody.scrollTop = 0;
 
-  // 4. Set temporary loading text
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
-  // ==========================================
-  // 🧹 5. THE FIX: WIPE OLD DATA & PREVIEWS (MATCHING EXACT HTML IDs)
-  // ==========================================
-  // 1. Clear previous server images
+  // Reset inputs & previews
   const dmgImg = document.getElementById('ceo-modal-image');
   if (dmgImg) dmgImg.src = '';
-
   const proofImg = document.getElementById('ceo-modal-proof-image');
   if (proofImg) proofImg.src = '';
-
-  // 2. Clear the actual File Input and Remarks so they are empty
   const proofInput = document.getElementById('ceo-repair-image-upload');
   if (proofInput) proofInput.value = '';
-
   const remarksInput = document.getElementById('ceo-repair-remarks');
   if (remarksInput) remarksInput.value = '';
-
-  // 3. 🚀 WIPE THE VISUAL PREVIEW UI AND RESTORE DEFAULT CAMERA ICON
-
-  // A. Clear the green filename text
   const fileNameDisplay = document.getElementById('ceo-repair-file-name');
   if (fileNameDisplay) fileNameDisplay.innerText = '';
-
-  // B. Clear the actual image preview tag
   const previewImgTag = document.getElementById('ceo-preview-img');
   if (previewImgTag) previewImgTag.src = '';
-
-  // C. Hide the wrapper that holds the Image AND the Red "X" button
   const previewContainer = document.getElementById('ceo-dropzone-preview');
   if (previewContainer) previewContainer.style.display = 'none';
-
-  // D. SHOW the default "Click to upload or drag photo here" box again
   const defaultDropzone = document.getElementById('ceo-dropzone-default');
   if (defaultDropzone) defaultDropzone.style.display = 'block';
-  // ==========================================
 
-  // 🚀 FETCH THE DATA
   apiFetch(`/api/reports/${reportId}`, { cache: 'no-store' })
     .then(report => {
-      // ... (Keep the rest of your .then() logic exactly as it is) ...
-      // Save coordinates for the "Locate on Map" button
       currentCEOLat = report.latitude;
       currentCEOLng = report.longitude;
 
-      // 1. Core Details
       document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(report.id).padStart(4, '0')}`;
       document.getElementById('ceo-modal-brgy').innerText = report.barangay ? report.barangay.barangayName : 'Unknown';
       document.getElementById('ceo-modal-road-name').innerText = report.cityRoadName || 'Unnamed Road';
 
-      // 2. Full Road Details
       document.getElementById('ceo-modal-road-id').innerText = report.cityRoadId || 'N/A';
       document.getElementById('ceo-modal-importance').innerText = report.roadImportance || 'N/A';
       document.getElementById('ceo-modal-terrain').innerText = report.terrainType || 'N/A';
@@ -2173,7 +2294,6 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-culverts').innerText = report.lengthOfCulverts || 0;
       document.getElementById('ceo-modal-bridges').innerText = report.numberOfBridges || 0;
 
-      // 3. Damage Details
       document.getElementById('ceo-modal-damage-type').innerText = report.damageType || 'None';
 
       const damageLen = parseFloat(report.damageLength) || 0;
@@ -2195,7 +2315,6 @@ window.openCEOManageModal = function(reportId) {
       if (ceoSubmitterEl) ceoSubmitterEl.innerText = ceoSubmitterText;
       document.getElementById('ceo-modal-description').innerText = report.damageDescription || 'No description provided.';
 
-      // 4. Priority Badge
       const severity = String(report.severity || 'UNASSESSED').toUpperCase();
       const priorityBadge = document.getElementById('ceo-modal-priority');
       priorityBadge.innerText = severity;
@@ -2210,7 +2329,6 @@ window.openCEOManageModal = function(reportId) {
         priorityBadge.style.cssText = "background-color: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
       }
 
-      // 5. Current Status Badge
       const status = String(report.status || '');
       const currentStatus = status.toLowerCase();
       const statusBadge = document.getElementById('ceo-modal-current-status');
@@ -2222,32 +2340,24 @@ window.openCEOManageModal = function(reportId) {
         statusBadge.style.cssText = "background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
       }
 
-      // ==========================================
-      // 🚀 NEW: REWORK ALERT LOGIC
-      // ==========================================
+      // Rework Alert
       const reworkAlert = document.getElementById('ceo-rework-alert');
       const reworkText = document.getElementById('ceo-modal-admin-remarks');
-
-      // If the Admin wrote remarks AND the ticket is "In Progress" (meaning it was bounced back)
       if (report.adminRemarks && report.adminRemarks.trim() !== '' && currentStatus === 'in progress') {
         if (reworkText) reworkText.innerText = report.adminRemarks;
         if (reworkAlert) reworkAlert.style.display = 'block';
       } else {
-        // Keep it hidden if there are no remarks, or if it hasn't been bounced back yet
         if (reworkAlert) reworkAlert.style.display = 'none';
       }
 
-      // ==========================================
-      // 6. IMAGE LOADING
-      // ==========================================
+      // Image Loading
       const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
       if (placeholderEl) placeholderEl.style.display = 'none';
+      if (typeof loadSecureImage === 'function') {
+        loadSecureImage('ceo-modal-image', report.damageImage);
+      }
 
-      loadSecureImage('ceo-modal-image', report.damageImage);
-
-      // ==========================================
-      // 7. BUTTON LOCK & COMPLETED DATA
-      // ==========================================
+      // Buttons & Completion State
       const btnStartRepair = document.getElementById('ceo-btn-start-repair');
       const completionForm = document.getElementById('ceo-completion-form');
       const completedEvidence = document.getElementById('ceo-completed-evidence-section');
@@ -2263,8 +2373,10 @@ window.openCEOManageModal = function(reportId) {
           if (completionForm) completionForm.style.display = 'none';
           if (completedEvidence) completedEvidence.style.display = 'block';
 
-          loadSecureImage('ceo-modal-proof-image', report.proofOfRepairImage);
-          proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
+          if (typeof loadSecureImage === 'function') {
+            loadSecureImage('ceo-modal-proof-image', report.proofOfRepairImage);
+          }
+          if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
         } else if (currentStatus.includes('progress')) {
           btnStartRepair.innerHTML = `<span class="icon">✅</span> Already In Progress`;
@@ -2274,10 +2386,9 @@ window.openCEOManageModal = function(reportId) {
 
           if (completionForm) completionForm.style.display = 'block';
           if (completedEvidence) completedEvidence.style.display = 'none';
-
         } else {
           btnStartRepair.innerHTML = `<span class="icon">👷</span> Mark as In Progress`;
-          btnStartRepair.style.backgroundColor = "";
+          btnStartRepair.style.backgroundColor = "#ea580c"; // 🚀 EXPLICIT CEO ORANGE
           btnStartRepair.style.cursor = "pointer";
           btnStartRepair.disabled = false;
 
@@ -2291,38 +2402,33 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-prj-id').innerText = "Database Error!";
     });
 };
-// ==========================================
-// CEO ACTION QUEUE: TAB JUMP & MANAGE LOGIC
-// ==========================================
-window.jumpToCEOMasterlistAndManage = function(reportId) {
-  // 1. Find the "Repair Projects" tab button in the sidebar
-  // (Assuming your sidebar uses data-target="view-repair" for the CEO)
-  const repairTabBtn = document.querySelector('.nav-menu li[data-target="view-repair"]');
 
-  // 2. Programmatically "click" it to switch the screen and highlight the sidebar menu
+window.jumpToCEOMasterlistAndManage = function(reportId) {
+  const repairTabBtn = document.querySelector('.nav-menu li[data-target="view-repair"]');
   if (repairTabBtn) {
     repairTabBtn.click();
   } else {
-    // Fallback just in case
     document.getElementById('view-dashboard').classList.add('hidden');
     document.getElementById('view-repair').classList.remove('hidden');
   }
 
-  // 3. Wait 150ms for the screen to switch, then pop open the modal!
   setTimeout(() => {
     if (typeof openCEOManageModal === 'function') {
       openCEOManageModal(reportId);
-    } else {
-      console.error("openCEOManageModal function not found!");
     }
   }, 150);
 };
 
-
 // ==========================================
-// CEO FILE UPLOAD: DRAG, DROP & PREVIEW
+// 7. FILE UPLOAD & LEAFLET MAP OBSERVERS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Initial load
+  if (document.getElementById('ultimate-ceo-dash-table')) {
+    loadCEODashboardData();
+  }
+
+  // 1. Drag & Drop File Upload Logic
   const dropzone = document.getElementById('ceo-dropzone-container');
   const fileInput = document.getElementById('ceo-repair-image-upload');
   const defaultState = document.getElementById('ceo-dropzone-default');
@@ -2331,110 +2437,87 @@ document.addEventListener('DOMContentLoaded', () => {
   const removeBtn = document.getElementById('ceo-btn-remove-image');
   const fileNameDisplay = document.getElementById('ceo-repair-file-name');
 
-  // Only run this if we are actually on the CEO page
-  if (!dropzone || !fileInput) return;
+  if (dropzone && fileInput) {
+    dropzone.addEventListener('click', (e) => {
+      if (e.target !== removeBtn) fileInput.click();
+    });
 
-  // 1. Click dropzone to open file dialog (unless clicking the 'X' button)
-  dropzone.addEventListener('click', (e) => {
-    if (e.target !== removeBtn) {
-      fileInput.click();
-    }
-  });
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#0d6efd';
+      dropzone.style.backgroundColor = '#e0f2fe';
+    });
 
-  // 2. Drag & Drop Visuals (Highlights blue when dragging a file over it)
-  dropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropzone.style.borderColor = '#0d6efd'; // Highlight border
-    dropzone.style.backgroundColor = '#e0f2fe'; // Light blue background
-  });
+    dropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#cbd5e1';
+      dropzone.style.backgroundColor = '#f8fafc';
+    });
 
-  dropzone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dropzone.style.borderColor = '#cbd5e1'; // Revert border
-    dropzone.style.backgroundColor = '#f8fafc'; // Revert background
-  });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = '#cbd5e1';
+      dropzone.style.backgroundColor = '#f8fafc';
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileUpload(e.dataTransfer.files[0]);
+      }
+    });
 
-  dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.style.borderColor = '#cbd5e1';
-    dropzone.style.backgroundColor = '#f8fafc';
+    fileInput.addEventListener('change', function() {
+      if (this.files && this.files.length > 0) {
+        handleFileUpload(this.files[0]);
+      }
+    });
 
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      fileInput.files = e.dataTransfer.files; // Assign dragged file to input
-      handleFileUpload(e.dataTransfer.files[0]);
-    }
-  });
+    function handleFileUpload(file) {
+      if (!file.type.startsWith('image/')) {
+        if (typeof showToast === 'function') showToast("Please upload a valid image file (JPG, PNG).", "error");
+        fileInput.value = '';
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        if (typeof showToast === 'function') showToast("File is too large! Must be under 5MB.", "error");
+        fileInput.value = '';
+        return;
+      }
 
-  // 3. Handle File Selection (If they click to browse)
-  fileInput.addEventListener('change', function() {
-    if (this.files && this.files.length > 0) {
-      handleFileUpload(this.files[0]);
-    }
-  });
-
-  // 4. Magic Function: Read the image, check size, and show the live preview!
-  function handleFileUpload(file) {
-    // Check if it is actually an image
-    if (!file.type.startsWith('image/')) {
-      showToast("Please upload a valid image file (JPG, PNG).", "error");
-      fileInput.value = ''; // Reset input
-      return;
-    }
-
-    // 🚀 THE FIX: Check if file is over 5MB (5 * 1024 * 1024 bytes = 5,242,880 bytes)
-    if (file.size > 5 * 1024 * 1024) {
-      showToast("File is too large! Must be under 5MB.", "error");
-      fileInput.value = ''; // Reset input so it doesn't try to upload anyway
-      return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (previewImg) previewImg.src = e.target.result;
+        if (defaultState) defaultState.style.display = 'none';
+        if (previewState) previewState.style.display = 'block';
+        if (fileNameDisplay) fileNameDisplay.innerText = file.name;
+      };
+      reader.readAsDataURL(file);
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target.result; // Set the image source to the file data
-      defaultState.style.display = 'none'; // Hide the "Click to upload" text
-      previewState.style.display = 'block'; // Show the image!
-      fileNameDisplay.innerText = file.name;
-    };
-    reader.readAsDataURL(file);
+    if (removeBtn) {
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.value = '';
+        if (previewImg) previewImg.src = '';
+        if (previewState) previewState.style.display = 'none';
+        if (defaultState) defaultState.style.display = 'block';
+      });
+    }
   }
 
-  // 5. Remove Button Logic (Clicking the red 'X')
-  removeBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // Stop the click from triggering the file dialog again
-    fileInput.value = ''; // Empty the invisible file input
-    previewImg.src = ''; // Clear the image
-    previewState.style.display = 'none'; // Hide the preview container
-    defaultState.style.display = 'block'; // Bring back the "Click to upload" text
-  });
-});
-
-// Global variables for the CEO Map
-let ceoManageMap = null;
-let ceoManageMarker = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-
-  // ==========================================
-  // CEO MAP LOGIC (Locate on Map Button)
-  // ==========================================
+  // 2. Leaflet Map Locator
   const btnLocateMap = document.getElementById('ceo-btn-locate-map');
-
   if (btnLocateMap) {
     btnLocateMap.addEventListener('click', function(e) {
-      e.preventDefault(); // Stop page from jumping
+      e.preventDefault();
       const mapContainer = document.getElementById('ceo-manage-map-container');
 
-      // Safety check: Did the Barangay Official actually provide GPS coordinates?
       if (!currentCEOLat || !currentCEOLng || (currentCEOLat === 0 && currentCEOLng === 0)) {
         alert("No GPS coordinates were provided for this report.");
         return;
       }
 
-      // Toggle the map open/closed
       if (mapContainer.style.display === 'none') {
         mapContainer.style.display = 'block';
 
-        // Define a custom Red Icon for damages
         const redIcon = new L.Icon({
           iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -2444,98 +2527,74 @@ document.addEventListener('DOMContentLoaded', () => {
           shadowSize: [41, 41]
         });
 
-        // If the map hasn't been built yet, build it!
         if (!ceoManageMap) {
           ceoManageMap = L.map('ceo-manage-map').setView([currentCEOLat, currentCEOLng], 17);
-
-          // Switch to Esri World Imagery (Satellite View)
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
           }).addTo(ceoManageMap);
-
-          // Drop the RED pin!
-          ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], {icon: redIcon}).addTo(ceoManageMap);
+          ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], { icon: redIcon }).addTo(ceoManageMap);
         } else {
-          // If the map is already built, just move the camera and update the pin location
           ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
           ceoManageMarker.setLatLng([currentCEOLat, currentCEOLng]);
         }
 
-        // CRUCIAL LEAFLET TRICK: Leaflet breaks if loaded inside a hidden div.
-        // We must tell it to recalculate its size a fraction of a second after we unhide it.
         setTimeout(() => {
           ceoManageMap.invalidateSize();
         }, 200);
-
       } else {
-        // Close the map if they click the button again
         mapContainer.style.display = 'none';
       }
     });
   }
-});
 
-// ==========================================
-// CEO: MARK PROJECT AS "IN PROGRESS"
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+  // 3. Mark as In Progress Action
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
-
   if (btnStartRepair) {
     btnStartRepair.addEventListener('click', function() {
-      // Safety check to make sure a project is actually open
       if (!currentCEOProjectID) return;
 
-      // 1. UI Loading State (Prevent spam clicking)
       const originalText = this.innerHTML;
       this.innerHTML = `<span class="icon">⏳</span> Updating...`;
       this.disabled = true;
       this.style.opacity = "0.7";
 
-      // 2. Call the Backend API
+      const currentUserId = sessionStorage.getItem("userId");
+
       fetch(`${API_BASE_URL}/api/reports/${currentCEOProjectID}/status`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
         },
-        body: JSON.stringify({ status: "In Progress" })
+        body: JSON.stringify({
+          status: "In Progress",
+          userId: currentUserId
+        })
       })
         .then(res => {
           if (!res.ok) throw new Error("Failed to update status");
+          if (typeof showToast === 'function') showToast("Crew Dispatched! Admin notified that repairs are in progress.", "success");
 
-          // 3. Success! Show the professional Toast Notification
-          showToast("Crew Dispatched! Admin notified that repairs are in progress.", "success");
-
-          // 4. Instantly update the badge inside the modal so it turns Blue
           const statusBadge = document.getElementById('ceo-modal-current-status');
           if (statusBadge) {
             statusBadge.innerText = "In Progress";
             statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
           }
 
-          // 5. Change the button to show it's already done
           this.innerHTML = `<span class="icon">✅</span> Already In Progress`;
-          this.style.backgroundColor = "#6c757d"; // Turn it gray
+          this.style.backgroundColor = "#6c757d";
           this.style.cursor = "not-allowed";
 
-          // ==========================================
-          // 🚀 6. THE FIX: REVEAL THE UPLOAD FORM INSTANTLY
-          // ==========================================
           const completionForm = document.getElementById('ceo-completion-form');
-          if (completionForm) {
-            completionForm.style.display = 'block';
-          }
+          if (completionForm) completionForm.style.display = 'block';
 
-          // 7. Refresh the CEO Dashboard Table quietly in the background
           if (typeof loadCEODashboardData === "function") {
             loadCEODashboardData();
           }
         })
         .catch(err => {
           console.error("Status Update Error:", err);
-          showToast("Failed to update. Check database connection.", "error");
-
-          // If it fails, restore the button so they can try again
+          if (typeof showToast === 'function') showToast("Failed to update. Check database connection.", "error");
           this.innerHTML = originalText;
           this.disabled = false;
           this.style.opacity = "1";
@@ -2545,8 +2604,28 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// BACKEND API CONNECTION LOGIC (RoadWise)
+// BACKEND API CONNECTION & FORM LOGIC (RoadWise)
 // ==========================================
+
+// 🚀 FIX: Global toggle function for "Other" damage type selection
+window.toggleOtherDamageType = function() {
+  const select = document.getElementById('damageType');
+  const otherGroup = document.getElementById('otherDamageTypeGroup');
+  const otherInput = document.getElementById('otherDamageType');
+
+  if (!select || !otherGroup) return;
+
+  if (select.value === 'Other') {
+    otherGroup.classList.remove('hidden');
+    otherGroup.style.display = 'block'; // Failsafe in case CSS class is overridden
+    if (otherInput) otherInput.focus();
+  } else {
+    otherGroup.classList.add('hidden');
+    otherGroup.style.display = 'none';
+    if (otherInput) otherInput.value = '';
+  }
+};
+
 // STEP 1: Validate and show the custom popup
 function submitRoadReport() {
   const roadName = document.getElementById("cityRoadName")?.value;
@@ -2559,7 +2638,7 @@ function submitRoadReport() {
     return;
   }
 
-  // If they selected "Other" but left the text box blank, we should still warn them
+  // If they selected "Other" but left the text box blank, warn them
   const damageType = document.getElementById("damageType")?.value;
   if (damageType === "Other" && !document.getElementById("otherDamageType")?.value) {
     showToast("Please specify the 'Other' damage type.", "error");
@@ -2576,7 +2655,7 @@ function submitRoadReport() {
     return;
   }
 
-  // Show our sleek new modern modal instead of window.confirm!
+  // Show modern confirmation modal
   document.getElementById('confirm-modal').classList.remove('hidden');
 }
 
@@ -2585,7 +2664,6 @@ function closeConfirmModal() {
   document.getElementById('confirm-modal').classList.add('hidden');
 }
 
-// STEP 3: The actual server submission if they click "Yes, Submit"
 // STEP 3: The actual server submission if they click "Yes, Submit"
 function executeFinalSubmission() {
   closeConfirmModal();
@@ -2604,7 +2682,7 @@ function executeFinalSubmission() {
     formData.append("barangayId", loggedInBarangayId);
   }
 
-  // 🚀 THE FIX: Send the specific User ID so the server knows EXACTLY who submitted it!
+  // Send the specific User ID so the server logs who submitted it
   const loggedInUserId = sessionStorage.getItem("userId");
   if (loggedInUserId) {
     formData.append("userId", loggedInUserId);
@@ -2612,23 +2690,22 @@ function executeFinalSubmission() {
 
   // ==============================================================
   // 🛡️ THE BULLETPROOF DATA EXTRACTOR 🛡️
-  // This guarantees we get data from disabled or auto-filled fields!
+  // Guarantees data from disabled or auto-filled fields
   // ==============================================================
   function getVal(id) {
     const el = document.getElementById(id);
-    if (!el) return ""; // Failsafe if ID doesn't exist
+    if (!el) return "";
 
     if (el.tagName === "SELECT") {
       if (el.selectedIndex === -1) return "";
       const opt = el.options[el.selectedIndex];
-      if (opt.disabled) return ""; // Skip the "Select Road" placeholder
-      // Prefer the 'value', but fallback to the raw text if 'value' is empty!
+      if (opt.disabled) return "";
       return (opt.value && opt.value.trim() !== "") ? opt.value : opt.text;
     }
     return el.value || "";
   }
 
-  // 1. Road Details (Now immune to the disabled field bug!)
+  // 1. Road Details
   formData.append("cityRoadName", getVal("cityRoadName"));
   formData.append("cityRoadId", getVal("cityRoadId"));
   formData.append("roadImportance", getVal("roadImportance"));
@@ -2642,10 +2719,10 @@ function executeFinalSubmission() {
   formData.append("lengthOfCulverts", parseFloat(getVal("lengthOfCulverts")) || 0.0);
   formData.append("damageDescription", getVal("damageDescription"));
 
-  // 3. ⬇️ THE NEW DAMAGE FIELDS ⬇️
+  // 3. Damage Information
   let finalDamageType = getVal("damageType");
   if (!finalDamageType || finalDamageType.includes("Select Damage")) {
-    finalDamageType = "None"; // Force "None" if they skip it
+    finalDamageType = "None";
   } else if (finalDamageType === "Other") {
     finalDamageType = getVal("otherDamageType") || "Other";
   }
@@ -2668,13 +2745,12 @@ function executeFinalSubmission() {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  // 🔍 DEV DEBUGGER: Prints exactly what is going to PostgreSQL into your browser console!
   console.log("--- DATA LEAVING BROWSER ---");
   for (let pair of formData.entries()) {
     console.log(pair[0] + ": " + pair[1]);
   }
 
-  // 6. Send to Spring Boot
+  // 6. Send to Spring Boot API
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
@@ -2739,13 +2815,24 @@ function resetAddReportForm() {
   document.getElementById("damageLength").value = "";
   document.getElementById("damageWidth").value = "";
 
-  // 3. Wipe the hidden map math and reset the display text
+  // 🚀 Clear & hide the "Other" specify field
+  const otherGroup = document.getElementById("otherDamageTypeGroup");
+  const otherInput = document.getElementById("otherDamageType");
+  if (otherGroup) {
+    otherGroup.classList.add("hidden");
+    otherGroup.style.display = "none";
+  }
+  if (otherInput) {
+    otherInput.value = "";
+  }
+
+  // 3. Wipe hidden map math and reset display text
   document.getElementById("latitude").value = "";
   document.getElementById("longitude").value = "";
   const coordsDisplay = document.getElementById("coords-display");
   if (coordsDisplay) coordsDisplay.textContent = "Not Selected";
 
-  // 4. Completely wipe the image file and hide the preview
+  // 4. Wipe the image file and hide the preview
   document.getElementById("damageImageFile").value = "";
   const preview = document.getElementById("imagePreview");
   if (preview) {
@@ -2755,7 +2842,6 @@ function resetAddReportForm() {
   const fileNameDisplay = document.getElementById("fileNameDisplay");
   if (fileNameDisplay) fileNameDisplay.textContent = "";
 }
-
 // ==========================================
 // 🚀 STEP 1: INITIATE LOGIN & REQUEST MFA CODE
 // ==========================================
@@ -3204,18 +3290,18 @@ function loadAdminReports() {
           ? report.barangay.barangayName
           : 'Unknown Barangay';
 
-        // 🚀 DYNAMIC SEVERITY BADGES (EXPLICIT STYLING FOR UNASSESSED)
+        // 🚀 DYNAMIC SEVERITY BADGES (STANDARDIZED UNASSESSED & SEVERITY TIERS)
         const rawSeverity = String(report.severity || '').toLowerCase().trim();
         let severityBadgeHtml = '';
 
         if (rawSeverity === 'high') {
-          severityBadgeHtml = `<span class="badge high">HIGH</span>`;
+          severityBadgeHtml = `<span style="background-color: #dc2626; color: #ffffff; border: 1px solid #dc2626; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">HIGH</span>`;
         } else if (rawSeverity === 'medium') {
-          severityBadgeHtml = `<span class="badge medium">MEDIUM</span>`;
+          severityBadgeHtml = `<span style="background-color: #ffc107; color: #000000; border: 1px solid #eab308; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">MEDIUM</span>`;
         } else if (rawSeverity === 'low') {
-          severityBadgeHtml = `<span class="badge low">LOW</span>`;
+          severityBadgeHtml = `<span style="background-color: #16a34a; color: #ffffff; border: 1px solid #16a34a; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">LOW</span>`;
         } else {
-          severityBadgeHtml = `<span class="badge" style="background-color: #dcfce7; color: #15803d !important; border: 1px solid #86efac; font-weight: 700; padding: 3px 8px; border-radius: 4px; display: inline-block;">UNASSESSED</span>`;
+          severityBadgeHtml = `<span style="background-color: #ecfdf5; color: #047857; border: 1px solid #34d399; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">UNASSESSED</span>`;
         }
 
         const status = report.status || 'Pending';
@@ -3249,7 +3335,7 @@ function loadAdminReports() {
           <td>${barangayDisplay}</td>
           <td><b>${roadId}</b></td>
           <td>${roadName}</td>
-          <td>${severityBadgeHtml}</td>
+          <td style="text-align: center; white-space: nowrap;">${severityBadgeHtml}</td>
           <td>${dateSubmitted}</td>
           <td>${statusHtml}</td>
           <td>${buttonHtml}</td>
@@ -3284,6 +3370,7 @@ let currentReviewReportId = null;
 
 // Ensure it runs when the script loads
 loadAdminReports();
+
 // ==========================================
 // ADMIN DASHBOARD: OPEN REVIEW MODAL
 // ==========================================
@@ -3297,7 +3384,7 @@ function reviewReport(reportId) {
   // 2. Unhide the modal
   modal.classList.remove('hidden');
 
-  // 3. 🚀 THE BULLETPROOF SCROLL RESET (Fixes the stuck scroll bug 100% of the time)
+  // 3. 🚀 THE BULLETPROOF SCROLL RESET
   setTimeout(() => {
     const modalBody = modal.querySelector('.modal-body');
     const modalContent = modal.querySelector('.modal-content');
@@ -3313,69 +3400,82 @@ function reviewReport(reportId) {
   // Temporary loading text
   document.getElementById('modal-header-id').textContent = `#RPT-${String(reportId).padStart(4, '0')} (Loading...)`;
 
-  // 🚀 FIXED: Now using apiFetch to bypass ngrok!
+  // 🚀 API Fetch Call
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
-      // 2. Format basic data
       const formattedId = `#RPT-${String(report.id).padStart(4, '0')}`;
-      const severity = report.severity || 'Unassessed';
-      const severityClass = severity.toLowerCase() === 'high' ? 'high' :
-        severity.toLowerCase() === 'medium' ? 'medium' :
-          severity.toLowerCase() === 'low' ? 'low' : 'secondary';
 
-      // ⬇️ SAVE THE COORDINATES FOR THE MAP BUTTON ⬇️
-      currentReviewLat = report.latitude;
-      currentReviewLng = report.longitude;
+      // ⬇️ SAVE NUMERIC COORDINATES (parseFloat prevents blank map tile failure) ⬇️
+      currentReviewLat = parseFloat(report.latitude) || 0;
+      currentReviewLng = parseFloat(report.longitude) || 0;
 
-      // 3. Inject text into the HTML IDs
+      // Inject text into the HTML IDs
       document.getElementById('modal-header-id').textContent = formattedId;
       document.getElementById('modal-report-id').textContent = formattedId;
 
+      // ========================================================
+      // 🚀 ENHANCED: UNIFIED SEVERITY BADGE (MINT UNASSESSED)
+      // ========================================================
+      const rawSev = String(report.severity || '').trim().toLowerCase();
       const severityBadge = document.getElementById('modal-severity');
-      severityBadge.textContent = severity;
-      severityBadge.className = `badge ${severityClass}`;
+
+      if (severityBadge) {
+        if (rawSev === 'high') {
+          severityBadge.textContent = 'HIGH';
+          severityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #dc2626; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+        } else if (rawSev === 'medium') {
+          severityBadge.textContent = 'MEDIUM';
+          severityBadge.style.cssText = 'background-color: #ffc107; color: #000000; border: 1px solid #eab308; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+        } else if (rawSev === 'low') {
+          severityBadge.textContent = 'LOW';
+          severityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #16a34a; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+        } else {
+          // Standard Mint-Green UNASSESSED Badge
+          severityBadge.textContent = 'UNASSESSED';
+          severityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1px solid #34d399; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+        }
+      }
 
       document.getElementById('modal-date').textContent = report.dateSubmitted || 'N/A';
-      document.getElementById('modal-gps').textContent = `${report.latitude || 0}° N, ${report.longitude || 0}° E`;
+      document.getElementById('modal-gps').textContent = (currentReviewLat !== 0 && currentReviewLng !== 0)
+        ? `${currentReviewLat}° N, ${currentReviewLng}° E`
+        : '0° N, 0° E';
       document.getElementById('modal-barangay').textContent = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
 
-      // ========================================================
-      // 🚀 THE FIX: Inject the Real Submitter Name here!
-      // ========================================================
+      // Inject Submitter Name
       let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
       if (report.user && report.user.firstName && report.user.lastName) {
         submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
       } else if (report.reportedBy) {
         submitterText = report.reportedBy;
       }
-
-      // Make sure 'modal-report-by' is the ID in your admin_dashboard.html!
       const reportByEl = document.getElementById('modal-report-by');
       if (reportByEl) reportByEl.textContent = submitterText;
-      // ========================================================
 
+      // Road Details (Passing parsed numbers only so HTML units don't duplicate)
       document.getElementById('modal-road-name').textContent = report.cityRoadName || 'N/A';
       document.getElementById('modal-road-id').textContent = report.cityRoadId || 'N/A';
       document.getElementById('modal-importance').textContent = report.roadImportance || 'N/A';
       document.getElementById('modal-terrain').textContent = report.terrainType || 'N/A';
       document.getElementById('modal-road-type').textContent = report.roadType || 'N/A';
 
-      document.getElementById('modal-length').textContent = report.length || 0;
-      document.getElementById('modal-width').textContent = report.width || 0;
-      document.getElementById('modal-culverts').textContent = report.lengthOfCulverts || 0;
+      document.getElementById('modal-length').textContent = parseFloat(report.length) || 0;
+      document.getElementById('modal-width').textContent = parseFloat(report.width) || 0;
+      document.getElementById('modal-culverts').textContent = parseFloat(report.lengthOfCulverts) || 0;
       document.getElementById('modal-bridges').textContent = report.numberOfBridges || 0;
+
       document.getElementById('modal-damage-type').textContent = report.damageType || 'None';
-      document.getElementById('modal-damage-length').textContent = report.damageLength || 0;
-      document.getElementById('modal-damage-width').textContent = report.damageWidth || 0;
+      document.getElementById('modal-damage-length').textContent = parseFloat(report.damageLength) || 0;
+      document.getElementById('modal-damage-width').textContent = parseFloat(report.damageWidth) || 0;
 
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
-      // 4. Handle the Image Upload Display
-      // 🚀 FIXED: Securely load image
+      // Handle Image Display
       const placeholderEl = document.getElementById('modal-damage-image');
-      if (placeholderEl) placeholderEl.style.display = 'none'; // Hide until loaded
-      loadSecureImage('modal-damage-image', report.damageImage);
-
+      if (placeholderEl) placeholderEl.style.display = 'none';
+      if (typeof loadSecureImage === 'function') {
+        loadSecureImage('modal-damage-image', report.damageImage);
+      }
     })
     .catch(error => {
       console.error("Error:", error);
@@ -3391,102 +3491,111 @@ window.closeReviewModal = function() {
   if (modal) {
     modal.classList.add('hidden');
   }
+  const mapContainer = document.getElementById('admin-review-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
 };
 
 // ==========================================
 // ADMIN DASHBOARD: LOCATE ON MAP BUTTON
 // ==========================================
-const btnLocateMap = document.getElementById('btn-admin-locate-map');
-if (btnLocateMap) {
-  btnLocateMap.addEventListener('click', function() {
-    const mapContainer = document.getElementById('admin-review-map-container');
+function toggleAdminReviewMap() {
+  const mapContainer = document.getElementById('admin-review-map-container');
+  if (!mapContainer) return;
 
-    // Safety check: Did the Barangay Official actually provide GPS coordinates?
-    if (!currentReviewLat || !currentReviewLng || (currentReviewLat === 0 && currentReviewLng === 0)) {
+  // 🛡️ Safety Check with showToast
+  if (!currentReviewLat || !currentReviewLng || (currentReviewLat === 0 && currentReviewLng === 0)) {
+    if (typeof showToast === 'function') {
+      showToast("No GPS coordinates were provided for this report.", "warning");
+    } else {
       alert("No GPS coordinates were provided for this report.");
+    }
+    return;
+  }
+
+  // Toggle the map open/closed
+  if (mapContainer.style.display === 'none' || mapContainer.style.display === '') {
+    mapContainer.style.display = 'block';
+
+    if (typeof L === 'undefined') {
+      console.error("Leaflet library (L) is not loaded.");
       return;
     }
 
-    // Toggle the map open/closed
-    if (mapContainer.style.display === 'none') {
-      mapContainer.style.display = 'block';
+    // Custom Red Pin
+    const redIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
 
+    if (!adminReviewMap) {
+      adminReviewMap = L.map('admin-review-map').setView([currentReviewLat, currentReviewLng], 17);
 
-      // Define a custom Red Icon for damages
-      const redIcon = new L.Icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
-      });
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+      }).addTo(adminReviewMap);
 
-      // If the map hasn't been built yet, build it!
-      if (!adminReviewMap) {
-        adminReviewMap = L.map('admin-review-map').setView([currentReviewLat, currentReviewLng], 17);
-        // Switch to Esri World Imagery (Satellite View)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        }).addTo(adminReviewMap);
-
-        // Drop the RED pin!
-        adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], {icon: redIcon}).addTo(adminReviewMap);
-      } else {
-        // If the map is already built, move the camera, update the pin location, AND ensure it stays red
-        adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
-        adminReviewMarker.setLatLng([currentReviewLat, currentReviewLng]);
-        adminReviewMarker.setIcon(redIcon);
-      }
-
-      // CRUCIAL LEAFLET TRICK: Leaflet breaks if loaded inside a hidden div.
-      // We must tell it to recalculate its size a fraction of a second after we unhide it.
-      setTimeout(() => {
-        adminReviewMap.invalidateSize();
-      }, 200);
-
+      adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon }).addTo(adminReviewMap);
     } else {
-      // Close the map if they click the button again
-      mapContainer.style.display = 'none';
+      adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
+      adminReviewMarker.setLatLng([currentReviewLat, currentReviewLng]);
+      adminReviewMarker.setIcon(redIcon);
     }
-  });
+
+    // Forces Leaflet to recalculate container bounds and render tiles immediately
+    setTimeout(() => {
+      adminReviewMap.invalidateSize();
+    }, 150);
+
+  } else {
+    mapContainer.style.display = 'none';
+  }
+}
+
+// Bind both global function and event listener
+window.toggleAdminReviewMap = toggleAdminReviewMap;
+
+const btnLocateMap = document.getElementById('btn-admin-locate-map');
+if (btnLocateMap) {
+  btnLocateMap.onclick = toggleAdminReviewMap;
 }
 // ==========================================
-// BARANGAY DASHBOARD: FETCH REAL DATA (SAFE UI)
+// 🚀 BARANGAY DASHBOARD: REAL DATA ENGINE & RENDERER
 // ==========================================
+let rawBarangayReports = [];
 let severityChartInstance = null;
 
-// 🧠 NEW: Progress Bar Logic (Fail-Safe Version)
+// 🧠 1. Progress Bar Logic (Fail-Safe Version)
 function calculateJurisdictionProgress(barangayId, reports) {
-  // 1. Calculate how many UNIQUE roads have been inspected
-  const inspectedRoadNames = new Set(reports.map(r => r.cityRoadName).filter(name => name));
+  const inspectedRoadNames = new Set(
+    reports
+      .map(r => r.cityRoadName)
+      .filter(name => name && String(name).trim() !== '')
+  );
   const inspectedCount = inspectedRoadNames.size;
 
-  // 2. Fetch total assigned roads for this specific barangay from the database
-  // 🚀 FIXED: Now using apiFetch to bypass ngrok!
-  apiFetch(`/api/roads`)
-    .then(allRoads => {
-      if (!Array.isArray(allRoads)) {
-        throw new Error("API did not return a valid array of roads.");
-      }
-
-      // Filter roads to only count ones belonging to this official's barangay
-      const barangayRoads = allRoads.filter(road => road.barangay && String(road.barangay.id) === String(barangayId));
-      const totalRoads = barangayRoads.length;
-
-      // Fallback: If DB has no roads assigned yet, use the inspected count
-      const displayTotal = totalRoads > 0 ? totalRoads : Math.max(inspectedCount, 1);
-
-      updateProgressBarUI(inspectedCount, displayTotal);
-    })
-    .catch(err => {
-      console.warn("Notice: Roads API unavailable or empty. Defaulting to dynamic quota.", err);
-      const displayTotal = Math.max(inspectedCount, 1);
-      updateProgressBarUI(inspectedCount, displayTotal);
-    });
+  if (typeof apiFetch === 'function') {
+    apiFetch(`/api/roads`)
+      .then(allRoads => {
+        if (!Array.isArray(allRoads)) throw new Error("Invalid roads array");
+        const barangayRoads = allRoads.filter(road => road.barangay && String(road.barangay.id) === String(barangayId));
+        const totalRoads = barangayRoads.length;
+        const displayTotal = totalRoads > 0 ? totalRoads : Math.max(inspectedCount, 1);
+        updateProgressBarUI(inspectedCount, displayTotal);
+      })
+      .catch(() => {
+        const displayTotal = Math.max(inspectedCount, 1);
+        updateProgressBarUI(inspectedCount, displayTotal);
+      });
+  } else {
+    const displayTotal = Math.max(inspectedCount, 1);
+    updateProgressBarUI(inspectedCount, displayTotal);
+  }
 }
 
-// 🎨 Helper function to update the HTML cleanly
 function updateProgressBarUI(inspectedCount, displayTotal) {
   let percentage = Math.round((inspectedCount / displayTotal) * 100);
   if (percentage > 100) percentage = 100;
@@ -3496,158 +3605,246 @@ function updateProgressBarUI(inspectedCount, displayTotal) {
   const barFill = document.getElementById('progress-bar-fill');
 
   if (progressText && progressPercent && barFill) {
-    progressText.innerHTML = `<strong>${inspectedCount}</strong> out of <strong>${displayTotal}</strong> assigned roads inspected this month.`;
+    progressText.innerHTML = `<strong>${inspectedCount}</strong> out of <strong>${displayTotal}</strong> assigned roads inspected.`;
     progressPercent.innerText = `${percentage}%`;
     barFill.style.width = `${percentage}%`;
 
-    // Turn the bar Green if they reach 100% quota
     if (percentage === 100) {
-      barFill.style.background = 'linear-gradient(90deg, #28a745, #34ce57)'; // Green
-      progressPercent.style.color = '#28a745';
+      barFill.style.background = 'linear-gradient(90deg, #16a34a, #22c55e)';
+      progressPercent.style.color = '#16a34a';
     } else {
-      barFill.style.background = 'linear-gradient(90deg, #007bff, #00d2ff)'; // Blue
-      progressPercent.style.color = '#007bff';
+      barFill.style.background = 'linear-gradient(90deg, #2563eb, #38bdf8)';
+      progressPercent.style.color = '#2563eb';
     }
   }
 }
 
+// 📋 2. Main Report Loader
 function loadBarangayReports(barangayId) {
   const listContainer = document.getElementById('barangay-report-list');
   if (!listContainer) return;
 
-  listContainer.innerHTML = "<p style='text-align:center; padding: 20px;'>Loading your reports...</p>";
+  listContainer.innerHTML = `
+    <div style="text-align: center; padding: 40px; color: #64748b;">
+      <div style="font-size: 24px; margin-bottom: 8px;">⏳</div>
+      Loading barangay inspection records...
+    </div>
+  `;
 
-  // 🚀 Replaced standard fetch with your new wrapper
   apiFetch(`/api/reports/barangay/${barangayId}`)
     .then(reports => {
-      // 🚀 TRIGGER THE PROGRESS BAR MATH
-      calculateJurisdictionProgress(barangayId, reports);
+      rawBarangayReports = Array.isArray(reports) ? reports : [];
+      calculateJurisdictionProgress(barangayId, rawBarangayReports);
 
-      if (reports.length === 0) {
-        listContainer.innerHTML = "<p style='text-align:center; padding: 20px;'>No reports found for your area.</p>";
+      if (rawBarangayReports.length === 0) {
+        listContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; color: #64748b;">
+            <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
+            <strong>No road reports submitted yet.</strong>
+            <p style="font-size: 13px; margin: 4px 0 0 0;">Click "New Report" above to submit your first inspection.</p>
+          </div>
+        `;
+        document.getElementById('metric-total').innerText = '0';
+        document.getElementById('metric-pending').innerText = '0';
+        document.getElementById('metric-validated').innerText = '0';
+        document.getElementById('metric-rejected').innerText = '0';
+        updateSeverityChart([0, 0, 0]);
         return;
       }
 
-      // ==========================================
-      // 🚀 BARANGAY SORTING: "ACTION REQUIRED" FIRST
-      // ==========================================
-      reports.sort((a, b) => {
+      // Sort Priority: Action Required (Rejected) at top, tie-break with newest date
+      rawBarangayReports.sort((a, b) => {
         const getPriority = (status) => {
           const s = String(status || '').toLowerCase();
-
-          if (s.includes('reject')) return 1; // 🔴 TIER 1: Needs immediate editing! (Top)
-          if (s.includes('pending') || s.includes('resubmit')) return 2; // 🟡 TIER 2: Waiting for Admin
-          if (s.includes('validate') || s.includes('dispatch') || s.includes('progress')) return 3; // 🔵 TIER 3: Approved & active
-          return 4; // 🟢 TIER 4: Completed/Closed (Bottom)
+          if (s.includes('reject')) return 1;
+          if (s.includes('pending') || s.includes('resubmit')) return 2;
+          if (s.includes('validate') || s.includes('dispatch') || s.includes('progress')) return 3;
+          return 4;
         };
 
         const priorityA = getPriority(a.status);
         const priorityB = getPriority(b.status);
 
-        if (priorityA !== priorityB) {
-          return priorityA - priorityB;
-        }
+        if (priorityA !== priorityB) return priorityA - priorityB;
 
-        // Tie-breaker: Newest first
-        const dateA = new Date(a.date_submitted || a.dateSubmitted || 0);
-        const dateB = new Date(b.date_submitted || b.dateSubmitted || 0);
+        const dateA = new Date(a.date_submitted || a.dateSubmitted || a.createdAt || 0);
+        const dateB = new Date(b.date_submitted || b.dateSubmitted || b.createdAt || 0);
         return dateB - dateA;
       });
 
+      // KPI Metrics Math
       let pending = 0, validated = 0, rejected = 0;
       let highSev = 0, medSev = 0, lowSev = 0;
 
-      // 🚀 BEST PRACTICE: Build a single HTML string
-      let allRowsHtml = "";
+      rawBarangayReports.forEach(r => {
+        const s = String(r.status || '').toLowerCase();
+        if (s.includes('reject')) rejected++;
+        else if (s.includes('validate') || s.includes('dispatch') || s.includes('progress') || s.includes('completed')) validated++;
+        else pending++;
 
-      reports.forEach(report => {
-        // Safely count statuses even if the backend returns "Pending Validation"
-        const sLower = String(report.status || '').toLowerCase();
-        if (sLower.includes('pending') || sLower.includes('resubmit')) pending++;
-        else if (sLower.includes('validate') || sLower.includes('dispatch') || sLower.includes('progress')) validated++;
-        else if (sLower.includes('reject')) rejected++;
-
-        if (report.severity === "High") highSev++;
-        else if (report.severity === "Medium") medSev++;
-        else if (report.severity === "Low") lowSev++;
-
-        let badgeClass = "bd-badge-pending";
-        if (sLower.includes("validate") || sLower.includes("dispatch") || sLower.includes("progress")) badgeClass = "bd-badge-validated";
-        if (sLower.includes("reject")) badgeClass = "bd-badge-rejected";
-
-        // Handle Resubmitted UI specific to Barangay
-        let displayStatus = report.status;
-        if (sLower.includes("resubmit")) {
-          badgeClass = "bd-badge-pending"; // keep it looking like pending, but add a warning icon
-          displayStatus = "⚠️ Resubmitted";
-        }
-
-        let dateStr = new Date(report.date_submitted || report.dateSubmitted).toLocaleDateString();
-
-        let rowHtml = `
-                <div class="bd-list-item">
-                  <div class="bd-item-image">
-    <img id="brgy-preview-img-${report.id}"
-         src="https://placehold.co/300x200/png?text=Loading..."
-         alt="Report Image"
-         onclick="openFullscreenImage(this)"> </div>
-                  <div class="bd-item-details">
-                    <div>
-                      <div class="bd-item-title">${report.cityRoadName || 'Unknown Road'} Inspection</div>
-                      <div class="bd-item-meta">
-                        <span>📍 Brgy. ID: ${report.barangay ? report.barangay.id : 'N/A'}</span>
-                        <span>📅 ${dateStr}</span>
-                      </div>
-                    </div>
-                    ${sLower.includes('reject') && report.adminRemarks ? `
-                    <div class="bd-feedback-box"><strong style="color: #dc3545;">Admin Note:</strong> ${report.adminRemarks}</div>
-                    ` : `<p style="font-size: 13px; color: #666; margin-top: 5px;">${report.damageDescription || 'No damage reported.'}</p>`}
-                  </div>
-                 <div class="bd-item-actions">
-                  <div class="bd-status-badge ${badgeClass}">${displayStatus}</div>
-
-                  ${sLower.includes('reject') ? `
-                    <button class="bd-btn-action" style="background-color: #dc3545;" onclick="openEditModal(${report.id})">Edit & Resubmit</button>
-                  ` : `
-                    <button class="bd-btn-action" style="background-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>
-                  `}
-                </div>
-                </div>`;
-
-        allRowsHtml += rowHtml;
+        const sev = String(r.severity || '').toLowerCase();
+        if (sev === 'high') highSev++;
+        else if (sev === 'medium') medSev++;
+        else if (sev === 'low') lowSev++;
       });
 
-      // 1. Inject all the HTML into the page at once
-      listContainer.innerHTML = allRowsHtml;
-
-      // 🚀 2. Load secure images
-      reports.forEach(report => {
-        loadSecureImage(`brgy-preview-img-${report.id}`, report.damageImage);
-      });
-
-      // Update Metrics
-      document.getElementById('metric-total').innerText = reports.length;
+      document.getElementById('metric-total').innerText = rawBarangayReports.length;
       document.getElementById('metric-pending').innerText = pending;
       document.getElementById('metric-validated').innerText = validated;
       document.getElementById('metric-rejected').innerText = rejected;
 
-      // Update Chart
       updateSeverityChart([highSev, medSev, lowSev]);
-
-      // 🚀 THE FIX: Re-apply the search/filter just in case data was reloaded!
-      if (typeof window.filterBarangayReports === 'function') window.filterBarangayReports();
-
+      renderFilteredCards(rawBarangayReports);
     })
     .catch(error => {
       console.error("Error loading reports:", error);
-      listContainer.innerHTML = "<p style='text-align:center; padding: 20px; color: red;'>Failed to load reports. Please try again.</p>";
+      listContainer.innerHTML = `
+        <div style="text-align: center; padding: 30px; background: #ffffff; border-radius: 10px; border: 1px solid #fecaca; color: #dc2626;">
+          ⚠️ Failed to load reports. Please check your network connection.
+        </div>
+      `;
     });
 }
 
+// 🎨 3. Render Report Cards Function
+function renderFilteredCards(reportsList) {
+  const listContainer = document.getElementById('barangay-report-list');
+  if (!listContainer) return;
+
+  if (reportsList.length === 0) {
+    listContainer.innerHTML = `
+      <div style="text-align: center; padding: 35px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; color: #64748b;">
+        No inspection records match your search filter.
+      </div>
+    `;
+    return;
+  }
+
+  const defaultBarangayName = sessionStorage.getItem("barangayName") || "Barangay Jurisdiction";
+
+  listContainer.innerHTML = reportsList.map(report => {
+    const sLower = String(report.status || '').toLowerCase();
+    const prjId = `#PRJ-${String(report.id).padStart(4, '0')}`;
+    const roadName = report.cityRoadName || 'Unnamed Road Segment';
+
+    // Clean Barangay Name Resolution (No raw ID: 24)
+    const brgyName = report.barangay?.barangayName || report.barangay?.name || defaultBarangayName;
+
+    // Date formatting
+    const rawDate = report.date_submitted || report.dateSubmitted || report.createdAt;
+    const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently';
+
+    // Damage & Severity Tags
+    const damageType = report.damageType || 'General Inspection';
+    const severity = report.severity || 'Pending AI';
+    let sevBadgeColor = '#64748b';
+    if (severity === 'High') sevBadgeColor = '#dc2626';
+    else if (severity === 'Medium') sevBadgeColor = '#d97706';
+    else if (severity === 'Low') sevBadgeColor = '#16a34a';
+
+    // Status Badge & Action Configuration
+    let badgeClass = 'bd-badge-pending';
+    let badgeLabel = 'Under Review';
+    let actionBtnHtml = `<button class="bd-btn-card-action bd-btn-view" onclick="openViewModal(${report.id})">View Details</button>`;
+
+    if (sLower.includes('reject')) {
+      badgeClass = 'bd-badge-rejected';
+      badgeLabel = 'Action Required';
+      actionBtnHtml = `<button class="bd-btn-card-action bd-btn-edit" onclick="openEditModal(${report.id})">✏️ Edit & Resubmit</button>`;
+    } else if (sLower.includes('resubmit')) {
+      badgeClass = 'bd-badge-pending';
+      badgeLabel = 'Resubmitted';
+    } else if (sLower.includes('validate') || sLower.includes('dispatch') || sLower.includes('progress') || sLower.includes('completed')) {
+      badgeClass = 'bd-badge-validated';
+      badgeLabel = sLower.includes('progress') ? 'In Progress' : (sLower.includes('completed') ? 'Completed' : 'Validated');
+    }
+
+    return `
+      <div class="bd-card-item">
+        <!-- Thumbnail -->
+        <div class="bd-card-image-box">
+          <img id="brgy-preview-img-${report.id}"
+               src="https://placehold.co/280x210/png?text=Loading+Photo..."
+               alt="Road Inspection"
+               onclick="openFullscreenImage(this)">
+        </div>
+
+        <!-- Details -->
+        <div class="bd-card-body">
+          <div class="bd-card-header-row">
+            <span class="bd-prj-tag">${prjId}</span>
+            <span class="bd-card-title">${roadName}</span>
+          </div>
+
+          <div class="bd-card-meta">
+            <span>📍 <strong>${brgyName}</strong></span>
+            <span>📅 ${dateStr}</span>
+            <span>⚠️ <strong style="color: ${sevBadgeColor};">${severity}</strong></span>
+            <span>🛠️ ${damageType}</span>
+          </div>
+
+          ${sLower.includes('reject') && report.adminRemarks ? `
+            <div class="bd-card-note-box">
+              <strong>💬 CPDO Feedback:</strong> ${escapeHtml(report.adminRemarks)}
+            </div>
+          ` : `
+            <div style="font-size: 12.5px; color: #64748b; line-height: 1.4;">
+              ${escapeHtml(report.damageDescription || 'Road assessment submitted and logged into central inventory.')}
+            </div>
+          `}
+        </div>
+
+        <!-- Action / Status Block -->
+        <div class="bd-card-actions">
+          <div class="bd-badge ${badgeClass}">${badgeLabel}</div>
+          ${actionBtnHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Securely load damage photos
+  reportsList.forEach(report => {
+    if (typeof loadSecureImage === 'function') {
+      loadSecureImage(`brgy-preview-img-${report.id}`, report.damageImage);
+    }
+  });
+}
+
+// 🔍 4. Search and Status Filter Controller
+window.filterBarangayReports = function() {
+  const query = (document.getElementById('report-search-bar')?.value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('report-status-filter')?.value || 'All';
+
+  const filtered = rawBarangayReports.filter(r => {
+    const prjId = `#prj-${String(r.id).padStart(4, '0')}`.toLowerCase();
+    const road = String(r.cityRoadName || '').toLowerCase();
+    const damage = String(r.damageType || '').toLowerCase();
+    const desc = String(r.damageDescription || '').toLowerCase();
+    const s = String(r.status || '').toLowerCase();
+
+    const matchesQuery = !query || road.includes(query) || prjId.includes(query) || damage.includes(query) || desc.includes(query);
+
+    let matchesStatus = true;
+    if (statusFilter === 'Rejected') matchesStatus = s.includes('reject');
+    else if (statusFilter === 'Pending') matchesStatus = s.includes('pending') || s.includes('resubmit');
+    else if (statusFilter === 'Validated') matchesStatus = s.includes('validate') || s.includes('dispatch') || s.includes('progress') || s.includes('completed');
+
+    return matchesQuery && matchesStatus;
+  });
+
+  renderFilteredCards(filtered);
+};
+
+// 📊 5. Chart.js Doughnut Initializer
 function updateSeverityChart(dataArray) {
   const canvasId = 'severityChart';
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
+
+  if (severityChartInstance) {
+    severityChartInstance.destroy();
+  }
 
   let existingChart = Chart.getChart(canvasId);
   if (existingChart) existingChart.destroy();
@@ -3655,96 +3852,54 @@ function updateSeverityChart(dataArray) {
   const totalSeverity = dataArray.reduce((a, b) => a + b, 0);
   const isEmpty = totalSeverity === 0;
 
-  new Chart(ctx, {
+  severityChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels: isEmpty ? ['Pending AI Assessment'] : ['High', 'Medium', 'Low'],
       datasets: [{
         data: isEmpty ? [1] : dataArray,
-        backgroundColor: isEmpty ? ['#e9ecef'] : ['#dc3545', '#f0ad4e', '#28a745'],
-        borderWidth: 0
+        backgroundColor: isEmpty ? ['#e2e8f0'] : ['#dc2626', '#f59e0b', '#16a34a'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom' },
+        legend: {
+          position: 'bottom',
+          labels: {
+            boxWidth: 10,
+            font: { size: 11, weight: '600' },
+            padding: 10
+          }
+        },
         tooltip: { enabled: !isEmpty }
       },
-      cutout: '70%'
+      cutout: '72%'
     }
   });
 }
-// ==========================================
-// SMART DASHBOARD LOADER (AUTO-REFRESHING)
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
 
-  // 1. BARANGAY DASHBOARD LOGIC
-  if (document.getElementById('barangay-report-list')) {
-    const storedBarangayId = sessionStorage.getItem("barangayId");
-    if (!storedBarangayId) {
-      alert("Security Check: You must log in first!");
-      window.location.href = "login.html";
-      return;
-    }
-
-    // Initial Load when logging in
-    console.log("Welcome! Loading reports for Barangay ID: " + storedBarangayId);
-    loadBarangayReports(storedBarangayId);
-
-    // 🚀 THE NAVIGATION FIX (Mutation Observer)
-    // Watches the Barangay Dashboard. Every time you click the "Dashboard" sidebar button, it refreshes!
-    const brgyDashboardSection = document.getElementById('view-dashboard');
-    if (brgyDashboardSection) {
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName === 'class') {
-            if (!brgyDashboardSection.classList.contains('hidden')) {
-              // Destroy old chart before reloading to prevent glitches
-              if (severityChartInstance) severityChartInstance.destroy();
-              loadBarangayReports(storedBarangayId);
-            }
-          }
-        });
-      });
-      observer.observe(brgyDashboardSection, { attributes: true });
-    }
-  }
-
-});
-
-// ==========================================
-// BULLETPROOF CLOSE FUNCTION
-// ==========================================
+// 6. View & Edit Modals Controller
 function closeBdModals() {
   const viewModal = document.getElementById('bd-view-modal');
   const editModal = document.getElementById('bd-edit-modal');
-
-  if (viewModal !== null) {
-    viewModal.classList.remove('active');
-  }
-  if (editModal !== null) {
-    editModal.classList.remove('active');
-  }
+  if (viewModal !== null) viewModal.classList.remove('active');
+  if (editModal !== null) editModal.classList.remove('active');
 }
 
-// 1. OPEN VIEW MODAL (DETAILED GRID)
 function openViewModal(reportId) {
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
-      // Header
       document.getElementById('view-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
-
-      // Status Badge
       const statusBadge = document.getElementById('view-modal-status');
       statusBadge.innerText = report.status;
       statusBadge.className = "bd-status-badge " +
         (report.status === 'Validated' ? 'bd-badge-validated' :
           (report.status === 'Rejected' ? 'bd-badge-rejected' : 'bd-badge-pending'));
 
-      // Overview Section
       document.getElementById('view-modal-severity').innerText = report.severity || "🤖 Pending AI";
       document.getElementById('view-modal-severity').style.color =
         report.severity === 'High' ? '#dc3545' : (report.severity === 'Medium' ? '#f0ad4e' : '#6c757d');
@@ -3752,7 +3907,6 @@ function openViewModal(reportId) {
       document.getElementById('view-modal-gps').innerText =
         (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not provided";
 
-      // Road Details Section
       document.getElementById('view-modal-road-name').innerText = report.cityRoadName || "N/A";
       document.getElementById('view-modal-road-id').innerText = report.cityRoadId || "N/A";
       document.getElementById('view-modal-importance').innerText = report.roadImportance || "N/A";
@@ -3766,12 +3920,9 @@ function openViewModal(reportId) {
       document.getElementById('view-modal-damage-type').innerText = report.damageType || "None";
       document.getElementById('view-modal-damage-length').innerText = report.damageLength || "0";
       document.getElementById('view-modal-damage-width').innerText = report.damageWidth || "0";
-      // Damage Evidence Section
       document.getElementById('view-modal-desc').innerText = report.damageDescription || "No description provided.";
 
-      // 🚀 FIXED: Securely load image (bypasses Ngrok/CORS)
       loadSecureImage('view-modal-img', report.damageImage);
-      // Feedback Section
       const feedbackBox = document.getElementById('view-modal-feedback');
       if (report.adminRemarks) {
         feedbackBox.style.display = "block";
@@ -3780,25 +3931,17 @@ function openViewModal(reportId) {
         feedbackBox.style.display = "none";
       }
 
-      // Finally, show the modal!
       const viewModal = document.getElementById('bd-view-modal');
       viewModal.classList.add('active');
-
-      // 🚀 THE FIX: Scroll the View Modal back to the top
       const viewModalBody = viewModal.querySelector('.bd-modal-body');
-      if (viewModalBody) {
-        viewModalBody.scrollTop = 0;
-      }
+      if (viewModalBody) viewModalBody.scrollTop = 0;
     })
     .catch(err => {
       console.error(err);
-      showToast("Error loading details.", "error");
+      if (typeof showToast === 'function') showToast("Error loading details.", "error");
     });
 }
 
-// ==========================================
-// 2. OPEN EDIT MODAL (Full Form Replica)
-// ==========================================
 function openEditModal(reportId) {
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
@@ -3806,7 +3949,6 @@ function openEditModal(reportId) {
       document.getElementById('edit-report-id').value = report.id;
       document.getElementById('edit-modal-remarks').innerText = report.adminRemarks || "Please review and fix the details below.";
 
-      // 🔒 LOCKED INPUTS (Using .value because they are now <input disabled>)
       document.getElementById('edit-modal-road-name').value = report.cityRoadName || "N/A";
       document.getElementById('edit-modal-road-id').value = report.cityRoadId || "N/A";
       document.getElementById('edit-modal-importance').value = report.roadImportance || "N/A";
@@ -3814,12 +3956,10 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-terrain').value = report.terrainType || "N/A";
       document.getElementById('edit-modal-severity').value = report.severity || "🤖 Pending AI Assessment";
 
-      // 📍 GPS Text
       document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not Selected";
-
       document.getElementById('edit-latitude').value = report.latitude || "";
       document.getElementById('edit-longitude').value = report.longitude || "";
-      // ✏️ EDITABLE NUMBER INPUTS
+
       document.getElementById('edit-modal-length').value = report.length || "";
       document.getElementById('edit-modal-width').value = report.width || "";
       document.getElementById('edit-modal-culverts').value = report.lengthOfCulverts || "";
@@ -3828,7 +3968,6 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-damage-length').value = report.damageLength || "";
       document.getElementById('edit-modal-damage-width').value = report.damageWidth || "";
 
-      // Check if the saved damage type is one of the standard options, otherwise put it in "Other"
       const standardTypes = ["Pothole", "Surface Cracking", "Edge Deformation", "Washout/Sinkhole", "None"];
       const savedType = report.damageType || "None";
 
@@ -3841,45 +3980,33 @@ function openEditModal(reportId) {
         otherInput.value = savedType;
         otherInput.classList.remove('hidden');
       }
-      // ✏️ EDITABLE DESCRIPTION & IMAGE
       document.getElementById('edit-modal-desc').value = report.damageDescription || "";
-
-      // 🚀 FIXED: Securely load image (bypasses Ngrok/CORS)
       loadSecureImage('edit-modal-current-img', report.damageImage);
 
-      // Clear old file inputs
       document.getElementById('edit-modal-img').value = "";
       document.getElementById('edit-modal-filename').innerText = "";
 
-      // Finally, show the edit modal!
       const editModal = document.getElementById('bd-edit-modal');
       editModal.classList.add('active');
-
-      // 🚀 THE FIX: Scroll the Edit Modal back to the top
       const editModalBody = editModal.querySelector('.bd-modal-body');
-      if (editModalBody) {
-        editModalBody.scrollTop = 0;
-      }
+      if (editModalBody) editModalBody.scrollTop = 0;
     })
-    .catch(err => showToast("Error loading report.", "error"));
+    .catch(err => {
+      if (typeof showToast === 'function') showToast("Error loading report.", "error");
+    });
 }
 
-// ==========================================
-// 3. SUBMIT THE FULLY EDITED REPORT
-// ==========================================
 function submitEditedReport() {
   const reportId = document.getElementById('edit-report-id').value;
   const fileInput = document.getElementById('edit-modal-img');
 
   if (fileInput.files.length > 0 && fileInput.files[0].size > 5 * 1024 * 1024) {
-    showToast("File is too large! Must be under 5MB.", "error");
+    if (typeof showToast === 'function') showToast("File is too large! Must be under 5MB.", "error");
     return;
   }
 
   const formData = new FormData();
   formData.append("damageDescription", document.getElementById('edit-modal-desc').value);
-
-  // ⬇️ Attach all the new editable numbers!
   formData.append("length", document.getElementById('edit-modal-length').value);
   formData.append("width", document.getElementById('edit-modal-width').value);
   formData.append("lengthOfCulverts", document.getElementById('edit-modal-culverts').value);
@@ -3897,29 +4024,47 @@ function submitEditedReport() {
   formData.append("damageLength", document.getElementById('edit-modal-damage-length').value || 0);
   formData.append("damageWidth", document.getElementById('edit-modal-damage-width').value || 0);
 
-
   fetch(`${API_BASE_URL}/api/reports/update/${reportId}`, {
     method: 'PUT',
-    headers: {
-      'ngrok-skip-browser-warning': 'true'
-    },
+    headers: { 'ngrok-skip-browser-warning': 'true' },
     body: formData
   })
     .then(response => {
       if (!response.ok) throw new Error("Update failed");
-      showToast("Report successfully updated and resubmitted!", "success");
+      if (typeof showToast === 'function') showToast("Report successfully updated and resubmitted!", "success");
       closeBdModals();
 
       const storedBarangayId = sessionStorage.getItem("barangayId");
       if (storedBarangayId) loadBarangayReports(storedBarangayId);
     })
-    .catch(error => showToast("Error updating report.", "error"));
+    .catch(error => {
+      if (typeof showToast === 'function') showToast("Error updating report.", "error");
+    });
 }
 
-// ==========================================
-// EDIT MODAL: IMAGE PREVIEW LOGIC
-// ==========================================
+// 7. Utilities & Observers
+function escapeHtml(text) {
+  if (!text) return "";
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  const storedBarangayId = sessionStorage.getItem("barangayId");
+  if (!storedBarangayId && document.getElementById('barangay-report-list')) {
+    alert("Security Check: You must log in first!");
+    window.location.href = "login.html";
+    return;
+  }
+
+  if (storedBarangayId && document.getElementById('barangay-report-list')) {
+    loadBarangayReports(storedBarangayId);
+  }
+
   const editImageInput = document.getElementById('edit-modal-img');
   const editImagePreview = document.getElementById('edit-modal-current-img');
   const editFileNameDisplay = document.getElementById('edit-modal-filename');
@@ -3928,28 +4073,46 @@ document.addEventListener("DOMContentLoaded", () => {
     editImageInput.addEventListener('change', function() {
       const file = this.files[0];
       if (file) {
-        // Security Check
-        const maxSizeInMB = 5;
-        if (file.size > maxSizeInMB * 1024 * 1024) {
-          showToast(`File is too large! Please choose an image smaller than ${maxSizeInMB}MB.`, "error");
+        if (file.size > 5 * 1024 * 1024) {
+          if (typeof showToast === 'function') showToast("File is too large! Max 5MB.", "error");
           this.value = "";
-          editFileNameDisplay.textContent = "";
+          if (editFileNameDisplay) editFileNameDisplay.textContent = "";
           return;
         }
-
-        // Show the file name
-        editFileNameDisplay.textContent = "New Selection: " + file.name;
-
-        // Instantly swap the image preview!
+        if (editFileNameDisplay) editFileNameDisplay.textContent = "Selected: " + file.name;
         const reader = new FileReader();
         reader.onload = function(e) {
-          editImagePreview.src = e.target.result;
-        }
+          if (editImagePreview) editImagePreview.src = e.target.result;
+        };
         reader.readAsDataURL(file);
       }
     });
   }
+
+  const brgyDashboardSection = document.getElementById('view-dashboard');
+  if (brgyDashboardSection && storedBarangayId) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class' && !brgyDashboardSection.classList.contains('hidden')) {
+          loadBarangayReports(storedBarangayId);
+        }
+      });
+    });
+    observer.observe(brgyDashboardSection, { attributes: true });
+  }
 });
+
+// ==========================================
+// 🚀 REDIRECT TO ADD REPORT VIEW
+// ==========================================
+window.goToAddReport = function() {
+  const sidebarBtn = document.querySelector('li[data-target="view-reports"]');
+  if (sidebarBtn) {
+    sidebarBtn.click();
+  } else if (typeof switchView === 'function') {
+    switchView('view-reports');
+  }
+};
 
 // ==========================================
 // UNIFIED TOAST NOTIFICATION SYSTEM
@@ -4040,27 +4203,21 @@ function loadRoadsToDropdown() {
   });
 }
 // ==========================================
-// ADMIN DASHBOARD: FETCH REAL DATA (AUTO-REFRESHING)
+// 🚀 CPDO ADMIN DASHBOARD: DATA ENGINE & ANALYTICS
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
 
-  // 1. Load data on the very first login
-  if (document.getElementById('adminComplianceChart')) {
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.getElementById('fresh-admin-queue-body') || document.getElementById('adminComplianceChart')) {
     loadAdminDashboardData();
   }
 
-  // 2. 🚀 THE NAVIGATION FIX (Mutation Observer)
-  // This watches your Admin Dashboard HTML section. Whenever it becomes visible
-  // (meaning the user clicked "Dashboard" in the sidebar), it automatically fetches fresh data!
+  // Live Navigation Observer
   const dashboardSection = document.getElementById('view-admin-dashboard');
   if (dashboardSection) {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          // If the 'hidden' class is removed, the dashboard is on screen!
-          if (!dashboardSection.classList.contains('hidden')) {
-            loadAdminDashboardData();
-          }
+        if (mutation.attributeName === 'class' && !dashboardSection.classList.contains('hidden')) {
+          loadAdminDashboardData();
         }
       });
     });
@@ -4069,128 +4226,246 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function loadAdminDashboardData() {
-  console.log("🚀 [Admin Dashboard] Starting data fetch...");
-
   Promise.all([
     apiFetch(`/api/reports`, { cache: 'no-store' }).catch(err => {
-      console.error("🚨 [Reports API] Failed inside Promise.all:", err);
-      return []; // Return empty so charts don't crash
+      console.error("🚨 [Reports API Error]:", err);
+      return [];
     }),
     apiFetch(`/api/roads`, { cache: 'no-store' }).catch(err => {
-      console.error("🚨 [Roads API] Failed inside Promise.all:", err);
+      console.error("🚨 [Roads API Error]:", err);
       return [];
     })
   ])
     .then(([reports, roads]) => {
-      console.log(`✅ [Admin Dashboard] Success! Fetched ${reports.length} reports and ${roads.length} roads.`);
+      const allReports = Array.isArray(reports) ? reports : [];
+      const allRoads = Array.isArray(roads) ? roads : [];
 
-      const pendingReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending validation');
+      // 1. Filter Categorical Metrics
+      const pendingReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending validation' || String(r.status || '').trim().toLowerCase() === 'resubmitted');
+      const validatedReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'validated');
+      const criticalReports = allReports.filter(r => String(r.severity || '').trim().toLowerCase() === 'high' && String(r.status || '').trim().toLowerCase() !== 'closed');
+      const dispatchedReports = allReports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s === 'dispatched to ceo' || s === 'in progress';
+      });
+      const completedQAReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'completed');
+      const deferredReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending budget');
 
-      console.log(`🔎 [Admin Dashboard] Filter caught ${pendingReports.length} 'Pending Validation' reports.`);
+      // 2. Calculate City-Wide Quota Coverage
+      const uniqueInspectedRoads = new Set(
+        allReports
+          .map(r => r.cityRoadName)
+          .filter(name => name && String(name).trim() !== '')
+      ).size;
 
-      const validatedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'validated');
-      const criticalReports = reports.filter(r => String(r.severity || '').trim().toLowerCase() === 'high' && String(r.status || '').trim().toLowerCase() === 'validated');
-      const dispatchedReports = reports.filter(r => String(r.status || '').trim().toLowerCase() === 'dispatched to ceo');
-
-      const uniqueInspectedRoads = new Set(reports.map(r => r.cityRoadName).filter(name => name)).size;
-      const totalCityRoads = roads.length > 0 ? roads.length : Math.max(uniqueInspectedRoads, 1);
+      const totalCityRoads = allRoads.length > 0 ? allRoads.length : Math.max(uniqueInspectedRoads, 1);
       let quotaPercentage = Math.round((uniqueInspectedRoads / totalCityRoads) * 100);
       if (quotaPercentage > 100) quotaPercentage = 100;
 
-      // Inject Metrics
-      if (document.getElementById('admin-metric-pending')) document.getElementById('admin-metric-pending').innerText = pendingReports.length;
-      if (document.getElementById('admin-metric-quota')) document.getElementById('admin-metric-quota').innerText = `${quotaPercentage}%`;
-      if (document.getElementById('admin-metric-critical')) document.getElementById('admin-metric-critical').innerText = criticalReports.length;
-      if (document.getElementById('admin-metric-validated')) document.getElementById('admin-metric-validated').innerText = validatedReports.length;
-      if (document.getElementById('admin-metric-dispatched')) document.getElementById('admin-metric-dispatched').innerText = dispatchedReports.length;
+      // 3. Inject Progress Banner Data
+      const progressText = document.getElementById('admin-quota-text');
+      const progressPercent = document.getElementById('admin-metric-quota');
+      const barFill = document.getElementById('admin-progress-bar-fill');
 
-      // ==========================================
-      // 🚀 BUILD ACTION QUEUE (FRESH REBUILD)
-      // ==========================================
-      const queueBody = document.getElementById('fresh-admin-queue-body');
+      if (progressText && progressPercent && barFill) {
+        progressText.innerHTML = `<strong>${uniqueInspectedRoads}</strong> of <strong>${totalCityRoads}</strong> total city roads inspected across all barangays.`;
+        progressPercent.innerText = `${quotaPercentage}%`;
+        barFill.style.width = `${quotaPercentage}%`;
 
-      if (!queueBody) {
-        console.error("🚨 [Admin Dashboard] ERROR: Could not find 'fresh-admin-queue-body'!");
-      } else {
-        console.log("✅ [Admin Dashboard] Found Fresh HTML Table. Building rows...");
-
-        queueBody.innerHTML = ''; // Clear out the 'fetching' text
-
-        // 🚀 FIXED: 'b' minus 'a' forces the newest dates to the very top!
-        pendingReports.sort((a, b) => new Date(b.dateSubmitted) - new Date(a.dateSubmitted));
-        const top5Pending = pendingReports.slice(0, 5);
-
-        if (top5Pending.length === 0) {
-          queueBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #666; padding: 20px;">All caught up! No pending reports.</td></tr>`;
+        if (quotaPercentage === 100) {
+          barFill.style.background = 'linear-gradient(90deg, #16a34a, #22c55e)';
+          progressPercent.style.color = '#16a34a';
         } else {
-          top5Pending.forEach(report => {
-            const formatId = `#RPT-${String(report.id).padStart(4, '0')}`;
-            const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-            const dateStr = new Date(report.dateSubmitted).toLocaleDateString();
-
-            const sev = String(report.severity || 'Unassessed').trim();
-            let badgeColor = '#e9ecef', badgeText = '#333';
-            if (sev.toLowerCase() === 'high') { badgeColor = '#ffeeba'; badgeText = '#856404'; }
-            else if (sev.toLowerCase() === 'medium') { badgeColor = '#ffe8a1'; badgeText = '#856404'; }
-            else if (sev.toLowerCase() === 'low') { badgeColor = '#d4edda'; badgeText = '#155724'; }
-
-            // Notice we added inline styles to the <td> elements just to be safe
-            queueBody.innerHTML += `
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding: 12px; color: #333; font-size: 14px;"><strong>${formatId}</strong></td>
-                            <td style="padding: 12px; color: #333; font-size: 14px;">${report.cityRoadName || 'Unnamed Road'}</td>
-                            <td style="padding: 12px; color: #333; font-size: 14px;">${formatBrgy}</td>
-                            <td style="padding: 12px;"><span class="ad-badge" style="background:${badgeColor}; color:${badgeText}; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">${sev}</span></td>
-                            <td style="padding: 12px; color: #333; font-size: 14px;">${dateStr}</td>
-                            <td style="padding: 12px; text-align: center;">
-                                <button onclick="jumpToReportsAndReview(${report.id})" style="background-color: #1c10a3; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 12px;">Review</button>
-                            </td>
-                        </tr>
-                    `;
-          });
-          console.log("✅ [Admin Dashboard] Successfully added rows to the fresh table!");
+          barFill.style.background = 'linear-gradient(90deg, #0b2545, #1e40af)';
+          progressPercent.style.color = '#0b2545';
         }
       }
 
-      renderRealAdminCharts(reports);
+      // 4. Update Dynamic CEO Budget Deferral Alert Banner
+      const deferralBanner = document.getElementById('admin-deferral-banner');
+      const deferralBannerText = document.getElementById('admin-deferral-banner-text');
+      if (deferralBanner) {
+        if (deferredReports.length > 0) {
+          deferralBanner.style.display = 'flex';
+          if (deferralBannerText) {
+            deferralBannerText.innerHTML = `The City Engineering Office has deferred <strong>${deferredReports.length} road repair projects</strong> due to budget constraints. Review remarks and batch-archive to the fiscal backlog.`;
+          }
+        } else {
+          deferralBanner.style.display = 'none';
+        }
+      }
+
+      // 5. Inject 6-Card KPI Values
+      if (document.getElementById('admin-metric-pending')) document.getElementById('admin-metric-pending').innerText = pendingReports.length;
+      if (document.getElementById('admin-metric-critical')) document.getElementById('admin-metric-critical').innerText = criticalReports.length;
+      if (document.getElementById('admin-metric-validated')) document.getElementById('admin-metric-validated').innerText = validatedReports.length;
+      if (document.getElementById('admin-metric-dispatched')) document.getElementById('admin-metric-dispatched').innerText = dispatchedReports.length;
+      if (document.getElementById('admin-metric-qa')) document.getElementById('admin-metric-qa').innerText = completedQAReports.length;
+      if (document.getElementById('admin-metric-deferred')) document.getElementById('admin-metric-deferred').innerText = deferredReports.length;
+
+      // 6. Build Action Queue Table
+      renderAdminActionQueue(pendingReports);
+
+      // 7. Render Charts
+      renderRealAdminCharts(allReports);
     })
     .catch(err => {
       console.error("🚨 Error loading Admin Dashboard data:", err);
     });
 }
 
+// ==========================================
+// 📋 ACTION QUEUE TABLE GENERATOR
+// ==========================================
+function renderAdminActionQueue(pendingReports) {
+  const queueBody = document.getElementById('fresh-admin-queue-body');
+  if (!queueBody) return;
+
+  queueBody.innerHTML = '';
+
+  // Sort: Priority to oldest submissions so they don't get delayed
+  pendingReports.sort((a, b) => {
+    const dateA = new Date(a.date_submitted || a.dateSubmitted || a.createdAt || 0);
+    const dateB = new Date(b.date_submitted || b.dateSubmitted || b.createdAt || 0);
+    return dateA - dateB;
+  });
+
+  const topPending = pendingReports.slice(0, 6);
+
+  if (topPending.length === 0) {
+    queueBody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: #64748b; padding: 35px; font-style: italic;">
+          ✅ All caught up! No pending inspections requiring validation audit.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  topPending.forEach(report => {
+    const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
+    const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
+    const roadName = report.cityRoadName || 'Unnamed Road Segment';
+    const damageType = report.damageType || 'Road Assessment';
+
+    const rawDate = report.date_submitted || report.dateSubmitted || report.createdAt;
+    const dateObj = rawDate ? new Date(rawDate) : new Date();
+    const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Relative Aging calculation
+    const diffTime = Math.abs(new Date() - dateObj);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    let ageTag = `<span style="font-size: 11px; color: #64748b;">${diffDays === 0 ? 'Today' : `${diffDays}d ago`}</span>`;
+    if (diffDays >= 14) {
+      ageTag = `<span style="font-size: 11px; color: #dc2626; font-weight: 700;">⚠️ ${diffDays}d ago</span>`;
+    }
+
+    // Unified AI Severity Badge Styles (Matching CEO & Barangay)
+    const sev = String(report.severity || 'Unassessed').trim();
+
+// Default: Mint green UNASSESSED badge
+    let badgeBg = '#ecfdf5';
+    let badgeColor = '#047857';
+    let badgeBorder = '1px solid #34d399';
+    let badgeLabel = 'UNASSESSED';
+
+    if (sev.toLowerCase() === 'high') {
+      badgeBg = '#dc2626';
+      badgeColor = '#ffffff';
+      badgeBorder = '1px solid #dc2626';
+      badgeLabel = 'HIGH';
+    } else if (sev.toLowerCase() === 'medium') {
+      badgeBg = '#ffc107';
+      badgeColor = '#000000';
+      badgeBorder = '1px solid #eab308';
+      badgeLabel = 'MEDIUM';
+    } else if (sev.toLowerCase() === 'low') {
+      badgeBg = '#16a34a';
+      badgeColor = '#ffffff';
+      badgeBorder = '1px solid #16a34a';
+      badgeLabel = 'LOW';
+    }
+
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = "1px solid #f1f5f9";
+    tr.style.transition = "background-color 0.15s";
+    tr.onmouseover = () => tr.style.backgroundColor = "#f8fafc";
+    tr.onmouseout = () => tr.style.backgroundColor = "transparent";
+
+    tr.innerHTML = `
+      <td style="padding: 12px 15px; font-family: monospace; font-weight: 800; color: #0b2545;">${formatId}</td>
+      <td style="padding: 12px 15px;">
+        <div style="font-weight: 700; color: #0f172a;">${roadName}</div>
+        <div style="font-size: 11.5px; color: #64748b;">🛠️ ${damageType}</div>
+      </td>
+      <td style="padding: 12px 15px; color: #475569;">${formatBrgy}</td>
+      <td style="padding: 12px 15px; text-align: center;">
+  <span style="background-color: ${badgeBg}; color: ${badgeColor}; border: ${badgeBorder}; padding: 3px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
+    ${badgeLabel}
+  </span>
+</td>
+      <td style="padding: 12px 15px; white-space: nowrap;">
+        <div>${dateStr}</div>
+        <div>${ageTag}</div>
+      </td>
+      <td style="padding: 12px 15px; text-align: center;">
+        <button onclick="jumpToReportsAndReview(${report.id})" class="ad-btn-review-action">Review</button>
+      </td>
+    `;
+    queueBody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// 📊 CHARTS ENGINE (FAIL-SAFE)
+// ==========================================
 function renderRealAdminCharts(reports) {
+  if (typeof Chart === 'undefined') {
+    console.warn("Notice: Chart.js not loaded. Skipping chart generation.");
+    return;
+  }
+
   // --- Chart 1: Severity Breakdown ---
-  let high = 0, med = 0, low = 0, clear = 0;
+  let high = 0, med = 0, low = 0, unassessed = 0;
   reports.forEach(r => {
     const sev = (r.severity || '').toLowerCase();
     if (sev === 'high') high++;
     else if (sev === 'medium') med++;
     else if (sev === 'low') low++;
-    else clear++;
+    else unassessed++;
   });
 
   const ctxDoughnut = document.getElementById('adminSeverityChart');
   if (ctxDoughnut) {
-    // 🚀 THE CHART FIX: Destroy the old chart before drawing a new one!
     let existingDoughnut = Chart.getChart(ctxDoughnut);
     if (existingDoughnut) existingDoughnut.destroy();
 
     new Chart(ctxDoughnut.getContext('2d'), {
       type: 'doughnut',
       data: {
-        labels: ['High', 'Medium', 'Low', 'Pending/Clear'],
+        labels: ['High', 'Medium', 'Low', 'Pending AI'],
         datasets: [{
-          data: [high, med, low, clear],
-          backgroundColor: ['#dc3545', '#f0ad4e', '#28a745', '#6c757d'],
-          borderWidth: 0
+          data: [high, med, low, unassessed],
+          backgroundColor: ['#dc2626', '#f59e0b', '#16a34a', '#64748b'],
+          borderWidth: 2,
+          borderColor: '#ffffff'
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } }, cutout: '65%' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 10, font: { size: 10.5, weight: '600' }, padding: 10 }
+          }
+        },
+        cutout: '70%'
+      }
     });
   }
 
-  // --- Chart 2: Barangay Compliance ---
+  // --- Chart 2: Barangay Compliance (Preserves "Pending Assignment" intact) ---
   const brgyData = {};
   reports.forEach(r => {
     const brgyName = (r.barangay && r.barangay.barangayName) ? r.barangay.barangayName : 'Unknown';
@@ -4202,7 +4477,7 @@ function renderRealAdminCharts(reports) {
   const brgyCounts = [];
   Object.entries(brgyData)
     .sort((a, b) => b[1].size - a[1].size)
-    .slice(0, 5)
+    .slice(0, 6)
     .forEach(([name, roadSet]) => {
       brgyLabels.push(name);
       brgyCounts.push(roadSet.size);
@@ -4210,7 +4485,6 @@ function renderRealAdminCharts(reports) {
 
   const ctxBar = document.getElementById('adminComplianceChart');
   if (ctxBar && brgyLabels.length > 0) {
-    // 🚀 THE CHART FIX: Destroy the old chart before drawing a new one!
     let existingBar = Chart.getChart(ctxBar);
     if (existingBar) existingBar.destroy();
 
@@ -4221,35 +4495,67 @@ function renderRealAdminCharts(reports) {
         datasets: [{
           label: 'Unique Roads Inspected',
           data: brgyCounts,
-          backgroundColor: '#0B2545',
-          borderRadius: 4
+          backgroundColor: '#0b2545',
+          borderRadius: 5
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
     });
   }
 }
 
 // ==========================================
-// ACTION QUEUE: TAB JUMP & REVIEW LOGIC
+// 🚀 TAB NAVIGATION HELPERS
 // ==========================================
 function jumpToReportsAndReview(reportId) {
-  // 1. Find the "Reports" tab button in your sidebar
-  const reportsTabBtn = document.querySelector('.nav-menu li[data-target="view-reports"]');
+  const reportsTabBtn = document.querySelector('.nav-menu li[data-target="view-reports"]') ||
+    document.querySelector('li[data-target="view-reports"]');
 
-  // 2. Programmatically "click" it to switch the screen
   if (reportsTabBtn) {
     reportsTabBtn.click();
+  } else if (typeof switchView === 'function') {
+    switchView('view-reports');
   }
 
-  // 3. Wait a tiny fraction of a second for the screen to switch, then open the modal!
   setTimeout(() => {
     if (typeof reviewReport === 'function') {
       reviewReport(reportId);
     } else {
-      console.error("reviewReport function not found!");
+      console.warn("reviewReport function not found.");
     }
   }, 150);
+}
+
+function jumpToAllReports() {
+  const reportsTabBtn = document.querySelector('.nav-menu li[data-target="view-reports"]') ||
+    document.querySelector('li[data-target="view-reports"]');
+  if (reportsTabBtn) {
+    reportsTabBtn.click();
+  } else if (typeof switchView === 'function') {
+    switchView('view-reports');
+  }
+}
+
+function jumpToArchiveTab() {
+  const trackingTabBtn = document.querySelector('.nav-menu li[data-target="view-tracking"]') ||
+    document.querySelector('li[data-target="view-tracking"]');
+  if (trackingTabBtn) {
+    trackingTabBtn.click();
+  } else if (typeof switchView === 'function') {
+    switchView('view-tracking');
+  }
 }
 
 // ==========================================
@@ -5014,15 +5320,26 @@ window.executeBatchArchive = function() {
     });
 };
 // ==========================================
-// 7. NEW TRACKING MODAL LOGIC
+// 7 & 8. TRACKING MODAL ENGINE (RELIABLE GLOBAL HANDLERS)
 // ==========================================
 let currentTrackingReportId = null;
 
-function openTrackingModal(reportId) {
+// 🗺️ 1. MAP STATE VARIABLES (Added here)
+let currentTrackLat = 0;
+let currentTrackLng = 0;
+let trackModalMap = null;
+let trackModalMarker = null;
+
+// Open Tracking Modal and Populate Data
+window.openTrackingModal = function(reportId) {
   currentTrackingReportId = reportId;
 
   const trackingModal = document.getElementById('tracking-modal');
   if (!trackingModal) return;
+
+  // 🗺️ 2. HIDE MAP WHEN SWITCHING TO A NEW PROJECT (Added here)
+  const mapContainer = document.getElementById('track-modal-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
 
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
@@ -5044,11 +5361,16 @@ function openTrackingModal(reportId) {
 
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
+      // 🗺️ 3. CAPTURE GPS COORDINATES FOR THE MAP (Added here)
+      currentTrackLat = parseFloat(report.latitude) || 0;
+      currentTrackLng = parseFloat(report.longitude) || 0;
+
       const setText = (id, text) => {
         const el = document.getElementById(id);
         if (el) el.textContent = text;
       };
 
+      // 1. Road Details
       setText('track-modal-id', `#PRJ-${String(report.id).padStart(4, '0')}`);
       setText('track-modal-brgy', report.barangay?.barangayName || 'Unknown');
       setText('track-modal-road', report.cityRoadName || 'Unknown Road');
@@ -5056,21 +5378,21 @@ function openTrackingModal(reportId) {
       setText('track-modal-importance', report.roadImportance || 'N/A');
       setText('track-modal-terrain', report.terrainType || 'N/A');
       setText('track-modal-road-type', report.roadType || 'N/A');
-      setText('track-modal-length', report.damageLength || '0');
-      setText('track-modal-width', report.damageWidth || '0');
-      setText('track-modal-gps', `${report.latitude || '0'}° N, ${report.longitude || '0'}° E`);
-      setText('track-modal-desc', report.damageDescription || 'No description provided.');
+      setText('track-modal-road-length', report.length ? `${report.length} km` : '0 km');
+      setText('track-modal-road-width', report.width ? `${report.width} m` : '0 m');
+      setText('track-modal-culverts', report.lengthOfCulverts ? `${report.lengthOfCulverts} m` : '0 m');
+      setText('track-modal-gps', (report.latitude && report.longitude) ? `${report.latitude}° N, ${report.longitude}° E` : 'No GPS data');
 
+      // 2. Submitter Info
       let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
-
       if (report.user && report.user.firstName && report.user.lastName) {
         submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
       } else if (report.reportedBy) {
         submitterText = report.reportedBy;
       }
-
       setText('track-modal-submitter', submitterText);
 
+      // 3. Priority Badge
       const sevBox = document.getElementById('track-modal-severity');
       if (sevBox) {
         const sev = String(report.severity || 'low').toLowerCase();
@@ -5079,10 +5401,22 @@ function openTrackingModal(reportId) {
         else sevBox.innerHTML = `<span class="badge low">LOW</span>`;
       }
 
+      // 4. Damage Information & Calculations
+      const dmgType = report.damageType || 'Not specified';
+      const dmgLen = parseFloat(report.damageLength) || 0;
+      const dmgWid = parseFloat(report.damageWidth) || 0;
+      const dmgArea = dmgLen * dmgWid;
+
+      setText('track-modal-damage-type', dmgType);
+      setText('track-modal-damage-dimensions', (dmgLen > 0 || dmgWid > 0) ? `${dmgLen}m (L) × ${dmgWid}m (W)` : 'Not specified');
+      setText('track-modal-damage-area', dmgArea > 0 ? `${dmgArea.toFixed(1)} sq.m` : '0 sq.m');
+      setText('track-modal-desc', report.damageDescription || 'No description provided.');
+
       if (typeof window.loadSecureImage === 'function') {
         window.loadSecureImage('track-modal-image', report.damageImage);
       }
 
+      // 5. Resolution & Status Controls
       const statusBox = document.getElementById('track-modal-status');
       const statusText = document.getElementById('track-modal-status-text');
       const approveBtn = document.getElementById('btn-approve-project');
@@ -5094,9 +5428,6 @@ function openTrackingModal(reportId) {
 
       const status = String(report.status || '').toLowerCase();
 
-      // ==========================================
-      // 🚀 STATUS-BASED UI LOGIC
-      // ==========================================
       if (status === 'completed') {
         if (statusBox) {
           statusBox.textContent = 'Repaired (Pending Approval)';
@@ -5109,7 +5440,7 @@ function openTrackingModal(reportId) {
           approveBtn.disabled = false;
           approveBtn.style.backgroundColor = '#28a745';
           approveBtn.style.cursor = 'pointer';
-          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`; // 🚀 RESET TEXT
+          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
         }
         if (reworkBtn) reworkBtn.classList.remove('hidden');
 
@@ -5130,12 +5461,11 @@ function openTrackingModal(reportId) {
 
         if (statusText) statusText.textContent = `CEO Remarks: "${report.repairRemarks || "Deferred due to budget constraints."}"`;
 
-        // 🚀 THE FIX: Unlock the button so CPDO Admin can archive it!
         if (approveBtn) {
           approveBtn.disabled = false;
-          approveBtn.style.backgroundColor = '#475569'; // Slate Gray for archiving
+          approveBtn.style.backgroundColor = '#475569';
           approveBtn.style.cursor = 'pointer';
-          approveBtn.innerHTML = `<span class="icon">📁</span> Acknowledge & Archive`; // 🚀 DYNAMIC TEXT
+          approveBtn.innerHTML = `<span class="icon">📁</span> Acknowledge & Archive`;
         }
         if (reworkBtn) reworkBtn.classList.add('hidden');
 
@@ -5154,7 +5484,7 @@ function openTrackingModal(reportId) {
           approveBtn.disabled = true;
           approveBtn.style.backgroundColor = '#ccc';
           approveBtn.style.cursor = 'not-allowed';
-          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`; // 🚀 RESET TEXT
+          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
         }
         if (reworkBtn) reworkBtn.classList.add('hidden');
 
@@ -5164,135 +5494,186 @@ function openTrackingModal(reportId) {
     })
     .catch(err => {
       console.error("Error loading tracking details:", err);
-      showToast("Error loading project details.", "error");
+      if (typeof showToast === 'function') showToast("Error loading project details.", "error");
     });
-}
+};
 
-// ==========================================
-// 8. TRACKING MODAL BUTTON ACTIONS
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+// 🗺️ 4. TOGGLE MAP FUNCTION (Added here)
+window.toggleTrackMap = function() {
+  const mapContainer = document.getElementById('track-modal-map-container');
+  if (!mapContainer) return;
+
+  if (!currentTrackLat || !currentTrackLng || (currentTrackLat === 0 && currentTrackLng === 0)) {
+    if (typeof showToast === 'function') {
+      showToast("No GPS coordinates were provided for this report.", "error");
+    } else {
+      alert("No GPS coordinates were provided for this report.");
+    }
+    return;
+  }
+
+  if (mapContainer.style.display === 'none' || mapContainer.style.display === '') {
+    mapContainer.style.display = 'block';
+
+    if (typeof L === 'undefined') {
+      console.error("Leaflet library (L) is not loaded.");
+      return;
+    }
+
+    const redIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    if (!trackModalMap) {
+      trackModalMap = L.map('track-modal-map').setView([currentTrackLat, currentTrackLng], 17);
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+      }).addTo(trackModalMap);
+
+      trackModalMarker = L.marker([currentTrackLat, currentTrackLng], { icon: redIcon }).addTo(trackModalMap);
+    } else {
+      trackModalMap.setView([currentTrackLat, currentTrackLng], 17);
+      trackModalMarker.setLatLng([currentTrackLat, currentTrackLng]);
+    }
+
+    setTimeout(() => {
+      trackModalMap.invalidateSize();
+    }, 200);
+
+  } else {
+    mapContainer.style.display = 'none';
+  }
+};
+
+// Close the modal
+window.closeTrackingModal = function() {
   const trackingModal = document.getElementById('tracking-modal');
-  const btnApprove = document.getElementById('btn-approve-project');
-  const btnRework = document.getElementById('btn-rework-project');
+  if (trackingModal) trackingModal.classList.add('hidden');
+
+  // Hide map container on close
+  const mapContainer = document.getElementById('track-modal-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
+};
+
+// Open the rework textarea form
+window.openReworkForm = function() {
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
-  const btnCancelRework = document.getElementById('btn-cancel-rework');
-  const btnConfirmRework = document.getElementById('btn-confirm-rework');
   const reworkInput = document.getElementById('rework-remarks-input');
+  if (primaryActions) primaryActions.classList.add('hidden');
+  if (reworkForm) reworkForm.classList.remove('hidden');
+  if (reworkInput) reworkInput.focus();
+};
 
-  // --- 1. FIX THE "X" CLOSE BUTTON ---
-  if (trackingModal) {
-    trackingModal.addEventListener('click', (e) => {
-      if (e.target.closest('.close-tracking-btn')) {
-        trackingModal.classList.add('hidden');
-      }
+// Cancel rework and return to primary buttons
+window.cancelReworkForm = function() {
+  const primaryActions = document.getElementById('tracking-primary-actions');
+  const reworkForm = document.getElementById('tracking-rework-form');
+  const reworkInput = document.getElementById('rework-remarks-input');
+  if (reworkForm) reworkForm.classList.add('hidden');
+  if (primaryActions) primaryActions.classList.remove('hidden');
+  if (reworkInput) reworkInput.value = '';
+};
+
+// Approve & Close Project or Acknowledge & Archive
+window.handleApproveProject = function() {
+  if (!currentTrackingReportId) return;
+  const btnApprove = document.getElementById('btn-approve-project');
+  if (!btnApprove || btnApprove.disabled) return;
+
+  const isArchiving = btnApprove.innerText.includes('Archive');
+  const targetStatus = isArchiving ? "Archived" : "Closed";
+  const loadingText = isArchiving ? "⏳ Archiving..." : "⏳ Approving...";
+  const successMsg = isArchiving ? "Project safely archived!" : "Project officially approved and closed!";
+
+  const originalText = btnApprove.innerHTML;
+  btnApprove.innerHTML = loadingText;
+  btnApprove.disabled = true;
+
+  fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({ status: targetStatus })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to update project status");
+      return res.text();
+    })
+    .then(() => {
+      if (typeof showToast === 'function') showToast(successMsg, "success");
+      closeTrackingModal();
+      if (typeof loadTrackingData === 'function') loadTrackingData();
+      if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
+    })
+    .catch(err => {
+      console.error(err);
+      if (typeof showToast === 'function') showToast(`Error ${isArchiving ? 'archiving' : 'closing'} project.`, "error");
+    })
+    .finally(() => {
+      btnApprove.innerHTML = originalText;
+      btnApprove.disabled = false;
     });
+};
+
+// Submit Rework Feedback to CEO
+window.submitReworkFeedback = function() {
+  if (!currentTrackingReportId) return;
+  const reworkInput = document.getElementById('rework-remarks-input');
+  const btnConfirmRework = document.getElementById('btn-confirm-rework');
+
+  const remarks = reworkInput ? reworkInput.value.trim() : '';
+  if (!remarks) {
+    if (typeof showToast === 'function') showToast("Please provide a reason so the crew knows what to fix.", "error");
+    return;
   }
 
-  // --- 2. APPROVE BUTTON LOGIC ---
-  if (btnApprove) {
-    btnApprove.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!currentTrackingReportId) return;
-
-      // 🚀 THE MAGIC: Detect if we are Archiving or Closing based on the button text
-      const isArchiving = btnApprove.innerText.includes('Archive');
-      const targetStatus = isArchiving ? "Archived" : "Closed";
-      const loadingText = isArchiving ? "⏳ Archiving..." : "⏳ Approving...";
-      const successMsg = isArchiving ? "Project safely archived!" : "Project officially approved and closed!";
-
-      // Save the original text so we can revert it if an error happens
-      const originalText = btnApprove.innerHTML;
-
-      btnApprove.innerHTML = loadingText;
-      btnApprove.disabled = true;
-
-      fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: targetStatus }) // 🚀 Send "Archived" OR "Closed"
-      })
-        .then(res => {
-          if (!res.ok) throw new Error("Failed to update project status");
-          return res.text();
-        })
-        .then(() => {
-          showToast(successMsg, "success");
-          trackingModal.classList.add('hidden');
-          if (typeof loadTrackingData === 'function') loadTrackingData();
-        })
-        .catch(err => {
-          console.error(err);
-          showToast(`Error ${isArchiving ? 'archiving' : 'closing'} project.`, "error");
-        })
-        .finally(() => {
-          btnApprove.innerHTML = originalText;
-          btnApprove.disabled = false;
-        });
-    });
-  }
-
-  // --- 3. REWORK UI TRANSITIONS ---
-  if (btnRework && primaryActions && reworkForm) {
-    btnRework.addEventListener('click', (e) => {
-      e.preventDefault();
-      primaryActions.classList.add('hidden');
-      reworkForm.classList.remove('hidden');
-      if(reworkInput) reworkInput.focus();
-    });
-
-    btnCancelRework.addEventListener('click', (e) => {
-      e.preventDefault();
-      reworkForm.classList.add('hidden');
-      primaryActions.classList.remove('hidden');
-      if(reworkInput) reworkInput.value = '';
-    });
-  }
-
-  // --- 4. SUBMIT REWORK TO DATABASE ---
+  const originalText = btnConfirmRework ? btnConfirmRework.innerHTML : "Submit to CEO";
   if (btnConfirmRework) {
-    btnConfirmRework.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!currentTrackingReportId) return;
-
-      const remarks = reworkInput ? reworkInput.value.trim() : '';
-      if (!remarks) {
-        showToast("Please provide a reason so the crew knows what to fix.", "error");
-        return;
-      }
-
-      btnConfirmRework.innerHTML = "⏳ Sending...";
-      btnConfirmRework.disabled = true;
-
-      fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: "In Progress",
-          adminRemarks: remarks
-        })
-      })
-        .then(res => {
-          if (!res.ok) throw new Error("Failed to rework project");
-          return res.text();
-        })
-        .then(() => {
-          showToast("Project bounced back to CEO with your feedback!", "success");
-          trackingModal.classList.add('hidden');
-          if (typeof loadTrackingData === 'function') loadTrackingData();
-        })
-        .catch(err => {
-          console.error(err);
-          showToast("Error requesting rework.", "error");
-        })
-        .finally(() => {
-          btnConfirmRework.innerHTML = "Submit to CEO";
-          btnConfirmRework.disabled = false;
-        });
-    });
+    btnConfirmRework.innerHTML = "⏳ Sending...";
+    btnConfirmRework.disabled = true;
   }
-});
+
+  fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({
+      status: "In Progress",
+      adminRemarks: remarks
+    })
+  })
+    .then(res => {
+      if (!res.ok) throw new Error("Failed to rework project");
+      return res.text();
+    })
+    .then(() => {
+      if (typeof showToast === 'function') showToast("Project bounced back to CEO with your feedback!", "success");
+      closeTrackingModal();
+      if (typeof loadTrackingData === 'function') loadTrackingData();
+      if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
+    })
+    .catch(err => {
+      console.error(err);
+      if (typeof showToast === 'function') showToast("Error requesting rework.", "error");
+    })
+    .finally(() => {
+      if (btnConfirmRework) {
+        btnConfirmRework.innerHTML = originalText;
+        btnConfirmRework.disabled = false;
+      }
+    });
+};
 
 // ==========================================
 // 🗺️ ADMIN GLOBAL MAP: MULTIPLE MARKERS
@@ -8681,12 +9062,13 @@ function renderArchiveTableRows(records) {
 // =======================================================
 // 📋 OPEN INDIVIDUAL PROJECT ARCHIVE DETAIL MODAL
 // =======================================================
+
 window.openArchiveDetailModal = function(reportId) {
   if (!reportId) return;
 
   const NO_IMAGE_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/%3E%3C/svg%3E";
 
-  // Force close any lingering fullscreen image viewer modals
+  // Close lingering image modals
   document.querySelectorAll('.fullscreen-modal, #image-modal, #fullscreen-image-modal, #image-viewer-modal').forEach(m => {
     m.classList.add('hidden');
     m.style.display = 'none';
@@ -8709,10 +9091,16 @@ window.openArchiveDetailModal = function(reportId) {
   const proofContainer = document.getElementById('archive-modal-proof-container');
   if (proofContainer) proofContainer.style.display = 'none';
 
-  // 🚀 DYNAMIC ADMIN NAME INJECTION FOR PRINT SIGNATORY
-  const adminFirst = sessionStorage.getItem("firstName") || "";
-  const adminLast = sessionStorage.getItem("lastName") || "";
-  const adminFullName = (adminFirst + " " + adminLast).trim();
+// Dynamic Admin Signer (Middle Initial Only)
+  const adminFirst = (sessionStorage.getItem("firstName") || "").trim();
+  const rawMiddle = (sessionStorage.getItem("middleInitial") || sessionStorage.getItem("middleName") || "").trim();
+  const adminLast = (sessionStorage.getItem("lastName") || "").trim();
+
+// Extracts only the first letter and appends a period (e.g., "Perez" -> "P.", "p" -> "P.", "P." -> "P.")
+  const middleInitial = rawMiddle ? `${rawMiddle.charAt(0).toUpperCase()}.` : "";
+
+  const adminFullName = [adminFirst, middleInitial, adminLast].filter(Boolean).join(" ");
+
   const signerEl = document.getElementById("archive-modal-signer-name");
   if (signerEl) {
     signerEl.innerText = adminFullName || "CPDO ADMINISTRATOR";
@@ -8756,7 +9144,7 @@ window.openArchiveDetailModal = function(reportId) {
         }
       }
 
-      // 1. Road Specs
+      // 1. Road Specifications (Separated Fields)
       document.getElementById('archive-modal-road-name').innerText = report.cityRoadName || 'Unnamed Road';
       document.getElementById('archive-modal-brgy').innerText = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : (report.barangayName || 'Unknown');
       document.getElementById('archive-modal-road-id').innerText = report.cityRoadId || `31420000${String(report.id).padStart(2, '0')}`;
@@ -8768,32 +9156,35 @@ window.openArchiveDetailModal = function(reportId) {
 
       const rLen = parseFloat(report.length) || 0;
       const rWid = parseFloat(report.width) || 0;
-      document.getElementById('archive-modal-road-dims').innerText = `${rLen}m × ${rWid}m`;
+      document.getElementById('archive-modal-road-length').innerText = rLen > 0 ? `${rLen} km` : '0 km';
+      document.getElementById('archive-modal-road-width').innerText = rWid > 0 ? `${rWid} m` : '0 m';
 
       const culverts = report.lengthOfCulverts != null && !isNaN(report.lengthOfCulverts) ? Number(report.lengthOfCulverts).toFixed(2) : '0.00';
       document.getElementById('archive-modal-culverts').innerText = `${culverts} m`;
       document.getElementById('archive-modal-bridges').innerText = report.numberOfBridges != null ? report.numberOfBridges : 0;
 
-      // 2. Damage Assessment
+      // 2. Damage Assessment & Scope
       document.getElementById('archive-modal-damage-type').innerText = report.damageType || 'General Wear';
 
       const dLen = parseFloat(report.damageLength) || 0;
       const dWid = parseFloat(report.damageWidth) || 0;
       const dArea = dLen * dWid;
-      document.getElementById('archive-modal-damage-area').innerText = `${dLen}m × ${dWid}m (${dArea > 0 ? dArea.toFixed(1) : '0.0'} sq.m)`;
+      document.getElementById('archive-modal-damage-dims').innerText = (dLen > 0 || dWid > 0) ? `${dLen}m (L) × ${dWid}m (W)` : 'Not specified';
+      document.getElementById('archive-modal-damage-area').innerText = `${dArea > 0 ? dArea.toFixed(1) : '0.0'} sq.m`;
 
+      // Severity Badge
       const severity = String(report.severity || 'UNASSESSED').toUpperCase();
       const priorityBadge = document.getElementById('archive-modal-priority-badge');
       if (priorityBadge) {
         priorityBadge.innerText = severity;
         if (severity === 'HIGH') {
-          priorityBadge.style.cssText = 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+          priorityBadge.style.cssText = 'background: #dc2626; color: #ffffff; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
         } else if (severity === 'MEDIUM') {
-          priorityBadge.style.cssText = 'background: #fffbeb; color: #d97706; border: 1px solid #fde68a; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+          priorityBadge.style.cssText = 'background: #ffc107; color: #000000; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
         } else if (severity === 'LOW') {
-          priorityBadge.style.cssText = 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+          priorityBadge.style.cssText = 'background: #16a34a; color: #ffffff; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
         } else {
-          priorityBadge.style.cssText = 'background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-weight: 800; padding: 1px 5px; border-radius: 4px; display: inline-block;';
+          priorityBadge.style.cssText = 'background: #475569; color: #ffffff; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
         }
       }
 
@@ -8846,60 +9237,67 @@ window.openArchiveDetailModal = function(reportId) {
 };
 
 // =======================================================
-// 🗺️ 6. ARCHIVE MODAL SATELLITE MAP TOGGLE
+// 🗺️ DIRECT GLOBAL MAP TOGGLE
 // =======================================================
-document.addEventListener('DOMContentLoaded', () => {
-  const btnLocate = document.getElementById('archive-btn-locate-map');
-  if (btnLocate) {
-    btnLocate.addEventListener('click', () => {
-      const container = document.getElementById('archive-detail-map-container');
-      if (!container) return;
+window.toggleArchiveMap = function() {
+  const container = document.getElementById('archive-detail-map-container');
+  if (!container) return;
 
-      // 🛡️ Safe check with custom Toast notification
-      if (!currentArchiveLat || !currentArchiveLng || (currentArchiveLat === 0 && currentArchiveLng === 0)) {
-        if (typeof showToast === 'function') {
-          showToast("No GPS coordinates recorded for this project.", "warning");
-        }
-        return;
-      }
-
-      if (container.style.display === 'none') {
-        container.style.display = 'block';
-
-        const redIcon = new L.Icon({
-          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41]
-        });
-
-        if (!archiveDetailMap) {
-          archiveDetailMap = L.map('archive-detail-map').setView([currentArchiveLat, currentArchiveLng], 17);
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-          }).addTo(archiveDetailMap);
-
-          archiveDetailMarker = L.marker([currentArchiveLat, currentArchiveLng], { icon: redIcon }).addTo(archiveDetailMap);
-        } else {
-          archiveDetailMap.setView([currentArchiveLat, currentArchiveLng], 17);
-          archiveDetailMarker.setLatLng([currentArchiveLat, currentArchiveLng]);
-        }
-
-        setTimeout(() => {
-          archiveDetailMap.invalidateSize();
-        }, 200);
-      } else {
-        container.style.display = 'none';
-      }
-    });
+  if (!currentArchiveLat || !currentArchiveLng || (currentArchiveLat === 0 && currentArchiveLng === 0)) {
+    if (typeof showToast === 'function') {
+      showToast("No GPS coordinates recorded for this project.", "warning");
+    } else {
+      alert("No GPS coordinates recorded for this project.");
+    }
+    return;
   }
-});
 
-// =======================================================
-// 🖨️ 7. PRINT SINGLE AUDIT SHEET CONTROLLER
-// =======================================================
+  if (container.style.display === 'none' || container.style.display === '') {
+    container.style.display = 'block';
+
+    if (typeof L === 'undefined') {
+      console.error("Leaflet is not loaded.");
+      return;
+    }
+
+    const redIcon = new L.Icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    if (!archiveDetailMap) {
+      archiveDetailMap = L.map('archive-detail-map').setView([currentArchiveLat, currentArchiveLng], 17);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+      }).addTo(archiveDetailMap);
+
+      archiveDetailMarker = L.marker([currentArchiveLat, currentArchiveLng], { icon: redIcon }).addTo(archiveDetailMap);
+    } else {
+      archiveDetailMap.setView([currentArchiveLat, currentArchiveLng], 17);
+      archiveDetailMarker.setLatLng([currentArchiveLat, currentArchiveLng]);
+    }
+
+    setTimeout(() => {
+      archiveDetailMap.invalidateSize();
+    }, 200);
+  } else {
+    container.style.display = 'none';
+  }
+};
+
+// Close modal handler
+window.closeArchiveDetailModal = function() {
+  const modal = document.getElementById('archive-detail-modal');
+  if (modal) modal.classList.add('hidden');
+  const mapContainer = document.getElementById('archive-detail-map-container');
+  if (mapContainer) mapContainer.style.display = 'none';
+};
+
+// Print handler
 window.printSingleArchiveIncident = function() {
   const prjId = document.getElementById('archive-modal-prj-id')?.innerText.replace(/\D/g, '') || '0000';
   const originalTitle = document.title;

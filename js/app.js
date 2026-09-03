@@ -263,7 +263,7 @@ window.filterTrackingReports = function() {
 // 🔍 REUSABLE GLOBAL TABLE SEARCH ENGINE
 // ==========================================
 /**
- * Searches any table by matching input value against table row text.
+ * Searches any table by matching input value against table row text AND optional data attributes (like data-roads).
  * @param {string} inputId - ID of the input field
  * @param {string} tbodyId - ID of the table body (tbody)
  */
@@ -275,17 +275,19 @@ window.executeGlobalSearch = function(inputId, tbodyId) {
   const tableRows = document.querySelectorAll(`#${tbodyId} tr`);
 
   tableRows.forEach(row => {
-    // Skip empty state or loading state rows (usually single-cell rows)
-    if (row.cells.length < 2) return;
+    // Skip empty state, loading state, or dynamic no-results rows
+    if (row.cells.length < 2 || row.classList.contains('no-search-results')) return;
 
-    // Grab all text within the row for smart full-row matching
+    // 1. Visible text in table cells
     const rowText = row.textContent.toLowerCase();
 
-    if (rowText.includes(searchTerm)) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-    }
+    // 2. Hidden road list attribute (populated on Barangay rows)
+    const roadsData = (row.getAttribute('data-roads') || '').toLowerCase();
+
+    // 3. Match against either visible text OR registered road names
+    const isMatch = !searchTerm || rowText.includes(searchTerm) || roadsData.includes(searchTerm);
+
+    row.style.display = isMatch ? '' : 'none';
   });
 };
 
@@ -3562,6 +3564,7 @@ const btnLocateMap = document.getElementById('btn-admin-locate-map');
 if (btnLocateMap) {
   btnLocateMap.onclick = toggleAdminReviewMap;
 }
+
 // ==========================================
 // 🚀 BARANGAY DASHBOARD: REAL DATA ENGINE & RENDERER
 // ==========================================
@@ -3569,9 +3572,10 @@ let rawBarangayReports = [];
 let severityChartInstance = null;
 
 // 🧠 1. Progress Bar Logic (Fail-Safe Version)
-function calculateJurisdictionProgress(barangayId, reports) {
+function calculateJurisdictionProgress(barangayId, activeReports) {
+  // Only count roads that have ACTIVE inspections in the current cycle
   const inspectedRoadNames = new Set(
-    reports
+    activeReports
       .map(r => r.cityRoadName)
       .filter(name => name && String(name).trim() !== '')
   );
@@ -3613,8 +3617,8 @@ function updateProgressBarUI(inspectedCount, displayTotal) {
       barFill.style.background = 'linear-gradient(90deg, #16a34a, #22c55e)';
       progressPercent.style.color = '#16a34a';
     } else {
-      barFill.style.background = 'linear-gradient(90deg, #2563eb, #38bdf8)';
-      progressPercent.style.color = '#2563eb';
+      barFill.style.background = 'linear-gradient(90deg, #16a34a, #34d399)';
+      progressPercent.style.color = '#16a34a';
     }
   }
 }
@@ -3633,15 +3637,26 @@ function loadBarangayReports(barangayId) {
 
   apiFetch(`/api/reports/barangay/${barangayId}`)
     .then(reports => {
-      rawBarangayReports = Array.isArray(reports) ? reports : [];
+      const allReports = Array.isArray(reports) ? reports : [];
+
+      // =========================================================================
+      // 🚀 THE FIX: FILTER OUT ARCHIVED REPORTS FROM ACTIVE ANNUAL CYCLE DASHBOARD
+      // =========================================================================
+      rawBarangayReports = allReports.filter(r => {
+        const s = String(r.status || '').toLowerCase();
+        return !s.includes('archiv');
+      });
+
+      // Recalculate progress bar using ONLY active cycle reports (resets to 0% if empty)
       calculateJurisdictionProgress(barangayId, rawBarangayReports);
 
+      // If all reports are archived or none exist, cleanly reset all UI metrics
       if (rawBarangayReports.length === 0) {
         listContainer.innerHTML = `
           <div style="text-align: center; padding: 40px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; color: #64748b;">
             <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
-            <strong>No road reports submitted yet.</strong>
-            <p style="font-size: 13px; margin: 4px 0 0 0;">Click "New Report" above to submit your first inspection.</p>
+            <strong>No active road reports for this cycle.</strong>
+            <p style="font-size: 13px; margin: 4px 0 0 0;">The annual cycle has been rolled over. Click "New Report" to begin surveys for the new cycle.</p>
           </div>
         `;
         document.getElementById('metric-total').innerText = '0';
@@ -3672,7 +3687,7 @@ function loadBarangayReports(barangayId) {
         return dateB - dateA;
       });
 
-      // KPI Metrics Math
+      // KPI Metrics Math (Strictly Active Reports)
       let pending = 0, validated = 0, rejected = 0;
       let highSev = 0, medSev = 0, lowSev = 0;
 
@@ -3727,7 +3742,7 @@ function renderFilteredCards(reportsList) {
     const prjId = `#PRJ-${String(report.id).padStart(4, '0')}`;
     const roadName = report.cityRoadName || 'Unnamed Road Segment';
 
-    // Clean Barangay Name Resolution (No raw ID: 24)
+    // Clean Barangay Name Resolution
     const brgyName = report.barangay?.barangayName || report.barangay?.name || defaultBarangayName;
 
     // Date formatting
@@ -4226,43 +4241,106 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function loadAdminDashboardData() {
+  // 1. Concurrently fetch all reports and the live database road registry
   Promise.all([
     apiFetch(`/api/reports`, { cache: 'no-store' }).catch(err => {
       console.error("🚨 [Reports API Error]:", err);
       return [];
     }),
-    apiFetch(`/api/roads`, { cache: 'no-store' }).catch(err => {
-      console.error("🚨 [Roads API Error]:", err);
-      return [];
-    })
+    // Query roads endpoint with automatic fallback to guarantee real DB count
+    apiFetch(`/api/roads`, { cache: 'no-store' })
+      .catch(() => apiFetch(`/api/city-roads`, { cache: 'no-store' }))
+      .catch(err => {
+        console.error("🚨 [Roads API Error]:", err);
+        return [];
+      })
   ])
     .then(([reports, roads]) => {
       const allReports = Array.isArray(reports) ? reports : [];
       const allRoads = Array.isArray(roads) ? roads : [];
 
-      // 1. Filter Categorical Metrics
-      const pendingReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending validation' || String(r.status || '').trim().toLowerCase() === 'resubmitted');
-      const validatedReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'validated');
-      const criticalReports = allReports.filter(r => String(r.severity || '').trim().toLowerCase() === 'high' && String(r.status || '').trim().toLowerCase() !== 'closed');
-      const dispatchedReports = allReports.filter(r => {
+      // =========================================================================
+      // 🚀 2. CYCLE & ARCHIVE FILTER: ACTIVE CYCLE ONLY
+      // =========================================================================
+      const currentCycleYear = String(new Date().getFullYear());
+
+      const activeCycleReports = allReports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+
+        // 🚫 Exclude any archived records
+        if (s.includes('archiv')) return false;
+
+        // Extract report year from field or timestamp
+        const yearVal = r.inventory_year || r.inventoryYear;
+        const rawDate = r.dateSubmitted || r.date_submitted || r.createdAt || r.created_at;
+        let reportYear = "";
+
+        if (yearVal && String(yearVal).trim() !== "" && String(yearVal).toLowerCase() !== "null") {
+          reportYear = String(yearVal).trim();
+        } else if (rawDate) {
+          const parsed = new Date(rawDate);
+          if (!isNaN(parsed.getTime())) reportYear = String(parsed.getFullYear());
+        }
+
+        // If from a past year and already terminal/validated, exclude from current active cycle
+        if (reportYear && reportYear !== currentCycleYear) {
+          if (s === 'validated' || s === 'closed' || s === 'resolved' || s.includes('reject')) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      // =========================================================================
+      // 3. CATEGORICAL METRICS (STRICTLY ACTIVE REPORTS)
+      // =========================================================================
+      const pendingReports = activeCycleReports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s === 'pending validation' || s === 'resubmit' || s === 'resubmitted';
+      });
+
+      const validatedReports = activeCycleReports.filter(r =>
+        String(r.status || '').trim().toLowerCase() === 'validated'
+      );
+
+      const criticalReports = activeCycleReports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return String(r.severity || '').trim().toLowerCase() === 'high' && s !== 'closed' && s !== 'resolved';
+      });
+
+      const dispatchedReports = activeCycleReports.filter(r => {
         const s = String(r.status || '').trim().toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress';
       });
-      const completedQAReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'completed');
-      const deferredReports = allReports.filter(r => String(r.status || '').trim().toLowerCase() === 'pending budget');
 
-      // 2. Calculate City-Wide Quota Coverage
+      const completedQAReports = activeCycleReports.filter(r =>
+        String(r.status || '').trim().toLowerCase() === 'completed'
+      );
+
+      const deferredReports = activeCycleReports.filter(r =>
+        String(r.status || '').trim().toLowerCase() === 'pending budget'
+      );
+
+      // =========================================================================
+      // 4. REAL DATABASE ROAD COUNT & QUOTA COVERAGE
+      // =========================================================================
+      // Deduplicate unique active roads inspected this cycle
       const uniqueInspectedRoads = new Set(
-        allReports
-          .map(r => r.cityRoadName)
-          .filter(name => name && String(name).trim() !== '')
+        activeCycleReports
+          .map(r => String(r.cityRoadName || '').trim().toLowerCase())
+          .filter(name => name !== '')
       ).size;
 
-      const totalCityRoads = allRoads.length > 0 ? allRoads.length : Math.max(uniqueInspectedRoads, 1);
-      let quotaPercentage = Math.round((uniqueInspectedRoads / totalCityRoads) * 100);
+      // Exact total road count directly from the database query
+      const totalCityRoads = allRoads.length > 0 ? allRoads.length : 378;
+
+      let quotaPercentage = totalCityRoads > 0 ? Math.round((uniqueInspectedRoads / totalCityRoads) * 100) : 0;
       if (quotaPercentage > 100) quotaPercentage = 100;
 
-      // 3. Inject Progress Banner Data
+      // =========================================================================
+      // 5. INJECT PROGRESS BANNER DATA
+      // =========================================================================
       const progressText = document.getElementById('admin-quota-text');
       const progressPercent = document.getElementById('admin-metric-quota');
       const barFill = document.getElementById('admin-progress-bar-fill');
@@ -4281,7 +4359,9 @@ function loadAdminDashboardData() {
         }
       }
 
-      // 4. Update Dynamic CEO Budget Deferral Alert Banner
+      // =========================================================================
+      // 6. UPDATE DYNAMIC CEO BUDGET DEFERRAL ALERT BANNER
+      // =========================================================================
       const deferralBanner = document.getElementById('admin-deferral-banner');
       const deferralBannerText = document.getElementById('admin-deferral-banner-text');
       if (deferralBanner) {
@@ -4295,7 +4375,9 @@ function loadAdminDashboardData() {
         }
       }
 
-      // 5. Inject 6-Card KPI Values
+      // =========================================================================
+      // 7. INJECT 6-CARD KPI VALUES
+      // =========================================================================
       if (document.getElementById('admin-metric-pending')) document.getElementById('admin-metric-pending').innerText = pendingReports.length;
       if (document.getElementById('admin-metric-critical')) document.getElementById('admin-metric-critical').innerText = criticalReports.length;
       if (document.getElementById('admin-metric-validated')) document.getElementById('admin-metric-validated').innerText = validatedReports.length;
@@ -4303,11 +4385,16 @@ function loadAdminDashboardData() {
       if (document.getElementById('admin-metric-qa')) document.getElementById('admin-metric-qa').innerText = completedQAReports.length;
       if (document.getElementById('admin-metric-deferred')) document.getElementById('admin-metric-deferred').innerText = deferredReports.length;
 
-      // 6. Build Action Queue Table
-      renderAdminActionQueue(pendingReports);
+      // =========================================================================
+      // 8. ACTION QUEUE & CHARTS (SCOPED TO ACTIVE CYCLE)
+      // =========================================================================
+      if (typeof renderAdminActionQueue === 'function') {
+        renderAdminActionQueue(pendingReports);
+      }
 
-      // 7. Render Charts
-      renderRealAdminCharts(allReports);
+      if (typeof renderRealAdminCharts === 'function') {
+        renderRealAdminCharts(activeCycleReports);
+      }
     })
     .catch(err => {
       console.error("🚨 Error loading Admin Dashboard data:", err);
@@ -4570,6 +4657,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const dispatchModal = document.getElementById('dispatch-confirm-modal');
       if (dispatchModal) {
         dispatchModal.classList.remove('hidden');
+        dispatchModal.style.display = 'flex';
       }
     });
   }
@@ -4583,35 +4671,74 @@ window.executePriorityDispatch = function(event) {
   const btnApproveDispatch = document.getElementById('btn-approve-dispatch');
 
   // Hide the modal
-  if (dispatchModal) dispatchModal.classList.add('hidden');
+  if (dispatchModal) {
+    dispatchModal.classList.add('hidden');
+    dispatchModal.style.display = 'none';
+  }
 
   if (btnApproveDispatch) {
     btnApproveDispatch.innerText = "⏳ Dispatching...";
     btnApproveDispatch.disabled = true;
   }
 
+  // Helper: Safely restores the CPDO Admin Dashboard without blank screens
+  function returnToDashboardView() {
+    const priorityView = document.getElementById('view-report-priority');
+    if (priorityView) {
+      priorityView.classList.add('hidden');
+      priorityView.style.display = 'none';
+    }
+
+    const adminDashboard = document.getElementById('view-admin-dashboard');
+    if (adminDashboard) {
+      adminDashboard.classList.remove('hidden');
+      adminDashboard.style.display = 'block'; // 🛑 KEY: Clears inline display:none
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (typeof loadAdminDashboardData === 'function') {
+      loadAdminDashboardData();
+    }
+  }
+
+  const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+
   // Call the Java Endpoint
-  fetch(`${API_BASE_URL}/api/reports/dispatch-masterlist`, {
+  fetch(`${baseUrl}/api/reports/dispatch-masterlist`, {
     method: 'PUT'
   })
-    .then(response => {
-      if (!response.ok) throw new Error("Failed to dispatch");
-      return response.text();
+    .then(async response => {
+      const text = await response.text();
+
+      // If backend returns 400 (Queue is empty), catch it as a specific notice
+      if (!response.ok) {
+        if (response.status === 400 || text.toLowerCase().includes("no 'validated' reports")) {
+          throw new Error("EMPTY_QUEUE");
+        }
+        throw new Error(text || "Failed to dispatch");
+      }
+
+      return text;
     })
     .then(message => {
       // 🚀 THE BEAUTIFUL TOAST SUCCESS MESSAGE
-      showToast(message, "success");
-
-      // Return to the main dashboard
-      document.getElementById('view-report-priority').classList.add('hidden');
-      document.getElementById('view-admin-dashboard').classList.remove('hidden');
-
-      // Force a data refresh so the 'Validated' count drops to zero
-      loadAdminDashboardData();
+      showToast(message || "Masterlist successfully dispatched to CEO!", "success");
+      returnToDashboardView();
     })
     .catch(err => {
-      console.error(err);
-      showToast("Error dispatching Masterlist. Is the server running?", "error");
+      console.warn("Dispatch result:", err.message);
+
+      // Revised friendly message when there are no reports
+      if (err.message === "EMPTY_QUEUE") {
+        showToast("No reports in priority list to dispatch.", "warning");
+      } else {
+        showToast("Error dispatching Masterlist. Is the server running?", "error");
+      }
+
+      // Return to dashboard so you never get stranded on a blank page
+      returnToDashboardView();
+    })
+    .finally(() => {
       if (btnApproveDispatch) {
         btnApproveDispatch.innerText = "🚀 Approve & Dispatch to CEO";
         btnApproveDispatch.disabled = false;
@@ -6578,77 +6705,130 @@ document.addEventListener("DOMContentLoaded", () => {
   const addUserModal = document.getElementById('add-user-modal');
   const formAddUser = document.getElementById('form-add-user');
 
+  const firstInput = document.getElementById('add-user-first');
+  const lastInput = document.getElementById('add-user-last');
+  const userOutput = document.getElementById('add-user-username');
+  const emailInput = document.getElementById('add-user-email');
+
+  // Helper: Auto-generate username (Attached once to prevent listener stacking)
+  const updateUsername = () => {
+    if (!firstInput || !lastInput || !userOutput) return;
+    const first = firstInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const last = lastInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    userOutput.value = (first || last) ? `${first}.${last}` : '';
+  };
+
+  if (firstInput && lastInput) {
+    firstInput.addEventListener('input', updateUsername);
+    lastInput.addEventListener('input', updateUsername);
+  }
+
+  // 1. Open Modal & Refresh Options
   if (btnOpenAddUser && addUserModal) {
     btnOpenAddUser.addEventListener('click', () => {
-      loadBarangayDropdownForAdmin(); // Refresh dropdown availability on open
+      if (typeof loadBarangayDropdownForAdmin === 'function') {
+        loadBarangayDropdownForAdmin(); // Refresh dropdown availability
+      }
       addUserModal.classList.remove('hidden');
-
-      const firstInput = document.getElementById('add-user-first');
-      const lastInput = document.getElementById('add-user-last');
-      const userOutput = document.getElementById('add-user-username');
-
-      const updateUsername = () => {
-        const first = firstInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        const last = lastInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        userOutput.value = (first || last) ? `${first}.${last}` : '';
-      };
-
-      firstInput.addEventListener('input', updateUsername);
-      lastInput.addEventListener('input', updateUsername);
+      addUserModal.style.display = 'flex';
+      if (firstInput) firstInput.focus();
     });
   }
 
+  // 2. Form Submission with Duplicate Email Validation
   if (formAddUser) {
-    formAddUser.addEventListener('submit', (e) => {
+    formAddUser.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const selectedBrgy = document.getElementById('add-user-barangay').value;
+      const selectedBrgy = document.getElementById('add-user-barangay')?.value;
       if (!selectedBrgy) {
         if (typeof showToast === 'function') showToast("Please select an available Barangay jurisdiction.", "warning");
         return;
       }
 
+      const email = (emailInput?.value || '').trim().toLowerCase();
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailPattern.test(email)) {
+        if (typeof showToast === 'function') showToast("Please provide a valid email address.", "warning");
+        return;
+      }
+
       const submitBtn = formAddUser.querySelector('button[type="submit"]');
-      submitBtn.innerHTML = "⏳ Saving...";
-      submitBtn.disabled = true;
+      if (submitBtn) {
+        submitBtn.innerHTML = "⏳ Validating & Saving...";
+        submitBtn.disabled = true;
+      }
 
-      const payload = {
-        firstName: document.getElementById('add-user-first').value.trim(),
-        middleName: document.getElementById('add-user-middle').value.trim(),
-        lastName: document.getElementById('add-user-last').value.trim(),
-        email: document.getElementById('add-user-email').value.trim(),
-        username: document.getElementById('add-user-username').value.trim(),
-        password: document.getElementById('add-user-password').value,
-        role: "BARANGAY",
-        status: "Active",
-        barangayId: selectedBrgy,
-        adminId: sessionStorage.getItem("userId") || ""
-      };
-
-      apiFetch(`/api/users/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(response => {
-          if (response && response.error) {
-            throw new Error(response.error);
+      try {
+        // 🔍 STEP 1: Pre-flight check for duplicate emails & usernames in the database
+        const existingUsers = await apiFetch(`/api/users`).catch(() => []);
+        if (Array.isArray(existingUsers)) {
+          const emailDuplicate = existingUsers.some(
+            u => String(u.email || '').trim().toLowerCase() === email
+          );
+          if (emailDuplicate) {
+            throw new Error(`The email "${email}" is already registered to another official.`);
           }
-          if (typeof showToast === 'function') showToast("Official account successfully provisioned!", "success");
-          addUserModal.classList.add('hidden');
-          formAddUser.reset();
 
-          if (typeof loadUserManagementTable === 'function') loadUserManagementTable();
-        })
-        .catch(error => {
-          console.error("Error creating user:", error);
-          const errorMsg = error.message || "Failed to create account. Please check inputs.";
-          if (typeof showToast === 'function') showToast(errorMsg, "error");
-        })
-        .finally(() => {
+          const usernameVal = (userOutput?.value || '').trim().toLowerCase();
+          const usernameDuplicate = existingUsers.some(
+            u => String(u.username || '').trim().toLowerCase() === usernameVal
+          );
+          if (usernameDuplicate) {
+            throw new Error(`The username "${usernameVal}" is already taken. Please customize it.`);
+          }
+        }
+
+        // 🚀 STEP 2: Dispatch payload to backend
+        const payload = {
+          firstName: firstInput ? firstInput.value.trim() : '',
+          middleName: document.getElementById('add-user-middle')?.value.trim() || '',
+          lastName: lastInput ? lastInput.value.trim() : '',
+          email: email,
+          username: userOutput ? userOutput.value.trim() : '',
+          password: document.getElementById('add-user-password')?.value || '',
+          role: "BARANGAY",
+          status: "Active",
+          barangayId: selectedBrgy,
+          adminId: sessionStorage.getItem("userId") || ""
+        };
+
+        const response = await apiFetch(`/api/users/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response && response.error) {
+          throw new Error(response.error);
+        }
+
+        if (typeof showToast === 'function') {
+          showToast("Official account successfully provisioned!", "success");
+        }
+
+        addUserModal.classList.add('hidden');
+        addUserModal.style.display = 'none';
+        formAddUser.reset();
+
+        if (typeof loadUserManagementTable === 'function') {
+          loadUserManagementTable();
+        }
+
+      } catch (error) {
+        console.error("Error creating user:", error);
+        const errorMsg = error.message || "Failed to create account. Please check inputs.";
+        if (typeof showToast === 'function') {
+          showToast(errorMsg, "error");
+        } else {
+          alert(errorMsg);
+        }
+      } finally {
+        if (submitBtn) {
           submitBtn.innerHTML = "💾 Provision Account";
           submitBtn.disabled = false;
-        });
+        }
+      }
     });
   }
 });
@@ -6671,7 +6851,7 @@ window.openManageOfficialModal = function(userId) {
       // Map other assigned officials
       const occupiedMap = {};
       officials.forEach(u => {
-        if (u.id !== userId && u.barangay && u.barangay.id && (!u.status || u.status !== 'Deactivated')) {
+        if (String(u.id) !== String(userId) && u.barangay && u.barangay.id && (!u.status || u.status !== 'Deactivated')) {
           occupiedMap[u.barangay.id] = `${u.firstName} ${u.lastName}`;
         }
       });
@@ -6701,6 +6881,7 @@ window.openManageOfficialModal = function(userId) {
       }
 
       modal.classList.remove('hidden');
+      modal.style.display = 'flex';
     })
     .catch(err => {
       console.error("Error loading user details:", err);
@@ -6708,51 +6889,87 @@ window.openManageOfficialModal = function(userId) {
     });
 };
 
-// Manage Form Submit
+// Manage Form Submit with Duplicate Email Protection
 document.addEventListener("DOMContentLoaded", () => {
   const formManageUser = document.getElementById('form-manage-user');
 
   if (formManageUser) {
-    formManageUser.addEventListener('submit', (e) => {
+    formManageUser.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const submitBtn = formManageUser.querySelector('button[type="submit"]');
-      submitBtn.innerHTML = "⏳ Saving Changes...";
-      submitBtn.disabled = true;
+      if (submitBtn) {
+        submitBtn.innerHTML = "⏳ Validating & Saving...";
+        submitBtn.disabled = true;
+      }
 
       const userId = document.getElementById('manage-user-id').value;
-      const payload = {
-        firstName: document.getElementById('manage-user-first').value.trim(),
-        middleName: document.getElementById('manage-user-middle').value.trim(),
-        lastName: document.getElementById('manage-user-last').value.trim(),
-        email: document.getElementById('manage-user-email').value.trim(),
-        barangayId: document.getElementById('manage-user-barangay').value,
-        status: document.getElementById('manage-user-status').value,
-        adminId: sessionStorage.getItem("userId") || ""
-      };
+      const emailInput = document.getElementById('manage-user-email');
+      const email = (emailInput?.value || '').trim().toLowerCase();
 
-      apiFetch(`/api/users/${userId}/manage`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(response => {
-          if (response && response.error) {
-            throw new Error(response.error);
-          }
-          if (typeof showToast === 'function') showToast("Official's record successfully updated!", "success");
-          document.getElementById('manage-user-modal').classList.add('hidden');
-          if (typeof loadUserManagementTable === 'function') loadUserManagementTable();
-        })
-        .catch(err => {
-          console.error("Error updating user:", err);
-          const errorMsg = err.message || "Failed to update record.";
-          if (typeof showToast === 'function') showToast(errorMsg, "error");
-        })
-        .finally(() => {
+      // 1. Email format verification
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailPattern.test(email)) {
+        if (typeof showToast === 'function') showToast("Please provide a valid email address.", "warning");
+        if (submitBtn) {
           submitBtn.innerHTML = "💾 Save Profile Changes";
           submitBtn.disabled = false;
+        }
+        return;
+      }
+
+      try {
+        // 2. Pre-flight check: Prevent assigning an email owned by ANOTHER user
+        const allUsers = await apiFetch(`/api/users`).catch(() => []);
+        if (Array.isArray(allUsers)) {
+          const emailDuplicate = allUsers.some(
+            u => String(u.id) !== String(userId) && String(u.email || '').trim().toLowerCase() === email
+          );
+          if (emailDuplicate) {
+            throw new Error(`The email "${email}" is already registered to another user.`);
+          }
+        }
+
+        const payload = {
+          firstName: document.getElementById('manage-user-first').value.trim(),
+          middleName: document.getElementById('manage-user-middle').value.trim(),
+          lastName: document.getElementById('manage-user-last').value.trim(),
+          email: email,
+          barangayId: document.getElementById('manage-user-barangay').value,
+          status: document.getElementById('manage-user-status').value,
+          adminId: sessionStorage.getItem("userId") || ""
+        };
+
+        const response = await apiFetch(`/api/users/${userId}/manage`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
+
+        if (response && response.error) {
+          throw new Error(response.error);
+        }
+
+        if (typeof showToast === 'function') showToast("Official's record successfully updated!", "success");
+
+        const modal = document.getElementById('manage-user-modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.style.display = 'none';
+        }
+
+        if (typeof loadUserManagementTable === 'function') loadUserManagementTable();
+
+      } catch (err) {
+        console.error("Error updating user:", err);
+        const errorMsg = err.message || "Failed to update record.";
+        if (typeof showToast === 'function') showToast(errorMsg, "error");
+      } finally {
+        if (submitBtn) {
+          submitBtn.innerHTML = "💾 Save Profile Changes";
+          submitBtn.disabled = false;
+        }
+      }
     });
   }
 
@@ -6773,12 +6990,18 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ adminId: sessionStorage.getItem("userId") || "" })
       })
         .then(() => {
-          if (resetConfirmModal) resetConfirmModal.classList.add('hidden');
+          if (resetConfirmModal) {
+            resetConfirmModal.classList.add('hidden');
+            resetConfirmModal.style.display = 'none';
+          }
           if (typeof showToast === 'function') showToast("Password successfully reset to default (RoadWise2026!)", "success");
         })
         .catch(err => {
           console.error("Error resetting password:", err);
-          if (resetConfirmModal) resetConfirmModal.classList.add('hidden');
+          if (resetConfirmModal) {
+            resetConfirmModal.classList.add('hidden');
+            resetConfirmModal.style.display = 'none';
+          }
           if (typeof showToast === 'function') showToast("Failed to reset password.", "error");
         })
         .finally(() => {
@@ -6790,7 +7013,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
-// 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE
+// 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE (WITH ROAD SEARCH)
 // ==========================================
 window.loadBarangayManagement = function() {
 
@@ -6799,14 +7022,20 @@ window.loadBarangayManagement = function() {
 
   tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 15px;">Loading Barangays... <span class="icon">⏳</span></td></tr>';
 
-  apiFetch('/api/barangays/dashboard-summary')
-    .then(data => {
+  // Concurrently fetch summary data and all city roads
+  Promise.all([
+    apiFetch('/api/barangays/dashboard-summary'),
+    apiFetch('/api/roads').catch(() => [])
+  ])
+    .then(([data, roads]) => {
       tableBody.innerHTML = '';
 
       if (!data || data.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 15px;">No barangays found in the system.</td></tr>';
         return;
       }
+
+      const allRoads = Array.isArray(roads) ? roads : [];
 
       data.forEach((brgy, index) => {
         let badgeHtml = `<span class="badge" style="background-color: #e9ecef; color: #6c757d;">0 Active</span>`;
@@ -6816,7 +7045,18 @@ window.loadBarangayManagement = function() {
           badgeHtml = `<span class="badge medium">${brgy.activeReportCount} Active</span>`;
         }
 
+        // 1. Gather all road names registered under this barangay
+        const brgyRoads = allRoads.filter(r => {
+          const rBrgyId = r.barangay?.id || r.barangayId;
+          return String(rBrgyId) === String(brgy.id);
+        });
+        const roadNamesString = brgyRoads.map(r => r.roadName || '').filter(Boolean).join(', ');
+
         const row = document.createElement('tr');
+
+        // 2. Attach road names to data-roads for the search engine
+        row.setAttribute('data-roads', roadNamesString);
+
         row.innerHTML = `
           <td style="text-align: center; font-weight: bold; color: #6c757d;">${index + 1}</td>
           <td><strong>${brgy.name}</strong></td>
@@ -6824,7 +7064,6 @@ window.loadBarangayManagement = function() {
           <td>${brgy.roadCount || 0} Roads</td>
           <td>${badgeHtml}</td>
           <td>
-            <!-- 🚀 CLEANED: Now we only pass the ID. The modal fetches the rest! -->
             <button class="btn-small manage-brgy-btn" onclick="openManageBarangayModal(${brgy.id})">
               Manage Barangay
             </button>
@@ -6832,6 +7071,12 @@ window.loadBarangayManagement = function() {
         `;
         tableBody.appendChild(row);
       });
+
+      // 3. Re-run search in case the user typed before the data finished loading
+      const searchInput = document.getElementById('search-barangay-input');
+      if (searchInput && searchInput.value.trim() !== '' && typeof window.executeGlobalSearch === 'function') {
+        window.executeGlobalSearch('search-barangay-input', 'barangay-table-body');
+      }
     })
     .catch(err => {
       console.error('Error loading barangays:', err);
@@ -7095,31 +7340,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 1. FUNCTION TO OPEN AND POPULATE THE MODAL
 window.openEditRoadModal = function(roadId) {
-  // Fetch the specific road details from your Java backend
   apiFetch(`/api/roads/${roadId}`)
     .then(road => {
-      // Secretly store the database ID so we know which road to update
+      // Store the database ID
       document.getElementById('edit-db-id').value = road.id;
 
       // Populate the visible fields
       document.getElementById('edit-road-sequence-id').value = road.roadId || 'N/A';
-      document.getElementById('edit-road-name').value = road.roadName;
-      document.getElementById('edit-road-importance').value = road.roadImportance;
-      document.getElementById('edit-road-type').value = road.roadType;
-      document.getElementById('edit-road-terrain').value = road.terrainType;
+      document.getElementById('edit-road-name').value = road.roadName || '';
+      document.getElementById('edit-road-importance').value = road.roadImportance || 'Secondary';
+      document.getElementById('edit-road-type').value = road.roadType || 'Concrete';
+      document.getElementById('edit-road-terrain').value = road.terrainType || 'Flat';
 
-      // ==========================================
-      // 🚀 THE FIX: TELEPORT AND FORCE Z-INDEX
-      // ==========================================
       const modal = document.getElementById('edit-road-modal');
 
-      // 1. Rip it out and paste it at the root of the document body
+      // 1. Move to document body so it escapes the Manage Modal's stacking container
       document.body.appendChild(modal);
 
-      // 2. Force it to be the absolute highest layer mathematically possible
-      modal.style.zIndex = "99999";
+      // 2. Override CSS !important rules to guarantee it sits on top
+      modal.style.setProperty('position', 'fixed', 'important');
+      modal.style.setProperty('z-index', '999999', 'important');
 
-      // 3. Show it!
+      // 3. Show the modal
       modal.classList.remove('hidden');
     })
     .catch(err => {
@@ -7133,7 +7375,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. CLOSE MODAL BUTTONS
   document.querySelectorAll('.close-edit-road-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.getElementById('edit-road-modal').classList.add('hidden');
+      const modal = document.getElementById('edit-road-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
     });
   });
 
@@ -7145,21 +7390,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const dbId = document.getElementById('edit-db-id').value;
 
-      // Note: We do NOT send the road sequence ID! It is locked.
       const payload = {
         roadName: document.getElementById('edit-road-name').value.trim(),
         roadImportance: document.getElementById('edit-road-importance').value,
         roadType: document.getElementById('edit-road-type').value,
         terrainType: document.getElementById('edit-road-terrain').value,
-        barangay: { id: currentManageBarangayId } // Attaches it to the current Barangay
+        barangay: { id: currentManageBarangayId }
       };
 
-      const submitBtn = this.querySelector('.btn-submit');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = "⏳ Saving...";
-      submitBtn.disabled = true;
+      const submitBtn = this.querySelector('.btn-submit') || this.querySelector('button[type="submit"]');
+      const originalText = submitBtn ? submitBtn.innerHTML : "Save";
+      if (submitBtn) {
+        submitBtn.innerHTML = "⏳ Saving...";
+        submitBtn.disabled = true;
+      }
 
-      // Send the PUT request to update the road
       fetch(`${API_BASE_URL}/api/roads/${dbId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -7179,7 +7424,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('edit-road-modal').classList.add('hidden');
           formEditRoad.reset();
 
-          // 🚀 Refresh the Manage Barangay table instantly to show the changes!
+          // Refresh the Manage Barangay table
           if (typeof openManageBarangayModal === 'function') {
             openManageBarangayModal(currentManageBarangayId);
           }
@@ -7189,13 +7434,14 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast(err.message, "error");
         })
         .finally(() => {
-          submitBtn.innerHTML = originalText;
-          submitBtn.disabled = false;
+          if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+          }
         });
     });
   }
 });
-
 
 // ==========================================
 // ✏️ RENAME BARANGAY LOGIC
@@ -8403,31 +8649,41 @@ window.loadActiveCycleOverview = function() {
   const yearEl = document.getElementById("settings-active-year");
   if (yearEl) yearEl.textContent = `${currentYear} Cycle`;
 
-  // ==========================================
-  // 🚀 THE FIX: Check Maintenance Status on Load!
-  // ==========================================
+  // Check Maintenance Status on Load
   if (typeof window.loadMaintenanceStatus === "function") {
     window.loadMaintenanceStatus();
   }
 
-  // Fetch actual Total City Roads AND all Reports concurrently
+  // 1. Concurrently fetch real city roads and reports (no-store prevents stale cached counts)
   Promise.all([
-    apiFetch("/api/city-roads").catch(() => []),
-    apiFetch("/api/reports").catch(() => [])
+    apiFetch("/api/roads", { cache: "no-store" })
+      .catch(() => apiFetch("/api/city-roads", { cache: "no-store" }))
+      .catch(() => []),
+    apiFetch("/api/reports", { cache: "no-store" }).catch(() => [])
   ])
     .then(([cityRoads, reports]) => {
       // A. Get Actual Total Road Count from DB (Fallback to 378 if API fails)
       const totalRoads = (Array.isArray(cityRoads) && cityRoads.length > 0) ? cityRoads.length : 378;
 
-      // B. Filter Reports for the Current Year ONLY
+      // =========================================================================
+      // 🚀 B. FILTER FOR ACTIVE CYCLE ONLY (EXCLUDE ARCHIVED & PAST YEARS)
+      // =========================================================================
       const currentYearReports = (Array.isArray(reports) ? reports : []).filter(r => {
-        return getReportYearSettings(r) === currentYear;
+        const status = String(r.status || '').trim().toLowerCase();
+
+        // 🚫 Exclude any archived records
+        if (status.includes('archiv')) return false;
+
+        const reportYear = getReportYearSettings(r);
+        return !reportYear || reportYear === currentYear;
       });
 
-      // C. Deduplicate: Count how many UNIQUE roads have been inspected this year
+      // =========================================================================
+      // C. DEDUPLICATE: COUNT UNIQUE ACTIVE ROADS INSPECTED THIS CYCLE
+      // =========================================================================
       const uniqueRoadsInspected = new Set();
       currentYearReports.forEach(r => {
-        const roadKey = String(r.cityRoadId || r.cityRoadName || r.id).trim().toLowerCase();
+        const roadKey = String(r.cityRoadName || r.cityRoadId || '').trim().toLowerCase();
         if (roadKey) uniqueRoadsInspected.add(roadKey);
       });
 
@@ -8440,7 +8696,7 @@ window.loadActiveCycleOverview = function() {
       }
       if (percentage > 100) percentage = 100;
 
-      // E. Update the UI DOM Elements
+      // E. Update UI DOM Elements
       const countEl = document.getElementById("settings-inspected-count");
       const totalEl = document.getElementById("settings-total-roads");
       const barEl = document.getElementById("settings-progress-bar");
@@ -8457,7 +8713,7 @@ window.loadActiveCycleOverview = function() {
         // Visual feedback based on completion
         if (percentage >= 100) {
           barEl.style.background = "#16a34a"; // Green
-          percentEl.style.color = "#16a34a";
+          if (percentEl) percentEl.style.color = "#16a34a";
           if (badgeEl) {
             badgeEl.textContent = "COMPLETED (READY TO ARCHIVE)";
             badgeEl.style.background = "#fee2e2";
@@ -8466,7 +8722,7 @@ window.loadActiveCycleOverview = function() {
           }
         } else {
           barEl.style.background = "#2563eb"; // Blue
-          percentEl.style.color = "#2563eb";
+          if (percentEl) percentEl.style.color = "#2563eb";
           if (badgeEl) {
             badgeEl.textContent = "ACTIVE (OPEN FOR INSPECTION)";
             badgeEl.style.background = "#dcfce7";

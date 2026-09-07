@@ -898,15 +898,24 @@
       <!-- 🛑 TWO-STEP VERIFICATION MODAL FOR ROLLOVER -->
       <!-- ======================================================= -->
       <div id="modal-rollover-confirm" class="hidden" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 999999; justify-content: center; align-items: center;">
-        <div style="background: white; border-radius: 12px; width: 400px; padding: 25px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); border: 2px solid #dc2626;">
+        <div style="background: white; border-radius: 12px; width: 440px; padding: 25px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); border: 2px solid #dc2626;">
           <h3 style="margin: 0 0 10px 0; color: #dc2626; font-size: 18px; display: flex; align-items: center; gap: 8px;">
             <span>⚠️</span> Confirm Annual Rollover
           </h3>
-          <p style="margin: 0 0 20px 0; font-size: 13px; color: #475569; line-height: 1.5;">
-            To confirm this permanent action, please type <strong>ARCHIVE CYCLE</strong> in the box below. All system users will be notified via email.
+          <p style="margin: 0 0 15px 0; font-size: 13px; color: #475569; line-height: 1.5;">
+            Initializing a new annual cycle will permanently archive completed records. Active repairs carry over to the new year.
           </p>
 
-          <input type="text" id="input-rollover-confirm" placeholder="Type ARCHIVE CYCLE" autocomplete="off" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; margin-bottom: 20px; font-weight: 800; text-align: center; text-transform: uppercase; outline: none;">
+          <!-- 🚀 NEW: PRE-FLIGHT AUDIT SUMMARY BOX -->
+          <div id="rollover-preflight-box" style="margin-bottom: 15px; border-radius: 8px; font-size: 12.5px; line-height: 1.4;">
+            <!-- Populated dynamically via JavaScript -->
+          </div>
+
+          <p style="margin: 0 0 10px 0; font-size: 12.5px; color: #334155; font-weight: 600;">
+            To confirm, type <span style="color: #dc2626;">ARCHIVE CYCLE</span> below:
+          </p>
+
+          <input type="text" id="input-rollover-confirm" placeholder="Type ARCHIVE CYCLE" autocomplete="off" style="width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; margin-bottom: 20px; font-weight: 800; text-align: center; text-transform: uppercase; outline: none;">
 
           <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button type="button" onclick="closeRolloverModal()" style="padding: 10px 16px; border: 1px solid #cbd5e1; background: white; color: #475569; border-radius: 6px; cursor: pointer; font-weight: 600;">Cancel</button>

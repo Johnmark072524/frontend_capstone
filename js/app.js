@@ -3571,11 +3571,21 @@ if (btnLocateMap) {
 let rawBarangayReports = [];
 let severityChartInstance = null;
 
-// 🧠 1. Progress Bar Logic (Fail-Safe Version)
+// 🧠 1. Progress Bar Logic (Cycle-Year Scoped)
 function calculateJurisdictionProgress(barangayId, activeReports) {
-  // Only count roads that have ACTIVE inspections in the current cycle
+  const currentCycleYear = new Date().getFullYear();
+
+  // 🚀 THE FIX: Only count roads that have inspections in the CURRENT annual cycle
+  const currentCycleReports = activeReports.filter(r => {
+    const reportYear = r.inventoryYear ||
+      (r.dateSubmitted ? new Date(r.dateSubmitted).getFullYear() :
+        (r.date_submitted ? new Date(r.date_submitted).getFullYear() : null));
+
+    return Number(reportYear) === currentCycleYear;
+  });
+
   const inspectedRoadNames = new Set(
-    activeReports
+    currentCycleReports
       .map(r => r.cityRoadName)
       .filter(name => name && String(name).trim() !== '')
   );
@@ -3599,7 +3609,6 @@ function calculateJurisdictionProgress(barangayId, activeReports) {
     updateProgressBarUI(inspectedCount, displayTotal);
   }
 }
-
 function updateProgressBarUI(inspectedCount, displayTotal) {
   let percentage = Math.round((inspectedCount / displayTotal) * 100);
   if (percentage > 100) percentage = 100;
@@ -3640,14 +3649,14 @@ function loadBarangayReports(barangayId) {
       const allReports = Array.isArray(reports) ? reports : [];
 
       // =========================================================================
-      // 🚀 THE FIX: FILTER OUT ARCHIVED REPORTS FROM ACTIVE ANNUAL CYCLE DASHBOARD
+      // 🚀 FILTER OUT ARCHIVED REPORTS (Only shows current annual cycle)
       // =========================================================================
       rawBarangayReports = allReports.filter(r => {
         const s = String(r.status || '').toLowerCase();
         return !s.includes('archiv');
       });
 
-      // Recalculate progress bar using ONLY active cycle reports (resets to 0% if empty)
+      // Recalculate progress bar using ONLY active cycle reports
       calculateJurisdictionProgress(barangayId, rawBarangayReports);
 
       // If all reports are archived or none exist, cleanly reset all UI metrics
@@ -3674,7 +3683,8 @@ function loadBarangayReports(barangayId) {
           if (s.includes('reject')) return 1;
           if (s.includes('pending') || s.includes('resubmit')) return 2;
           if (s.includes('validate') || s.includes('dispatch') || s.includes('progress')) return 3;
-          return 4;
+          if (s.includes('completed') || s.includes('closed') || s.includes('resolved')) return 4;
+          return 5;
         };
 
         const priorityA = getPriority(a.status);
@@ -3687,15 +3697,28 @@ function loadBarangayReports(barangayId) {
         return dateB - dateA;
       });
 
-      // KPI Metrics Math (Strictly Active Reports)
+      // =========================================================================
+      // 🚀 KPI METRICS MATH (Includes 'Closed' & 'Resolved' in Validated/Finished)
+      // =========================================================================
       let pending = 0, validated = 0, rejected = 0;
       let highSev = 0, medSev = 0, lowSev = 0;
 
       rawBarangayReports.forEach(r => {
         const s = String(r.status || '').toLowerCase();
-        if (s.includes('reject')) rejected++;
-        else if (s.includes('validate') || s.includes('dispatch') || s.includes('progress') || s.includes('completed')) validated++;
-        else pending++;
+        if (s.includes('reject')) {
+          rejected++;
+        } else if (
+          s.includes('validate') ||
+          s.includes('dispatch') ||
+          s.includes('progress') ||
+          s.includes('completed') ||
+          s.includes('closed') ||
+          s.includes('resolved')
+        ) {
+          validated++;
+        } else {
+          pending++;
+        }
 
         const sev = String(r.severity || '').toLowerCase();
         if (sev === 'high') highSev++;
@@ -3757,7 +3780,9 @@ function renderFilteredCards(reportsList) {
     else if (severity === 'Medium') sevBadgeColor = '#d97706';
     else if (severity === 'Low') sevBadgeColor = '#16a34a';
 
-    // Status Badge & Action Configuration
+    // =========================================================================
+    // 🚀 STATUS BADGE CONFIGURATION (Explicitly handles Closed & Resolved)
+    // =========================================================================
     let badgeClass = 'bd-badge-pending';
     let badgeLabel = 'Under Review';
     let actionBtnHtml = `<button class="bd-btn-card-action bd-btn-view" onclick="openViewModal(${report.id})">View Details</button>`;
@@ -3769,9 +3794,18 @@ function renderFilteredCards(reportsList) {
     } else if (sLower.includes('resubmit')) {
       badgeClass = 'bd-badge-pending';
       badgeLabel = 'Resubmitted';
-    } else if (sLower.includes('validate') || sLower.includes('dispatch') || sLower.includes('progress') || sLower.includes('completed')) {
+    } else if (sLower.includes('closed') || sLower.includes('resolved')) {
       badgeClass = 'bd-badge-validated';
-      badgeLabel = sLower.includes('progress') ? 'In Progress' : (sLower.includes('completed') ? 'Completed' : 'Validated');
+      badgeLabel = 'Closed / Resolved';
+    } else if (sLower.includes('completed')) {
+      badgeClass = 'bd-badge-validated';
+      badgeLabel = 'Completed (Pending QA)';
+    } else if (sLower.includes('progress')) {
+      badgeClass = 'bd-badge-validated';
+      badgeLabel = 'In Progress';
+    } else if (sLower.includes('validate') || sLower.includes('dispatch')) {
+      badgeClass = 'bd-badge-validated';
+      badgeLabel = 'Validated';
     }
 
     return `
@@ -8736,28 +8770,28 @@ window.loadActiveCycleOverview = function() {
 };
 
 // =======================================================
-// 🚨 DANGER ZONE: ANNUAL CYCLE ROLLOVER LOGIC
+// 🚨 DANGER ZONE: ANNUAL CYCLE ROLLOVER LOGIC (WITH PRE-FLIGHT)
 // =======================================================
 
-// 1. Open the Verification Modal
+// 1. Open the Verification Modal & Run Pre-Flight Check
 window.openRolloverModal = function() {
   const modal = document.getElementById("modal-rollover-confirm");
   const input = document.getElementById("input-rollover-confirm");
   const btn = document.getElementById("btn-execute-rollover");
+  const preflightBox = document.getElementById("rollover-preflight-box");
 
   if (modal) {
     modal.style.display = "flex";
     modal.classList.remove("hidden");
   }
 
+  // Set default initial state for input and execute button
   if (input && btn) {
-    input.value = ""; // Reset input
-    input.focus();
+    input.value = "";
     btn.style.opacity = "0.5";
     btn.style.pointerEvents = "none";
     btn.style.cursor = "not-allowed";
 
-    // 2. Real-time typing validation
     input.oninput = function() {
       if (this.value.trim().toUpperCase() === "ARCHIVE CYCLE") {
         btn.style.opacity = "1";
@@ -8770,9 +8804,74 @@ window.openRolloverModal = function() {
       }
     };
   }
+
+  // Pre-flight check UI loader
+  if (preflightBox) {
+    preflightBox.style.display = "block";
+    preflightBox.style.padding = "10px 12px";
+    preflightBox.style.background = "#f8fafc";
+    preflightBox.style.border = "1px solid #e2e8f0";
+    preflightBox.style.color = "#64748b";
+    preflightBox.innerHTML = `🔍 Running pre-flight system check...`;
+  }
+
+  // Fetch current report queue to audit unverified work
+  apiFetch("/api/reports")
+    .then(reports => {
+      if (!Array.isArray(reports)) return;
+
+      const pendingQa = reports.filter(r => String(r.status || '').toLowerCase() === 'completed');
+      const inProgress = reports.filter(r => {
+        const s = String(r.status || '').toLowerCase();
+        return s.includes('progress') || s.includes('dispatch');
+      });
+
+      if (!preflightBox) return;
+
+      if (pendingQa.length > 0) {
+        // ⚠️ REMINDER: Repairs are waiting for Admin QA
+        preflightBox.style.background = "#fffbeb";
+        preflightBox.style.border = "1px solid #fef3c7";
+        preflightBox.style.color = "#92400e";
+        preflightBox.innerHTML = `
+          <div style="font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
+            <span>⚠️</span> Pre-Flight Reminder (${pendingQa.length} Pending QA)
+          </div>
+          <div>
+            You have <strong>${pendingQa.length}</strong> repair(s) marked as <em>Completed</em> by the CEO awaiting your QA sign-off in <strong>Repair Tracking</strong>.
+          </div>
+          <div style="margin-top: 6px; font-size: 11.5px; color: #b45309;">
+            You can still proceed, but unverified repairs will carry over into the new cycle.
+          </div>
+        `;
+      } else if (inProgress.length > 0) {
+        // ℹ️ INFO: Active engineering projects
+        preflightBox.style.background = "#eff6ff";
+        preflightBox.style.border = "1px solid #dbeafe";
+        preflightBox.style.color = "#1e40af";
+        preflightBox.innerHTML = `
+          <div style="font-weight: 700; margin-bottom: 3px;">ℹ️ Active Engineering Notice</div>
+          <div>There are <strong>${inProgress.length}</strong> active repairs currently In Progress. These will safely carry over to the new year.</div>
+        `;
+      } else {
+        // ✅ CLEAN SLATE
+        preflightBox.style.background = "#f0fdf4";
+        preflightBox.style.border = "1px solid #dcfce7";
+        preflightBox.style.color = "#166534";
+        preflightBox.innerHTML = `
+          <div style="font-weight: 700;">✅ Pre-Flight Clear</div>
+          <div>All completed repairs have been officially verified and closed.</div>
+        `;
+      }
+    })
+    .catch(() => {
+      if (preflightBox) {
+        preflightBox.style.display = "none";
+      }
+    });
 };
 
-// 3. Close the Modal
+// 2. Close the Modal
 window.closeRolloverModal = function() {
   const modal = document.getElementById("modal-rollover-confirm");
   if (modal) {
@@ -8781,7 +8880,7 @@ window.closeRolloverModal = function() {
   }
 };
 
-// 4. Fire the Request to the Backend
+// 3. Fire the Rollover Request
 window.executeAnnualRollover = function() {
   const btn = document.getElementById("btn-execute-rollover");
   if (btn) {
@@ -8790,19 +8889,16 @@ window.executeAnnualRollover = function() {
     btn.style.opacity = "0.7";
   }
 
-  // Calls your existing endpoint
   apiFetch("/api/reports/rollover-annual-cycle", {
     method: "POST"
   })
     .then(res => {
-      // Show success notification
       if (typeof showToast === "function") {
-        showToast(`Rollover Complete: Archived ${res.archivedCount || 0} reports. Emails sent.`, "success");
+        showToast(`Rollover Complete: Archived ${res.archivedCount || 0} reports. Notifications sent.`, "success");
       } else {
         alert(`Rollover Complete: Archived ${res.archivedCount || 0} reports.`);
       }
 
-      // Close Modal and Refresh Cycle Stats
       window.closeRolloverModal();
       if (typeof window.loadActiveCycleOverview === "function") {
         window.loadActiveCycleOverview();
@@ -8818,7 +8914,7 @@ window.executeAnnualRollover = function() {
     })
     .finally(() => {
       if (btn) {
-        btn.innerHTML = "Execute Rollover"; // Reset button text
+        btn.innerHTML = "Execute Rollover";
       }
     });
 };

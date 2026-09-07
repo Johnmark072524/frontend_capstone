@@ -8780,12 +8780,16 @@ window.openRolloverModal = function() {
   const btn = document.getElementById("btn-execute-rollover");
   const preflightBox = document.getElementById("rollover-preflight-box");
 
-  if (modal) {
-    modal.style.display = "flex";
-    modal.classList.remove("hidden");
+  if (!modal) {
+    console.error("❌ Modal element #modal-rollover-confirm not found in DOM!");
+    return;
   }
 
-  // Set default initial state for input and execute button
+  // Display the modal
+  modal.style.display = "flex";
+  modal.classList.remove("hidden");
+
+  // Reset input and lock execute button
   if (input && btn) {
     input.value = "";
     btn.style.opacity = "0.5";
@@ -8805,31 +8809,41 @@ window.openRolloverModal = function() {
     };
   }
 
-  // Pre-flight check UI loader
-  if (preflightBox) {
-    preflightBox.style.display = "block";
-    preflightBox.style.padding = "10px 12px";
-    preflightBox.style.background = "#f8fafc";
-    preflightBox.style.border = "1px solid #e2e8f0";
-    preflightBox.style.color = "#64748b";
-    preflightBox.innerHTML = `🔍 Running pre-flight system check...`;
+  if (!preflightBox) {
+    console.error("❌ #rollover-preflight-box not found in DOM! Check for duplicate modal IDs.");
+    return;
   }
 
-  // Fetch current report queue to audit unverified work
+  // Initial loader state
+  preflightBox.style.display = "block";
+  preflightBox.style.padding = "10px 12px";
+  preflightBox.style.background = "#f8fafc";
+  preflightBox.style.border = "1px solid #e2e8f0";
+  preflightBox.style.color = "#64748b";
+  preflightBox.innerHTML = `🔍 Running pre-flight system check...`;
+
+  // Pre-flight check via /api/reports
   apiFetch("/api/reports")
     .then(reports => {
-      if (!Array.isArray(reports)) return;
+      console.log("Pre-flight data:", reports);
 
-      const pendingQa = reports.filter(r => String(r.status || '').toLowerCase() === 'completed');
+      if (!Array.isArray(reports)) {
+        throw new Error("Invalid response format (expected an array of reports)");
+      }
+
+      // Detect unreviewed QA completions
+      const pendingQa = reports.filter(r => {
+        const s = String(r.status || '').trim().toLowerCase();
+        return s === 'completed';
+      });
+
+      // Detect active construction/maintenance
       const inProgress = reports.filter(r => {
-        const s = String(r.status || '').toLowerCase();
+        const s = String(r.status || '').trim().toLowerCase();
         return s.includes('progress') || s.includes('dispatch');
       });
 
-      if (!preflightBox) return;
-
       if (pendingQa.length > 0) {
-        // ⚠️ REMINDER: Repairs are waiting for Admin QA
         preflightBox.style.background = "#fffbeb";
         preflightBox.style.border = "1px solid #fef3c7";
         preflightBox.style.color = "#92400e";
@@ -8845,7 +8859,6 @@ window.openRolloverModal = function() {
           </div>
         `;
       } else if (inProgress.length > 0) {
-        // ℹ️ INFO: Active engineering projects
         preflightBox.style.background = "#eff6ff";
         preflightBox.style.border = "1px solid #dbeafe";
         preflightBox.style.color = "#1e40af";
@@ -8854,7 +8867,6 @@ window.openRolloverModal = function() {
           <div>There are <strong>${inProgress.length}</strong> active repairs currently In Progress. These will safely carry over to the new year.</div>
         `;
       } else {
-        // ✅ CLEAN SLATE
         preflightBox.style.background = "#f0fdf4";
         preflightBox.style.border = "1px solid #dcfce7";
         preflightBox.style.color = "#166534";
@@ -8864,10 +8876,17 @@ window.openRolloverModal = function() {
         `;
       }
     })
-    .catch(() => {
-      if (preflightBox) {
-        preflightBox.style.display = "none";
-      }
+    .catch(err => {
+      console.warn("Pre-flight check error:", err);
+      // Fallback display instead of turning display to 'none'
+      preflightBox.style.display = "block";
+      preflightBox.style.background = "#f1f5f9";
+      preflightBox.style.border = "1px solid #cbd5e1";
+      preflightBox.style.color = "#475569";
+      preflightBox.innerHTML = `
+        <div style="font-weight: 600;">⚠️ Notice</div>
+        <div>Proceeding with standard cycle rollover. Verified and closed reports will be archived.</div>
+      `;
     });
 };
 
@@ -8918,7 +8937,6 @@ window.executeAnnualRollover = function() {
       }
     });
 };
-
 // =======================================================
 // 🔒 SYSTEM MAINTENANCE LOGIC
 // =======================================================

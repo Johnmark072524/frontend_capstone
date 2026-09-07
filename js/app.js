@@ -935,7 +935,6 @@ document.addEventListener('DOMContentLoaded', () => {
     history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
     switchView(finalTarget);
   })();
-
 // ==========================================
 // ADMIN DASHBOARD: ACCEPT & VALIDATE LOGIC
 // ==========================================
@@ -4666,7 +4665,7 @@ window.rawTrackedReports = [];
 window.currentFilteredTrackedReports = [];
 
 // ==========================================
-// ADMIN DASHBOARD: LOAD REPAIR TRACKING
+// ADMIN DASHBOARD: LOAD REPAIR TRACKING (STRICT ACTIVE QUEUE)
 // ==========================================
 function loadTrackingData() {
   const trackingTableBody = document.querySelector('#view-tracking .data-table tbody');
@@ -4676,20 +4675,30 @@ function loadTrackingData() {
     .then(reports => {
       trackingTableBody.innerHTML = '';
 
-      const trackedReports = reports.filter(r => {
+      // 🚀 OPTION A: STRICT ACTIVE QUEUE ONLY
+      // Excludes 'closed' and 'archived' — they belong in Archive & Reports
+      const trackedReports = (Array.isArray(reports) ? reports : []).filter(r => {
         const status = String(r.status || '').toLowerCase().trim();
         return status === 'dispatched to ceo' ||
           status === 'in progress' ||
           status === 'completed' ||
-          status === 'pending budget' ||
-          status === 'closed' ||
-          status === 'archived';
+          status === 'pending budget';
       });
 
       if (trackedReports.length === 0) {
         window.rawTrackedReports = [];
         window.currentFilteredTrackedReports = [];
-        trackingTableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px;">No active repair projects to track.</td></tr>`;
+        trackingTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">
+              <div style="font-size: 28px; margin-bottom: 8px;">🛠️</div>
+              <strong>No active repair projects to track.</strong>
+              <p style="font-size: 13px; margin: 4px 0 0 0; color: #94a3b8;">
+                All verified and closed projects are securely stored in <strong>Archive & Reports</strong>.
+              </p>
+            </td>
+          </tr>
+        `;
         return;
       }
 
@@ -4701,7 +4710,6 @@ function loadTrackingData() {
         else if (status === 'pending budget') report.statusScore = 1;
         else report.statusScore = 0;
 
-        // 🚀 Do NOT default to 'low' here
         const rawSeverity = String(report.severity || '').toLowerCase().trim();
         const importance = String(report.roadImportance || '').toLowerCase().trim();
 
@@ -4712,7 +4720,7 @@ function loadTrackingData() {
         } else if (rawSeverity === 'low') {
           report.priorityScore = 1;
         } else {
-          report.priorityScore = 0; // Unassessed priority score
+          report.priorityScore = 0;
         }
       });
 
@@ -4724,7 +4732,7 @@ function loadTrackingData() {
         return idB - idA;
       });
 
-      // Sync for the report generator & export
+      // Sync for report generator & export
       window.rawTrackedReports = trackedReports;
       window.currentFilteredTrackedReports = [...trackedReports];
 
@@ -4737,7 +4745,7 @@ function loadTrackingData() {
         const rawSeverity = String(report.severity || '').toLowerCase().trim();
         const importance = String(report.roadImportance || '').toLowerCase().trim();
 
-        // 🚀 PROPER PRIORITY BADGE WITH UNASSESSED SUPPORT
+        // Priority Badge
         let badgeHtml = '';
         let borderStyle = '4px solid #10b981';
 
@@ -4767,12 +4775,6 @@ function loadTrackingData() {
           statusHtml = `<span class="status-badge" style="background-color: #fef08a; color: #854d0e;">⚠️ Pending Budget</span>`;
           borderStyle = '4px solid #eab308';
           checkboxHtml = `<input type="checkbox" class="archive-checkbox" value="${report.id}" onclick="updateBatchArchiveUI()" style="cursor: pointer; transform: scale(1.2);">`;
-        } else if (currentStatus === 'closed') {
-          statusHtml = `<span class="status-badge" style="background-color: #e2e3e5; color: #6c757d;">✅ Officially Closed</span>`;
-          borderStyle = '4px solid #6c757d';
-        } else if (currentStatus === 'archived') {
-          statusHtml = `<span class="status-badge" style="background-color: #cbd5e1; color: #475569;">📁 Archived (Deferred)</span>`;
-          borderStyle = '4px solid #475569';
         } else {
           statusHtml = `<span class="status-badge pending" style="background-color: #e2e3e5; color: #383d41;">Dispatched to CEO</span>`;
         }
@@ -4780,11 +4782,6 @@ function loadTrackingData() {
         const row = document.createElement('tr');
         row.style.borderLeft = borderStyle;
         if (currentStatus === 'completed') row.style.backgroundColor = '#fafafa';
-
-        if (currentStatus === 'closed' || currentStatus === 'archived') {
-          row.style.opacity = '0.6';
-          row.style.backgroundColor = '#f8f9fa';
-        }
 
         row.innerHTML = `
           <td style="text-align: center;">${checkboxHtml}</td>
@@ -7410,18 +7407,52 @@ if (!currentUserId) {
   console.warn("No user is currently logged in. Notifications will not load.");
 }
 
-// 1. HELPER: Format dates to "Time Ago"
+// 1. HELPER: Format dates to "Time Ago" (Timezone-Aware)
 function timeAgo(dateString) {
   if (!dateString) return '';
-  const date = new Date(dateString);
+
+  let date;
+
+  if (typeof dateString === 'string') {
+    const trimmed = dateString.trim();
+    // Check if the string already has timezone indicators ('Z', '+08:00', etc.)
+    const hasTimezone = trimmed.endsWith('Z') ||
+      trimmed.includes('+') ||
+      (trimmed.length > 10 && trimmed.slice(10).includes('-'));
+
+    // If no timezone is specified, append 'Z' so the browser parses it as UTC
+    date = new Date(hasTimezone ? trimmed : trimmed + 'Z');
+  } else if (Array.isArray(dateString)) {
+    // Fallback if Jackson serializes LocalDateTime as [YYYY, MM, DD, HH, mm, ss]
+    date = new Date(Date.UTC(
+      dateString[0],
+      dateString[1] - 1,
+      dateString[2],
+      dateString[3] || 0,
+      dateString[4] || 0,
+      dateString[5] || 0
+    ));
+  } else {
+    date = new Date(dateString);
+  }
+
+  // Handle invalid dates gracefully
+  if (isNaN(date.getTime())) return '';
+
   const now = new Date();
-  const diffMs = now - date;
+  let diffMs = now - date;
+
+  // Guard against slight clock skew between server and client
+  if (diffMs < 0) diffMs = 0;
+
   const diffMins = Math.round(diffMs / 60000);
 
   if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minutes ago`;
+  if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+
   const diffHrs = Math.floor(diffMins / 60);
-  if (diffHrs < 24) return `${diffHrs} hours ago`;
+  if (diffHrs < 24) return `${diffHrs} hour${diffHrs === 1 ? '' : 's'} ago`;
+
   const diffDays = Math.floor(diffHrs / 24);
   if (diffDays === 1) return 'Yesterday';
   return `${diffDays} days ago`;

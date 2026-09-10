@@ -44,8 +44,6 @@ function connectLiveDashboards() {
   stompClient.debug = null;
 
   stompClient.connect({}, function (frame) {
-    console.log('🟢 WebSockets Connected: Live Mode Active!');
-
     // Tune in to the /topic/updates radio frequency
     stompClient.subscribe('/topic/updates', function (message) {
 
@@ -910,31 +908,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-// 🟢 INITIAL LOAD: Auto-Run to prevent timing bugs!
+// 🟢 INITIAL LOAD: Auto-Run (Dashboard View Switcher)
   (function initializeView() {
+    // 🛑 GUARD: If we are on the login page or a page without dashboards, exit silently
+    const isAdminDash = document.getElementById('view-admin-dashboard');
+    const isGeneralDash = document.getElementById('view-dashboard');
+
+    // If neither dashboard view exists, this is not a dashboard page (e.g., login.html)
+    if (!isAdminDash && !isGeneralDash) {
+      return; // Exit cleanly without console errors
+    }
+
     let hash = window.location.hash.replace('#', '').trim();
     let savedTab = sessionStorage.getItem('roadwise_active_tab');
 
     // Priority Check: 1. URL Hash, 2. Saved Tab in Memory
     let finalTarget = hash || savedTab;
 
-    // 🛑 SAFETY CHECK: Does the target actually exist in the HTML?
+    // 🛑 Fallback Check: Does the target actually exist in the HTML?
     if (!finalTarget || !document.getElementById(finalTarget)) {
-      // If it's missing or invalid, forcefully find the correct dashboard ID
-      if (document.getElementById('view-admin-dashboard')) {
+      if (isAdminDash) {
         finalTarget = 'view-admin-dashboard';
-      } else if (document.getElementById('view-dashboard')) {
+      } else if (isGeneralDash) {
         finalTarget = 'view-dashboard';
-      } else {
-        console.error("CRITICAL: No dashboard container found in HTML!");
-        return;
       }
     }
 
-    // Update URL and execute view safely
-    history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
-    switchView(finalTarget);
+    // Update URL and switch view
+    if (typeof switchView === 'function' && finalTarget) {
+      history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
+      switchView(finalTarget);
+    }
   })();
+
 // ==========================================
 // ADMIN DASHBOARD: ACCEPT & VALIDATE LOGIC
 // ==========================================

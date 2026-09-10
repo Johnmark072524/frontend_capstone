@@ -9944,6 +9944,50 @@ function formatOfficialName(firstName, middleName, lastName, prefix = '') {
   return prefix ? `${prefix.trim()} ${fullName}` : (fullName || 'CPDO Administrator');
 }
 
+// Helper: Target Entity Formatter (Handles #USR-0001 padding & Email display)
+function formatTargetEntity(entity) {
+  if (!entity || entity === 'N/A' || entity === '-') {
+    return {
+      html: `<span style="color: #94a3b8;">—</span>`,
+      text: '—'
+    };
+  }
+
+  const str = String(entity).trim();
+
+  // 1. Auto-pad entity numbers (#USR-1 -> #USR-0001, #PRJ-4 -> #PRJ-0004)
+  const idMatch = str.match(/^(#(?:USR|PRJ|LOG|RPT)-)(\d+)$/i);
+  if (idMatch) {
+    const padded = `${idMatch[1].toUpperCase()}${idMatch[2].padStart(4, '0')}`;
+    return {
+      html: `<span style="font-family: monospace; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 2px 7px; border-radius: 4px; font-size: 11px;">${padded}</span>`,
+      text: padded
+    };
+  }
+
+  // 2. Already formatted prefixed entity (e.g., #USR-0001, SYSTEM)
+  if (str.startsWith('#')) {
+    return {
+      html: `<span style="font-family: monospace; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 2px 7px; border-radius: 4px; font-size: 11px;">${escapeHtml(str)}</span>`,
+      text: str
+    };
+  }
+
+  // 3. Security Email target (Failed login attempt)
+  if (str.includes('@')) {
+    return {
+      html: `<span style="font-family: monospace; font-size: 10.5px; color: #475569; background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; word-break: break-all;" title="${escapeHtml(str)}">${escapeHtml(str)}</span>`,
+      text: str
+    };
+  }
+
+  // 4. Default plain text entity
+  return {
+    html: `<span style="font-family: monospace; font-size: 11px; font-weight: 600; color: #334155;">${escapeHtml(str)}</span>`,
+    text: str
+  };
+}
+
 // 1. Fetch & Initialize Activity Logs
 window.loadActivityLogs = async function() {
   const tbody = document.getElementById("activity-log-tbody");
@@ -9974,7 +10018,8 @@ window.loadActivityLogs = async function() {
     const res = await apiFetch('/api/activity-logs', { cache: 'no-store' });
     if (!res || !Array.isArray(res)) throw new Error("Invalid response format");
 
-    rawActivityLogs = res;
+    // Guarantee newest logs appear at the top
+    rawActivityLogs = res.sort((a, b) => (parseInt(b.id) || 0) - (parseInt(a.id) || 0));
     filteredActivityLogs = [...rawActivityLogs];
     renderActivityLogsTable(filteredActivityLogs);
   } catch (err) {
@@ -10015,10 +10060,11 @@ function renderActivityLogsTable(logs) {
     const dateFormatted = formatAuditTimestamp(log.timestamp);
     const categoryBadge = getCategoryBadge(log.category);
     const statusBadge = getStatusBadge(log.status);
+    const targetEntityInfo = formatTargetEntity(log.targetEntity);
 
     return `
       <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-        <td style="padding: 10px 12px; font-family: monospace; font-size: 11px; text-align: center; color: #475569;">
+        <td style="padding: 10px 12px; font-family: monospace; font-size: 11px; text-align: center; color: #475569; white-space: nowrap;">
           ${dateFormatted}
         </td>
         <td style="padding: 10px 12px;">
@@ -10028,8 +10074,8 @@ function renderActivityLogsTable(logs) {
         <td style="padding: 10px 12px; text-align: center;">
           ${categoryBadge}
         </td>
-        <td style="padding: 10px 12px; text-align: center; font-family: monospace; font-weight: 700; color: #2563eb;">
-          ${escapeHtml(log.targetEntity || 'N/A')}
+        <td style="padding: 10px 12px; text-align: center;">
+          ${targetEntityInfo.html}
         </td>
         <td style="padding: 10px 12px; color: #334155; line-height: 1.4;">
           <strong style="font-size: 11px; color: #0f172a; display: block;">${escapeHtml(log.action || 'ACTION')}</strong>
@@ -10057,9 +10103,12 @@ window.filterActivityLogsTable = function() {
   const now = new Date();
 
   filteredActivityLogs = rawActivityLogs.filter(log => {
+    const formattedTarget = formatTargetEntity(log.targetEntity).text.toLowerCase();
+
     const matchQuery = !query ||
       (log.actorName && log.actorName.toLowerCase().includes(query)) ||
       (log.targetEntity && log.targetEntity.toLowerCase().includes(query)) ||
+      formattedTarget.includes(query) ||
       (log.action && log.action.toLowerCase().includes(query)) ||
       (log.description && log.description.toLowerCase().includes(query)) ||
       (log.actorRole && log.actorRole.toLowerCase().includes(query));
@@ -10073,13 +10122,20 @@ window.filterActivityLogsTable = function() {
       (role === "SYSTEM" && String(log.actorRole).toUpperCase().includes("SYSTEM"));
 
     let matchTime = true;
-    if (timeframe !== "ALL" && log.timestamp) {
-      const logDate = new Date(log.timestamp);
-      const diffHours = (now - logDate) / (1000 * 60 * 60);
-
-      if (timeframe === "TODAY") matchTime = diffHours <= 24;
-      else if (timeframe === "7DAYS") matchTime = diffHours <= (24 * 7);
-      else if (timeframe === "30DAYS") matchTime = diffHours <= (24 * 30);
+    if (timeframe !== "ALL") {
+      if (!log.timestamp) {
+        matchTime = false;
+      } else {
+        const logDate = parseAuditTimestamp(log.timestamp);
+        if (!logDate || isNaN(logDate.getTime())) {
+          matchTime = false;
+        } else {
+          const diffHours = (now - logDate) / (1000 * 60 * 60);
+          if (timeframe === "TODAY") matchTime = diffHours >= -0.05 && diffHours <= 24;
+          else if (timeframe === "7DAYS") matchTime = diffHours >= -0.05 && diffHours <= (24 * 7);
+          else if (timeframe === "30DAYS") matchTime = diffHours >= -0.05 && diffHours <= (24 * 30);
+        }
+      }
     }
 
     return matchQuery && matchCat && matchRole && matchTime;
@@ -10115,10 +10171,10 @@ window.inspectActivityLog = function(logId) {
   document.getElementById("audit-modal-actor-name").innerText = log.actorName || "System Automation";
   document.getElementById("audit-modal-actor-role").innerText = log.actorRole || "SYSTEM";
   document.getElementById("audit-modal-actor-office").innerText = log.actorOffice || "Central";
-  document.getElementById("audit-modal-actor-id").innerText = log.actorId ? `#USR-${log.actorId}` : "SYSTEM";
+  document.getElementById("audit-modal-actor-id").innerText = log.actorId ? `#USR-${String(log.actorId).padStart(4, '0')}` : "SYSTEM";
 
   document.getElementById("audit-modal-category").innerText = log.category || "SYSTEM";
-  document.getElementById("audit-modal-target").innerText = log.targetEntity || "N/A";
+  document.getElementById("audit-modal-target").innerText = formatTargetEntity(log.targetEntity).text;
   document.getElementById("audit-modal-action").innerText = log.action || "GENERAL_ACTION";
   document.getElementById("audit-modal-description").innerText = log.description || "No description logged.";
 
@@ -10194,7 +10250,7 @@ window.exportActivityLogCSV = async function() {
     `"${(l.actorOffice || '').replace(/"/g, '""')}"`,
     `"${l.category || ''}"`,
     `"${l.action || ''}"`,
-    `"${l.targetEntity || ''}"`,
+    `"${formatTargetEntity(l.targetEntity).text}"`,
     `"${(l.description || '').replace(/"/g, '""')}"`,
     `"${l.status || 'SUCCESS'}"`,
     `"${l.ipAddress || ''}"`
@@ -10212,7 +10268,7 @@ window.exportActivityLogCSV = async function() {
   if (typeof showToast === "function") showToast(`Exported ${filteredActivityLogs.length} log records to CSV!`, "success");
 };
 
-// 7. Printable PDF Report Preview & Action (WITH MIDDLE INITIAL)
+// 7. Printable PDF Report Preview & Action
 window.openActivityLogPrintModal = function() {
   const dropdown = document.getElementById("activity-export-dropdown");
   if (dropdown) { dropdown.style.display = "none"; dropdown.classList.add("hidden"); }
@@ -10221,15 +10277,16 @@ window.openActivityLogPrintModal = function() {
   const tbody = document.getElementById("activity-print-tbody");
   if (!modal || !tbody) return;
 
-  // Metadata injection
+  // Metadata injection using toLocaleString for reliable date + time display
   const dateEl = document.getElementById("activity-print-generated-date");
   if (dateEl) {
-    dateEl.innerText = new Date().toLocaleDateString('en-US', {
+    dateEl.innerText = new Date().toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Asia/Manila'
     });
   }
 
@@ -10241,7 +10298,7 @@ window.openActivityLogPrintModal = function() {
   const timeEl = document.getElementById("activity-print-timeframe");
   if (timeEl) timeEl.innerText = timeFilter === "ALL" ? "All Records" : (timeFilter === "TODAY" ? "Today" : `Last ${timeFilter.replace('DAYS', ' Days')}`);
 
-  // 🚀 Dynamic Administrator Signer (First M.I. Last)
+  // Dynamic Administrator Signer (First M.I. Last)
   const adminFirst = sessionStorage.getItem("firstName") || "";
   const adminMiddle = sessionStorage.getItem("middleName") || "";
   const adminLast = sessionStorage.getItem("lastName") || "";
@@ -10258,13 +10315,13 @@ window.openActivityLogPrintModal = function() {
   } else {
     tbody.innerHTML = filteredActivityLogs.map(l => `
       <tr style="border-bottom: 1px solid #cbd5e1;">
-        <td style="padding: 6px 8px; text-align: center; font-family: monospace; font-size: 9.5px; border: 1px solid #cbd5e1;">${formatAuditTimestamp(l.timestamp)}</td>
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; font-size: 9.5px; border: 1px solid #cbd5e1; white-space: nowrap;">${formatAuditTimestamp(l.timestamp)}</td>
         <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
           <strong>${escapeHtml(l.actorName || 'System')}</strong><br>
           <span style="font-size: 9px; color: #64748b;">${escapeHtml(l.actorRole || 'SYSTEM')}</span>
         </td>
         <td style="padding: 6px 8px; text-align: center; font-weight: 700; border: 1px solid #cbd5e1;">${escapeHtml(l.category || '-')}</td>
-        <td style="padding: 6px 8px; text-align: center; font-family: monospace; border: 1px solid #cbd5e1;">${escapeHtml(l.targetEntity || '-')}</td>
+        <td style="padding: 6px 8px; text-align: center; font-family: monospace; border: 1px solid #cbd5e1;">${formatTargetEntity(l.targetEntity).text}</td>
         <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
           <strong>${escapeHtml(l.action || '-')}</strong>: ${escapeHtml(l.description || '-')}
         </td>
@@ -10277,7 +10334,7 @@ window.openActivityLogPrintModal = function() {
   modal.style.display = "flex";
 };
 
-// 8. Clean Print Trigger (Suppresses Browser Header/Footer)
+// 8. Clean Print Trigger
 window.printActivityLogSheet = async function() {
   const currentUserId = sessionStorage.getItem("userId");
   try {
@@ -10313,12 +10370,51 @@ window.closeActivityLogPrintModal = function() {
   }
 };
 
-// --- Formatters & UI Badges ---
+// --- Timezone-Aware Parsers & UI Formatters ---
+
+// Robust UTC Parser (Standardizes Render UTC Timestamps)
+function parseAuditTimestamp(ts) {
+  if (!ts) return null;
+
+  if (typeof ts === 'string') {
+    let trimmed = ts.trim();
+    if (trimmed.includes(' ') && !trimmed.includes('T')) {
+      trimmed = trimmed.replace(' ', 'T');
+    }
+
+    const hasTz = trimmed.endsWith('Z') ||
+      trimmed.includes('+') ||
+      (trimmed.length > 10 && trimmed.slice(10).includes('-'));
+
+    return new Date(hasTz ? trimmed : trimmed + 'Z');
+  } else if (Array.isArray(ts)) {
+    return new Date(Date.UTC(ts[0], ts[1] - 1, ts[2], ts[3] || 0, ts[4] || 0, ts[5] || 0));
+  }
+  return new Date(ts);
+}
+
+// Convert UTC to Philippine Standard Time (PHT: Asia/Manila)
 function formatAuditTimestamp(ts) {
   if (!ts) return "N/A";
-  const d = new Date(ts);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const d = parseAuditTimestamp(ts);
+  if (!d || isNaN(d.getTime())) return "N/A";
+
+  const datePart = d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'Asia/Manila'
+  });
+
+  const timePart = d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Manila'
+  });
+
+  return `${datePart} ${timePart}`;
 }
 
 function getCategoryBadge(cat) {
@@ -10347,4 +10443,3 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-

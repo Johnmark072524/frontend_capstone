@@ -2670,6 +2670,20 @@ function resetAddReportForm() {
   if (fileNameDisplay) fileNameDisplay.textContent = "";
 }
 // ==========================================
+// ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  ['username', 'password'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form from refreshing the page
+        handleLogin();
+      }
+    });
+  });
+});
+
+// ==========================================
 // 🚀 STEP 1: INITIATE LOGIN & REQUEST MFA CODE
 // ==========================================
 function handleLogin() {
@@ -2683,7 +2697,7 @@ function handleLogin() {
 
   if (!username || !password) {
     if (typeof showToast === "function") {
-      showToast("Please enter both your Official ID and password.", "error");
+      showToast("Please enter both your Official ID/Email and password.", "error");
     }
     return;
   }
@@ -2730,6 +2744,9 @@ function handleLogin() {
       }
     })
     .catch(error => {
+      // Clear password field on failed attempt
+      if (passwordInput) passwordInput.value = "";
+
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         if (typeof showToast === "function") {
           showToast("System is currently offline or unreachable. Please try again later.", "error");
@@ -2747,7 +2764,6 @@ function handleLogin() {
       }
     });
 }
-
 // ==========================================
 // 🚀 STEP 2: VERIFY 6-DIGIT CODE & GRANT ACCESS
 // ==========================================
@@ -2850,6 +2866,9 @@ function handleVerifyMfa() {
       }, 1000);
     })
     .catch(error => {
+      // 🚀 NEW: Clear password field on failed attempt
+      if (passwordInput) passwordInput.value = "";
+
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         if (typeof showToast === "function") {
           showToast("System is currently offline or unreachable. Please try again later.", "error");
@@ -2860,10 +2879,10 @@ function handleVerifyMfa() {
         }
       }
 
-      if (verifyBtn) {
-        verifyBtn.innerHTML = "Verify Code ➔";
-        verifyBtn.disabled = false;
-        verifyBtn.style.opacity = "1";
+      if (loginBtn) {
+        loginBtn.innerHTML = "Log in ➔";
+        loginBtn.disabled = false;
+        loginBtn.style.opacity = "1";
       }
     });
 }
@@ -7407,11 +7426,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🚀 DYNAMIC USER ID: Fetch the actual logged-in user's ID from session storage
 const currentUserId = sessionStorage.getItem("userId");
-
-// Stop the notification script if no one is logged in yet (e.g., on the login screen)
-if (!currentUserId) {
-  console.warn("No user is currently logged in. Notifications will not load.");
-}
 
 // 1. HELPER: Format dates to "Time Ago" (Timezone-Aware)
 function timeAgo(dateString) {

@@ -1166,7 +1166,7 @@ body.login-page {
   background: white;
 }
 
-./* Add the missing dot right here! */
+/* Add the missing dot right here! */
 .profile-nav li.active {
   background: white;
   color: var(--primary-blue);

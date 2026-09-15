@@ -774,27 +774,89 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // 1. SIDEBAR NAVIGATION & SPA HISTORY LOGIC
 // ==========================================
-// ⚠️ Kept global so the rest of app.js (like Profile Logic) doesn't crash!
   const navLinks = document.querySelectorAll('.nav-menu li[data-target]');
   const contentSections = document.querySelectorAll('.content-section');
 
-// 🛠 Helper Function to switch views safely
+// 🗺️ VIEW DISPATCH REGISTRY: Maps views directly to their loaders
+  const viewDispatchers = {
+    'view-dashboard': () => {
+      const role = (sessionStorage.getItem('role') || '').toUpperCase();
+      if (role.includes('CEO') || role.includes('ENGINEER')) {
+        if (typeof window.loadCEODashboardData === 'function') window.loadCEODashboardData();
+      } else {
+        if (typeof window.loadAdminDashboardData === 'function') window.loadAdminDashboardData();
+      }
+    },
+    'view-admin-dashboard': () => {
+      if (typeof window.loadAdminDashboardData === 'function') window.loadAdminDashboardData();
+    },
+    'view-repair': () => {
+      if (typeof window.loadCEODashboardData === 'function') window.loadCEODashboardData();
+    },
+    'view-barangay-management': () => {
+      if (typeof window.loadBarangayManagement === 'function') window.loadBarangayManagement();
+    },
+    'view-user-management': () => {
+      if (typeof window.loadBarangayDropdownForAdmin === 'function') window.loadBarangayDropdownForAdmin();
+      if (typeof window.loadUserManagementTable === 'function') window.loadUserManagementTable();
+    },
+    'view-reports': () => {
+      if (typeof window.loadAdminReports === 'function') window.loadAdminReports();
+    },
+    'view-tracking': () => {
+      if (typeof window.loadTrackingData === 'function') window.loadTrackingData();
+    },
+    'view-profile': () => {
+      if (typeof window.populateProfileData === 'function') window.populateProfileData();
+      document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)').forEach(l => l.classList.remove('active'));
+      document.querySelectorAll('.profile-tab').forEach(t => t.classList.add('hidden'));
+
+      const defaultLink = document.querySelector('#profile-nav-menu li[data-target="tab-identity"]');
+      const defaultTab = document.getElementById('tab-identity');
+      if (defaultLink) defaultLink.classList.add('active');
+      if (defaultTab) defaultTab.classList.remove('hidden');
+    },
+    'view-report-priority': () => {
+      if (typeof window.generatePriorityList === 'function') window.generatePriorityList();
+    },
+    'view-settings': () => {
+      if (typeof window.loadActiveCycleOverview === 'function') window.loadActiveCycleOverview();
+    },
+    'view-activity-log': () => {
+      if (typeof window.loadActivityLogs === 'function') window.loadActivityLogs();
+    },
+    // Map loaders with automatic Leaflet canvas invalidation
+    'view-map': () => {
+      if (typeof window.loadAdminGlobalMap === 'function') window.loadAdminGlobalMap();
+      setTimeout(() => window.adminGlobalMap?.invalidateSize?.(), 100);
+    },
+    'view-ceo-map': () => {
+      if (typeof window.loadCEOGlobalMap === 'function') window.loadCEOGlobalMap();
+      setTimeout(() => window.ceoGlobalMap?.invalidateSize?.(), 100);
+    },
+    'view-barangay-map': () => {
+      if (typeof window.loadBarangayLocalMap === 'function') window.loadBarangayLocalMap();
+      setTimeout(() => window.barangayLocalMap?.invalidateSize?.(), 100);
+    }
+  };
+
+// 🛠 Safe View Switching Engine
   window.switchView = function(targetId) {
     if (!targetId) return;
 
-    // 💾 Save tab to memory so a browser refresh NEVER forgets it!
+    // 💾 Persist active tab across refreshes
     sessionStorage.setItem('roadwise_active_tab', targetId);
 
-    // 1. Force close modals
+    // 1. Dismiss active modal backdrops
     document.querySelectorAll('.modal-overlay').forEach(modal => {
       modal.classList.add('hidden');
     });
 
-    // 2. Update UI Classes
+    // 2. Toggle active tab indicator & section visibility
     navLinks.forEach(nav => nav.classList.remove('active'));
     contentSections.forEach(section => {
       section.classList.add('hidden');
-      section.style.display = ''; // Safely clear inline styles so Profile button works!
+      section.style.display = '';
     });
 
     const activeLink = document.querySelector(`.nav-menu li[data-target="${targetId}"]`);
@@ -803,136 +865,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
       targetSection.classList.remove('hidden');
-      targetSection.style.display = ''; // Safely clear inline styles
+      targetSection.style.display = '';
 
-      // ==========================================
-      // 🚀 CLEAR ALL SEARCH BARS AND RESET TABLES
-      // ==========================================
-      document.querySelectorAll('.search-bar input').forEach(input => {
-        input.value = '';
-      });
-      document.querySelectorAll('table tbody tr').forEach(row => {
-        row.style.display = '';
-      });
-
-      // ==========================================
-      // 🚀 THE BRUTE-FORCE SCROLL RESET
-      // ==========================================
-      window.scrollTo(0, 0);
+      // ⚡ Targeted View Scroll Reset: Snaps .content-area directly to top
+      const contentArea = document.querySelector('.content-area');
+      if (contentArea) {
+        contentArea.scrollTo({ top: 0, behavior: 'instant' });
+      }
       targetSection.scrollTop = 0;
-      targetSection.querySelectorAll('div').forEach(div => {
-        div.scrollTop = 0;
-      });
+      window.scrollTo(0, 0);
     }
 
-    // ==========================================
-    // 🚀 SMART DATA LOADING ON REFRESH
-    // ==========================================
-    const currentPath = window.location.pathname.toLowerCase();
-    const isCEO = currentPath.includes("ceo");
-    const isAdmin = currentPath.includes("admin");
-
-    if (isCEO && (targetId === 'view-dashboard' || targetId === 'view-repair')) {
-      if (typeof window.loadCEODashboardData === 'function') window.loadCEODashboardData();
-    } else if (targetId === 'view-barangay-management') {
-      if (typeof window.loadBarangayManagement === 'function') window.loadBarangayManagement();
-    } else if (targetId === 'view-user-management') {
-      if (typeof window.loadBarangayDropdownForAdmin === 'function') window.loadBarangayDropdownForAdmin();
-      if (typeof window.loadUserManagementTable === 'function') window.loadUserManagementTable();
-    } else if (targetId === 'view-reports') {
-      if (typeof window.loadAdminReports === 'function') window.loadAdminReports();
-    } else if (targetId === 'view-tracking') {
-      if (typeof window.loadTrackingData === 'function') window.loadTrackingData();
-    } else if (isAdmin && (targetId === 'view-admin-dashboard' || targetId === 'view-dashboard')) {
-      if (typeof window.loadAdminDashboardData === 'function') window.loadAdminDashboardData();
-    } else if (targetId === 'view-profile') {
-      // 🚀 REFRESH FIX: Load Profile Data if user hits F5 on the Profile Page!
-      if (typeof window.populateProfileData === 'function') window.populateProfileData();
-
-      // Reset the profile inner tabs to default
-      document.querySelectorAll('#profile-nav-menu li:not(.logout-btn)').forEach(l => l.classList.remove('active'));
-      document.querySelectorAll('.profile-tab').forEach(t => t.classList.add('hidden'));
-
-      const defaultLink = document.querySelector('#profile-nav-menu li[data-target="tab-identity"]');
-      const defaultTab = document.getElementById('tab-identity');
-      if (defaultLink) defaultLink.classList.add('active');
-      if (defaultTab) defaultTab.classList.remove('hidden');
-    } else if (targetId === 'view-report-priority') {
-      if (typeof window.generatePriorityList === 'function') window.generatePriorityList();
-    }
-    // 🚀 SETTINGS TRIGGER
-    else if (targetId === 'view-settings') {
-      if (typeof window.loadActiveCycleOverview === 'function') window.loadActiveCycleOverview();
-    }
-    // 🚀 NEW: ACTIVITY LOG AUDIT TRAIL TRIGGER
-    else if (targetId === 'view-activity-log') {
-      if (typeof window.loadActivityLogs === 'function') window.loadActivityLogs();
-    }
-      // ==========================================
-      // 🚀 THE MAP FIX: TELL MAPS TO LOAD ON REFRESH
-    // ==========================================
-    else if (targetId === 'view-map') {
-      if (typeof window.loadAdminGlobalMap === 'function') window.loadAdminGlobalMap();
-    } else if (targetId === 'view-ceo-map') {
-      if (typeof window.loadCEOGlobalMap === 'function') window.loadCEOGlobalMap();
-    } else if (targetId === 'view-barangay-map') {
-      if (typeof window.loadBarangayLocalMap === 'function') window.loadBarangayLocalMap();
+    // 3. Dispatch targeted view loader directly
+    if (typeof viewDispatchers[targetId] === 'function') {
+      viewDispatchers[targetId]();
     }
   };
 
-// 👆 Handle Sidebar Clicks
+// 👆 Handle Sidebar Click Delegation
   navLinks.forEach(link => {
     link.addEventListener('click', function(event) {
       event.preventDefault();
       const targetId = this.getAttribute('data-target');
 
       if (targetId) {
-        // Write it down in the browser's memory
         history.pushState({ target: targetId }, "", "#" + targetId);
         switchView(targetId);
       }
     });
   });
 
-// ⏪ THE BACK BUTTON WATCHER
+// ⏪ Browser Back & Forward Navigation Watcher
   window.addEventListener('popstate', function(event) {
     if (event.state && event.state.target) {
       switchView(event.state.target);
     } else {
-      // Default to dashboard if they go all the way back
-      const currentPath = window.location.pathname.toLowerCase();
-      const defaultHash = currentPath.includes("admin") ? 'view-admin-dashboard' : 'view-dashboard';
+      const role = (sessionStorage.getItem('role') || '').toUpperCase();
+      const defaultHash = (role.includes('CEO') || role.includes('ENGINEER'))
+        ? 'view-dashboard'
+        : 'view-admin-dashboard';
       switchView(defaultHash);
     }
   });
 
-// 🟢 INITIAL LOAD: Auto-Run (Dashboard View Switcher)
+// 🟢 Initial Page Boot Handler
   (function initializeView() {
-    // 🛑 GUARD: If we are on the login page or a page without dashboards, exit silently
     const isAdminDash = document.getElementById('view-admin-dashboard');
     const isGeneralDash = document.getElementById('view-dashboard');
 
-    // If neither dashboard view exists, this is not a dashboard page (e.g., login.html)
-    if (!isAdminDash && !isGeneralDash) {
-      return; // Exit cleanly without console errors
-    }
+    if (!isAdminDash && !isGeneralDash) return;
 
-    let hash = window.location.hash.replace('#', '').trim();
-    let savedTab = sessionStorage.getItem('roadwise_active_tab');
-
-    // Priority Check: 1. URL Hash, 2. Saved Tab in Memory
+    const hash = window.location.hash.replace('#', '').trim();
+    const savedTab = sessionStorage.getItem('roadwise_active_tab');
     let finalTarget = hash || savedTab;
 
-    // 🛑 Fallback Check: Does the target actually exist in the HTML?
     if (!finalTarget || !document.getElementById(finalTarget)) {
-      if (isAdminDash) {
-        finalTarget = 'view-admin-dashboard';
-      } else if (isGeneralDash) {
-        finalTarget = 'view-dashboard';
-      }
+      finalTarget = isAdminDash ? 'view-admin-dashboard' : 'view-dashboard';
     }
 
-    // Update URL and switch view
     if (typeof switchView === 'function' && finalTarget) {
       history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
       switchView(finalTarget);

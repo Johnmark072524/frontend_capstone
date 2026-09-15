@@ -653,25 +653,31 @@ textarea {
 }
 
 /* ========================================== */
-/* LOGIN PAGE STYLES     */
+/* MODERN CIVIC TECH / GIS LOGIN PAGE STYLES  */
 /* ========================================== */
 
 body.login-page {
   display: flex;
+  min-height: 100vh;
   height: 100vh;
   margin: 0;
-  background-color: #ffffff;
-  font-family: Arial, sans-serif;
+  background-color: #f8fafc;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0f172a;
+  overflow: hidden;
 }
 
-/* Left Side: White Background, Form */
+/* --- Left Column: Authentication Form --- */
 .login-form-side {
-  width: 40%;
+  width: 42%;
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: #ffffff;
-  padding: 40px;
+  padding: 48px;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.04);
+  z-index: 10;
+  overflow-y: auto;
 }
 
 .login-container {
@@ -679,81 +685,79 @@ body.login-page {
   max-width: 380px;
 }
 
-/* Right Side: Blue Background, Giant Watermark */
-.login-info-side {
-  width: 60%;
-  background-color: #1e5ba3; /* The exact BulSU blue color */
-  color: white;
+/* Brand Header */
+.login-brand-header {
+  margin-bottom: 32px;
+}
+
+.brand-logos {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 80px;
-  position: relative;
-  overflow: hidden;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-/* This creates the giant faded logo in the background */
-.login-info-side::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 130%;
-  height: 130%;
-  background-image: url('../img/cpdologo.png'); /* Uses your logo */
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.15; /* Makes it a faint watermark */
-  z-index: 1;
+.brand-logo-main {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
 }
 
-/* Keeps text above the watermark */
-.login-info-content {
-  position: relative;
-  z-index: 2;
-  max-width: 800px;
+.brand-divider {
+  width: 1.5px;
+  height: 36px;
+  background-color: #cbd5e1;
+  border-radius: 2px;
 }
 
-/* Vision & Mission Layout */
-.vision-mission-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
+.brand-logo-seal {
+  height: 54px;
+  width: auto;
+  object-fit: contain;
 }
 
-.vision-mission-grid h4 {
-  font-size: 22px;
-  margin-bottom: 15px;
-  font-weight: bold;
+.brand-titles h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
 }
 
-.vision-mission-grid p {
-  font-size: 15px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.95);
+.brand-titles p {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
 }
 
-/* Form Styling Updates */
+/* Input Styles */
 .login-container .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   position: relative;
 }
 
 .input-icon-wrapper input {
   width: 100%;
-  padding: 14px 15px 14px 45px; /* Room for the left icon */
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 13px 16px 13px 44px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
   font-size: 14px;
-  background-color: #eef2f7; /* Slight blue-gray tint like the photo */
+  background-color: #ffffff;
+  color: #0f172a;
   box-sizing: border-box;
   outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
 }
 
 .input-icon-wrapper input:focus {
-  border-color: #1e5ba3;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.input-icon-wrapper input::placeholder {
+  color: #94a3b8;
 }
 
 .input-icon {
@@ -761,46 +765,289 @@ body.login-page {
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: #666;
+  color: #94a3b8;
   font-size: 16px;
+  pointer-events: none;
 }
 
 .input-icon-right {
   position: absolute;
-  right: 15px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: #666;
+  color: #64748b;
+  font-size: 16px;
+  padding: 4px;
+  user-select: none;
 }
 
+/* Form Options & Links */
 .login-container .form-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  font-size: 13px;
+  margin: 8px 0 24px 0;
+  font-size: 12.5px;
 }
 
-.login-container .form-options a {
-  color: #1e5ba3;
-  text-decoration: none;
-  font-weight: bold;
+.remember-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-.login-container .btn-login {
-  width: 100%;
-  padding: 14px;
-  background-color: #0b3d7a; /* Darker blue button */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 15px;
-  font-weight: bold;
+.remember-label input[type="checkbox"] {
+  accent-color: #2563eb;
+  width: 15px;
+  height: 15px;
   cursor: pointer;
 }
 
+.login-container .form-options a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-size: 11.5px;
+  transition: color 0.15s ease;
+}
+
+.login-container .form-options a:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* Primary Action Button */
+.login-container .btn-login {
+  width: 100%;
+  padding: 13px;
+  background-color: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
 .login-container .btn-login:hover {
-  background-color: #082d5a;
+  background-color: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
+}
+
+.login-container .btn-login:active {
+  transform: translateY(0);
+}
+
+/* Step Headers & OTP Input */
+.step-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.step-title {
+  margin: 0 0 6px 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.step-desc {
+  color: #64748b;
+  margin: 0 0 24px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.otp-input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: #f8fafc;
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 12px;
+  font-weight: 800;
+  box-sizing: border-box;
+  outline: none;
+  font-family: monospace;
+  transition: all 0.2s ease;
+}
+
+.otp-input:focus {
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.back-link-wrap {
+  justify-content: center !important;
+  margin-top: 20px !important;
+}
+
+.login-footer-notice {
+  margin-top: 36px;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* --- Right Column: Civic Tech / GIS Showcase --- */
+.login-info-side {
+  width: 58%;
+  background: radial-gradient(circle at top right, #1e293b, #0f172a 70%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px 70px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Faint GIS Vector / Coordinate Grid Pattern */
+.gis-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+  pointer-events: none;
+}
+
+.login-info-content {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
+}
+
+/* Platform Tag & Pulse */
+.platform-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #93c5fd;
+  margin-bottom: 24px;
+}
+
+.live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.platform-hero-title {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.platform-hero-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0 0 36px 0;
+}
+
+/* Feature Stack Cards */
+.feature-card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tech-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.tech-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+.tech-card-icon {
+  font-size: 22px;
+  line-height: 1;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.tech-card-body h4 {
+  margin: 0 0 4px 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.tech-card-body p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  body.login-page {
+    flex-direction: column;
+    height: auto;
+    overflow-y: auto;
+  }
+  .login-form-side, .login-info-side {
+    width: 100%;
+    padding: 40px 24px;
+  }
+  .gis-grid-overlay {
+    display: none;
+  }
 }
 
 /* ========================================== */

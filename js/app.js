@@ -1568,9 +1568,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🚀 4. FETCH & POPULATE REPORTS TABLE
     apiFetch(`/api/reports`)
       .then(reports => {
-        const validatedReports = (Array.isArray(reports) ? reports : []).filter(
-          r => String(r.status || '').toLowerCase() === 'validated'
-        );
+        // Filter: Validated reports WITH a valid photographic damage image
+        const validatedReports = (Array.isArray(reports) ? reports : []).filter(r => {
+          const isValidated = String(r.status || '').toLowerCase().trim() === 'validated';
+          const hasValidImage = Boolean(
+            r.damageImage &&
+            typeof r.damageImage === 'string' &&
+            r.damageImage.trim() !== '' &&
+            r.damageImage.trim().toLowerCase() !== 'no_image.jpg'
+          );
+          return isValidated && hasValidImage;
+        });
 
         // Calculate Priority Scores
         validatedReports.forEach(report => {
@@ -1627,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '';
 
         if (validatedReports.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No validated reports available for dispatch.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No validated reports with damage evidence available for dispatch.</td></tr>`;
           return;
         }
 
@@ -1641,13 +1649,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155;"><strong>${index + 1}</strong></td>
-          <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
-          <td style="padding: 8px 6px; border: 1px solid #334155;"><strong>${formatName}</strong><br><span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy}</span></td>
-          <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
-          <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dLength}m × ${dWidth}m</td>
-          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
-        `;
+        <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155;"><strong>${index + 1}</strong></td>
+        <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
+        <td style="padding: 8px 6px; border: 1px solid #334155;"><strong>${formatName}</strong><br><span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy}</span></td>
+        <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
+        <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dLength}m × ${dWidth}m</td>
+        <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
+      `;
           tbody.appendChild(tr);
         });
       })
@@ -2056,7 +2064,7 @@ window.filterCEODashTable = function() {
 };
 
 // ==========================================
-// 6. MODAL & MAP CONTROLLERS (PRESERVED)
+// 6. MODAL & MAP CONTROLLERS (CEO MANAGE MODAL)
 // ==========================================
 window.openCEOManageModal = function(reportId) {
   currentCEOProjectID = reportId;
@@ -2080,6 +2088,17 @@ window.openCEOManageModal = function(reportId) {
   if (modalBody) modalBody.scrollTop = 0;
 
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
+
+  // 🔄 INSTANT BUTTON RESET: Clears any prior state before fetching new data
+  const btnStartRepair = document.getElementById('ceo-btn-start-repair');
+  if (btnStartRepair) {
+    btnStartRepair.disabled = true;
+    btnStartRepair.style.pointerEvents = "none";
+    btnStartRepair.style.opacity = "0.6";
+    btnStartRepair.style.cursor = "wait";
+    btnStartRepair.style.backgroundColor = "#64748b";
+    btnStartRepair.innerHTML = `<span class="icon">⏳</span> Loading...`;
+  }
 
   // Reset inputs & previews
   const dmgImg = document.getElementById('ceo-modal-image');
@@ -2128,6 +2147,7 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-damage-area').innerText = damageArea > 0 ? `${damageArea.toFixed(1)} sq.m` : '0 sq.m';
 
       document.getElementById('ceo-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}°, ${report.longitude}°` : 'No GPS data';
+
       let ceoSubmitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
       if (report.user && report.user.firstName && report.user.lastName) {
         ceoSubmitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
@@ -2138,29 +2158,41 @@ window.openCEOManageModal = function(reportId) {
       if (ceoSubmitterEl) ceoSubmitterEl.innerText = ceoSubmitterText;
       document.getElementById('ceo-modal-description').innerText = report.damageDescription || 'No description provided.';
 
-      const severity = String(report.severity || 'UNASSESSED').toUpperCase();
+      // ========================================================
+      // 🧠 SOLID AI SEVERITY & CONFIDENCE BADGE
+      // ========================================================
+      const rawSev = String(report.severity || '').trim().toLowerCase();
+      const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
+      const confText = confScore ? ` (${confScore}%)` : '';
       const priorityBadge = document.getElementById('ceo-modal-priority');
-      priorityBadge.innerText = severity;
 
-      if (severity === 'HIGH') {
-        priorityBadge.style.cssText = "background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
-      } else if (severity === 'MEDIUM') {
-        priorityBadge.style.cssText = "background-color: #ff8c00; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
-      } else if (severity === 'LOW') {
-        priorityBadge.style.cssText = "background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
-      } else {
-        priorityBadge.style.cssText = "background-color: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      if (priorityBadge) {
+        if (rawSev === 'high') {
+          priorityBadge.innerText = `HIGH${confText}`;
+          priorityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
+        } else if (rawSev === 'medium') {
+          priorityBadge.innerText = `MEDIUM${confText}`;
+          priorityBadge.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
+        } else if (rawSev === 'low') {
+          priorityBadge.innerText = `LOW${confText}`;
+          priorityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
+        } else {
+          priorityBadge.innerText = 'UNASSESSED';
+          priorityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
+        }
       }
 
       const status = String(report.status || '');
       const currentStatus = status.toLowerCase();
       const statusBadge = document.getElementById('ceo-modal-current-status');
 
-      statusBadge.innerText = status;
-      if (currentStatus === 'in progress') {
-        statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
-      } else {
-        statusBadge.style.cssText = "background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+      if (statusBadge) {
+        statusBadge.innerText = status;
+        if (currentStatus === 'in progress') {
+          statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+        } else {
+          statusBadge.style.cssText = "background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+        }
       }
 
       // Rework Alert
@@ -2181,16 +2213,18 @@ window.openCEOManageModal = function(reportId) {
       }
 
       // Buttons & Completion State
-      const btnStartRepair = document.getElementById('ceo-btn-start-repair');
       const completionForm = document.getElementById('ceo-completion-form');
       const completedEvidence = document.getElementById('ceo-completed-evidence-section');
       const proofRemarks = document.getElementById('ceo-modal-proof-remarks');
 
       if (btnStartRepair) {
         if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
+          // State 1: Completed
           btnStartRepair.innerHTML = `<span class="icon">✅</span> Already Completed`;
-          btnStartRepair.style.backgroundColor = "#6c757d";
+          btnStartRepair.style.backgroundColor = "#64748b";
           btnStartRepair.style.cursor = "not-allowed";
+          btnStartRepair.style.pointerEvents = "none";
+          btnStartRepair.style.opacity = "0.75";
           btnStartRepair.disabled = true;
 
           if (completionForm) completionForm.style.display = 'none';
@@ -2202,17 +2236,24 @@ window.openCEOManageModal = function(reportId) {
           if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
         } else if (currentStatus.includes('progress')) {
-          btnStartRepair.innerHTML = `<span class="icon">✅</span> Already In Progress`;
-          btnStartRepair.style.backgroundColor = "#6c757d";
+          // State 2: Already In Progress (Strictly Locked and Disabled)
+          btnStartRepair.innerHTML = `<span class="icon"></span> Repairs Underway`;
+          btnStartRepair.style.backgroundColor = "#64748b";
           btnStartRepair.style.cursor = "not-allowed";
+          btnStartRepair.style.pointerEvents = "none";
+          btnStartRepair.style.opacity = "0.75";
           btnStartRepair.disabled = true;
 
           if (completionForm) completionForm.style.display = 'block';
           if (completedEvidence) completedEvidence.style.display = 'none';
+
         } else {
+          // State 3: Dispatched / Ready to Mark In Progress (Active Orange)
           btnStartRepair.innerHTML = `<span class="icon">👷</span> Mark as In Progress`;
-          btnStartRepair.style.backgroundColor = "#ea580c"; // 🚀 EXPLICIT CEO ORANGE
+          btnStartRepair.style.backgroundColor = "#ea580c";
           btnStartRepair.style.cursor = "pointer";
+          btnStartRepair.style.pointerEvents = "auto";
+          btnStartRepair.style.opacity = "1";
           btnStartRepair.disabled = false;
 
           if (completionForm) completionForm.style.display = 'none';
@@ -2326,7 +2367,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 2. Leaflet Map Locator
+  // 2. Leaflet Map Locator (With showToast replacement)
   const btnLocateMap = document.getElementById('ceo-btn-locate-map');
   if (btnLocateMap) {
     btnLocateMap.addEventListener('click', function(e) {
@@ -2334,11 +2375,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const mapContainer = document.getElementById('ceo-manage-map-container');
 
       if (!currentCEOLat || !currentCEOLng || (currentCEOLat === 0 && currentCEOLng === 0)) {
-        alert("No GPS coordinates were provided for this report.");
+        if (typeof showToast === 'function') {
+          showToast("No GPS coordinates were provided for this report.", "warning");
+        } else {
+          alert("No GPS coordinates were provided for this report.");
+        }
         return;
       }
 
-      if (mapContainer.style.display === 'none') {
+      if (mapContainer.style.display === 'none' || mapContainer.style.display === '') {
         mapContainer.style.display = 'block';
 
         const redIcon = new L.Icon({
@@ -2374,11 +2419,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
     btnStartRepair.addEventListener('click', function() {
-      if (!currentCEOProjectID) return;
+      // 🛡️ GUARD: Disallow clicks if disabled, locked, or missing report ID
+      if (!currentCEOProjectID || this.disabled || this.style.pointerEvents === 'none') return;
 
       const originalText = this.innerHTML;
       this.innerHTML = `<span class="icon">⏳</span> Updating...`;
       this.disabled = true;
+      this.style.pointerEvents = "none";
       this.style.opacity = "0.7";
 
       const currentUserId = sessionStorage.getItem("userId");
@@ -2404,9 +2451,13 @@ document.addEventListener('DOMContentLoaded', () => {
             statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
           }
 
-          this.innerHTML = `<span class="icon">✅</span> Already In Progress`;
-          this.style.backgroundColor = "#6c757d";
+          // Lock in-progress state visually and behaviorally
+          this.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
+          this.style.backgroundColor = "#64748b";
           this.style.cursor = "not-allowed";
+          this.style.pointerEvents = "none";
+          this.style.opacity = "0.75";
+          this.disabled = true;
 
           const completionForm = document.getElementById('ceo-completion-form');
           if (completionForm) completionForm.style.display = 'block';
@@ -2418,8 +2469,11 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(err => {
           console.error("Status Update Error:", err);
           if (typeof showToast === 'function') showToast("Failed to update. Check database connection.", "error");
+
+          // Re-enable on failure
           this.innerHTML = originalText;
           this.disabled = false;
+          this.style.pointerEvents = "auto";
           this.style.opacity = "1";
         });
     });
@@ -3261,25 +3315,25 @@ function reviewReport(reportId) {
       document.getElementById('modal-report-id').textContent = formattedId;
 
       // ========================================================
-      // 🚀 ENHANCED: UNIFIED SEVERITY BADGE (MINT UNASSESSED)
-      // ========================================================
+// 🚀 SOLID SEVERITY BADGE (WITH OPTIONAL AI CONFIDENCE)
+// ========================================================
       const rawSev = String(report.severity || '').trim().toLowerCase();
+      const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
       const severityBadge = document.getElementById('modal-severity');
 
       if (severityBadge) {
         if (rawSev === 'high') {
-          severityBadge.textContent = 'HIGH';
-          severityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #dc2626; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+          severityBadge.textContent = `HIGH${confText}`;
+          severityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         } else if (rawSev === 'medium') {
-          severityBadge.textContent = 'MEDIUM';
-          severityBadge.style.cssText = 'background-color: #ffc107; color: #000000; border: 1px solid #eab308; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+          severityBadge.textContent = `MEDIUM${confText}`;
+          severityBadge.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         } else if (rawSev === 'low') {
-          severityBadge.textContent = 'LOW';
-          severityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #16a34a; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+          severityBadge.textContent = `LOW${confText}`;
+          severityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         } else {
-          // Standard Mint-Green UNASSESSED Badge
           severityBadge.textContent = 'UNASSESSED';
-          severityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1px solid #34d399; padding: 3px 9px; border-radius: 5px; font-weight: 800; font-size: 11px; display: inline-block;';
+          severityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         }
       }
 
@@ -5398,7 +5452,7 @@ window.openTrackingModal = function(reportId) {
   const trackingModal = document.getElementById('tracking-modal');
   if (!trackingModal) return;
 
-  // 🗺️ 2. HIDE MAP WHEN SWITCHING TO A NEW PROJECT (Added here)
+  // 🗺️ 2. HIDE MAP WHEN SWITCHING TO A NEW PROJECT
   const mapContainer = document.getElementById('track-modal-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
@@ -5422,7 +5476,7 @@ window.openTrackingModal = function(reportId) {
 
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
-      // 🗺️ 3. CAPTURE GPS COORDINATES FOR THE MAP (Added here)
+      // 🗺️ 3. CAPTURE GPS COORDINATES FOR THE MAP
       currentTrackLat = parseFloat(report.latitude) || 0;
       currentTrackLng = parseFloat(report.longitude) || 0;
 
@@ -5453,13 +5507,24 @@ window.openTrackingModal = function(reportId) {
       }
       setText('track-modal-submitter', submitterText);
 
-      // 3. Priority Badge
+      // ========================================================
+      // 🧠 3. SOLID AI SEVERITY & CONFIDENCE BADGE
+      // ========================================================
       const sevBox = document.getElementById('track-modal-severity');
       if (sevBox) {
-        const sev = String(report.severity || 'low').toLowerCase();
-        if (sev === 'high') sevBox.innerHTML = `<span class="badge high">HIGH</span>`;
-        else if (sev === 'medium') sevBox.innerHTML = `<span class="badge medium">MEDIUM</span>`;
-        else sevBox.innerHTML = `<span class="badge low">LOW</span>`;
+        const rawSev = String(report.severity || '').trim().toLowerCase();
+        const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
+        const confText = confScore ? ` (${confScore}%)` : '';
+
+        if (rawSev === 'high') {
+          sevBox.innerHTML = `<span style="background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">HIGH${confText}</span>`;
+        } else if (rawSev === 'medium') {
+          sevBox.innerHTML = `<span style="background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">MEDIUM${confText}</span>`;
+        } else if (rawSev === 'low') {
+          sevBox.innerHTML = `<span style="background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">LOW${confText}</span>`;
+        } else {
+          sevBox.innerHTML = `<span style="background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">UNASSESSED</span>`;
+        }
       }
 
       // 4. Damage Information & Calculations
@@ -5533,13 +5598,33 @@ window.openTrackingModal = function(reportId) {
         if (proofPlaceholder) proofPlaceholder.style.display = 'block';
         if (resolutionData) resolutionData.style.display = 'none';
 
-      } else {
+      } else if (status === 'in progress') {
         if (statusBox) {
-          statusBox.textContent = report.status || 'Dispatched';
+          statusBox.textContent = 'In Progress';
+          statusBox.style.backgroundColor = '#cce5ff';
+          statusBox.style.color = '#004085';
+        }
+        if (statusText) statusText.textContent = 'Engineering crew is actively handling this project.';
+
+        if (approveBtn) {
+          approveBtn.disabled = true;
+          approveBtn.style.backgroundColor = '#ccc';
+          approveBtn.style.cursor = 'not-allowed';
+          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
+        }
+        if (reworkBtn) reworkBtn.classList.add('hidden');
+
+        if (proofPlaceholder) proofPlaceholder.style.display = 'block';
+        if (resolutionData) resolutionData.style.display = 'none';
+
+      } else {
+        // Dispatched to CEO / Awaiting Response
+        if (statusBox) {
+          statusBox.textContent = report.status || 'Dispatched to CEO';
           statusBox.style.backgroundColor = '#e2e3e5';
           statusBox.style.color = '#383d41';
         }
-        if (statusText) statusText.textContent = 'Engineering crew is actively handling this project.';
+        if (statusText) statusText.textContent = 'Awaiting update from engineering crew.';
 
         if (approveBtn) {
           approveBtn.disabled = true;
@@ -5558,7 +5643,6 @@ window.openTrackingModal = function(reportId) {
       if (typeof showToast === 'function') showToast("Error loading project details.", "error");
     });
 };
-
 // 🗺️ 4. TOGGLE MAP FUNCTION (Added here)
 window.toggleTrackMap = function() {
   const mapContainer = document.getElementById('track-modal-map-container');
@@ -6644,7 +6728,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const userOutput = document.getElementById('add-user-username');
   const emailInput = document.getElementById('add-user-email');
 
-  // Helper: Auto-generate username (Attached once to prevent listener stacking)
+  // Helper: Auto-generate username
   const updateUsername = () => {
     if (!firstInput || !lastInput || !userOutput) return;
     const first = firstInput.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -6657,15 +6741,47 @@ document.addEventListener("DOMContentLoaded", () => {
     lastInput.addEventListener('input', updateUsername);
   }
 
-  // 1. Open Modal & Refresh Options
+  // Helper: Clean Reset of Modal State
+  const resetAddUserForm = () => {
+    if (formAddUser) formAddUser.reset();
+    if (userOutput) userOutput.value = '';
+    const submitBtn = formAddUser ? formAddUser.querySelector('button[type="submit"]') : null;
+    if (submitBtn) {
+      submitBtn.innerHTML = "💾 Provision Account";
+      submitBtn.disabled = false;
+    }
+  };
+
+  // Helper: Modal Closer
+  window.closeAddUserModal = function() {
+    if (addUserModal) {
+      addUserModal.classList.add('hidden');
+      addUserModal.style.display = 'none';
+    }
+    resetAddUserForm();
+  };
+
+  // 1. Open Modal & Refresh Options (Clean state guaranteed)
   if (btnOpenAddUser && addUserModal) {
     btnOpenAddUser.addEventListener('click', () => {
+      resetAddUserForm(); // 🔄 Clears leftover data before displaying
       if (typeof loadBarangayDropdownForAdmin === 'function') {
-        loadBarangayDropdownForAdmin(); // Refresh dropdown availability
+        loadBarangayDropdownForAdmin();
       }
       addUserModal.classList.remove('hidden');
       addUserModal.style.display = 'flex';
       if (firstInput) firstInput.focus();
+    });
+  }
+
+  // Bind close buttons (X icon, Cancel button)
+  if (addUserModal) {
+    const closeBtns = addUserModal.querySelectorAll('.close-modal-btn, .btn-cancel, #btn-cancel-add-user');
+    closeBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.closeAddUserModal();
+      });
     });
   }
 
@@ -6741,9 +6857,7 @@ document.addEventListener("DOMContentLoaded", () => {
           showToast("Official account successfully provisioned!", "success");
         }
 
-        addUserModal.classList.add('hidden');
-        addUserModal.style.display = 'none';
-        formAddUser.reset();
+        window.closeAddUserModal();
 
         if (typeof loadUserManagementTable === 'function') {
           loadUserManagementTable();
@@ -9390,12 +9504,12 @@ window.openArchiveDetailModal = function(reportId) {
   const proofContainer = document.getElementById('archive-modal-proof-container');
   if (proofContainer) proofContainer.style.display = 'none';
 
-// Dynamic Admin Signer (Middle Initial Only)
+  // Dynamic Admin Signer (Middle Initial Only)
   const adminFirst = (sessionStorage.getItem("firstName") || "").trim();
   const rawMiddle = (sessionStorage.getItem("middleInitial") || sessionStorage.getItem("middleName") || "").trim();
   const adminLast = (sessionStorage.getItem("lastName") || "").trim();
 
-// Extracts only the first letter and appends a period (e.g., "Perez" -> "P.", "p" -> "P.", "P." -> "P.")
+  // Extracts only the first letter and appends a period (e.g., "Perez" -> "P.", "p" -> "P.", "P." -> "P.")
   const middleInitial = rawMiddle ? `${rawMiddle.charAt(0).toUpperCase()}.` : "";
 
   const adminFullName = [adminFirst, middleInitial, adminLast].filter(Boolean).join(" ");
@@ -9471,19 +9585,27 @@ window.openArchiveDetailModal = function(reportId) {
       document.getElementById('archive-modal-damage-dims').innerText = (dLen > 0 || dWid > 0) ? `${dLen}m (L) × ${dWid}m (W)` : 'Not specified';
       document.getElementById('archive-modal-damage-area').innerText = `${dArea > 0 ? dArea.toFixed(1) : '0.0'} sq.m`;
 
-      // Severity Badge
-      const severity = String(report.severity || 'UNASSESSED').toUpperCase();
+      // ========================================================
+      // 🧠 3. SOLID AI SEVERITY & CONFIDENCE BADGE
+      // ========================================================
+      const rawSev = String(report.severity || '').trim().toLowerCase();
+      const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
+      const confText = confScore ? ` (${confScore}%)` : '';
       const priorityBadge = document.getElementById('archive-modal-priority-badge');
+
       if (priorityBadge) {
-        priorityBadge.innerText = severity;
-        if (severity === 'HIGH') {
-          priorityBadge.style.cssText = 'background: #dc2626; color: #ffffff; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
-        } else if (severity === 'MEDIUM') {
-          priorityBadge.style.cssText = 'background: #ffc107; color: #000000; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
-        } else if (severity === 'LOW') {
-          priorityBadge.style.cssText = 'background: #16a34a; color: #ffffff; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
+        if (rawSev === 'high') {
+          priorityBadge.innerText = `HIGH${confText}`;
+          priorityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
+        } else if (rawSev === 'medium') {
+          priorityBadge.innerText = `MEDIUM${confText}`;
+          priorityBadge.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
+        } else if (rawSev === 'low') {
+          priorityBadge.innerText = `LOW${confText}`;
+          priorityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
         } else {
-          priorityBadge.style.cssText = 'background: #475569; color: #ffffff; font-weight: 800; padding: 2px 7px; border-radius: 4px; display: inline-block;';
+          priorityBadge.innerText = 'UNASSESSED';
+          priorityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
         }
       }
 
@@ -9500,7 +9622,7 @@ window.openArchiveDetailModal = function(reportId) {
       document.getElementById('archive-modal-submitter').innerText = submitter;
       document.getElementById('archive-modal-description').innerText = report.damageDescription || 'No description provided.';
 
-      // 3. Photographic Evidence
+      // 4. Photographic Evidence
       if (report.damageImage && report.damageImage !== 'no_image.jpg' && report.damageImage.trim() !== '') {
         if (typeof loadSecureImage === 'function') {
           loadSecureImage('archive-modal-damage-image', report.damageImage);
@@ -9525,7 +9647,7 @@ window.openArchiveDetailModal = function(reportId) {
         if (proofContainer) proofContainer.style.display = 'none';
       }
 
-      // 4. Remarks
+      // 5. Remarks
       document.getElementById('archive-modal-admin-remarks').innerText = report.adminRemarks || 'None logged';
       document.getElementById('archive-modal-repair-remarks').innerText = report.repairRemarks || 'None logged';
     })

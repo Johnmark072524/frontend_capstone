@@ -49,8 +49,6 @@ function connectLiveDashboards() {
 
       // When we hear the pulse from the Java backend:
       if (message.body === "REFRESH_DASHBOARDS") {
-        console.log("⚡ Live pulse received! Waiting 300ms for DB to finalize...");
-
         // 🚀 THE FIX: Give the database 0.3 seconds to officially commit the save!
         setTimeout(() => {
           // 🔔 1. REFRESH THE NOTIFICATIONS
@@ -1679,8 +1677,6 @@ let ceoManageMarker = null;
 // 1. DATA LOADER (MAIN BRAIN)
 // ==========================================
 window.loadCEODashboardData = function() {
-  console.log("🚀 [CEO ENGINE] Fetching work orders...");
-
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .catch(err => {
       console.error("🚨 [CEO API] Failed to fetch reports:", err);
@@ -2562,9 +2558,6 @@ function executeFinalSubmission() {
   formData.append("latitude", parseFloat(getVal("latitude")) || 0.0);
   formData.append("longitude", parseFloat(getVal("longitude")) || 0.0);
   formData.append("inventoryYear", new Date().getFullYear());
-  formData.append("severity", "Unassessed");
-  formData.append("cvDamageClassification", "Pending CV Analysis");
-  formData.append("cvConfidenceScore", 0.0);
 
   // 5. Image Processing
   const imageInput = document.getElementById("damageImageFile");
@@ -2572,12 +2565,7 @@ function executeFinalSubmission() {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  console.log("--- DATA LEAVING BROWSER ---");
-  for (let pair of formData.entries()) {
-    console.log(pair[0] + ": " + pair[1]);
-  }
-
-  // 6. Send to Spring Boot API
+// 6. Send to Spring Boot API
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
@@ -2587,7 +2575,19 @@ function executeFinalSubmission() {
       throw new Error('Network response was not ok.');
     })
     .then(data => {
-      showToast("Report securely saved to the database!", "success");
+      // 🚀 EXTRACT THE AI DATA RETURNED FROM SPRING BOOT
+      const aiSeverity = data.severity || "Unassessed";
+      const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
+
+      // 🚀 SHOW A DYNAMIC TOAST WITH THE AI VERDICT
+      if (aiSeverity === "High") {
+        showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
+      } else if (aiSeverity === "Medium") {
+        showToast(`⚠️ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
+      } else {
+        showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
+      }
+
       if (typeof resetAddReportForm === 'function') resetAddReportForm();
 
       if (typeof loadBarangayReports === 'function') {
@@ -2669,6 +2669,7 @@ function resetAddReportForm() {
   const fileNameDisplay = document.getElementById("fileNameDisplay");
   if (fileNameDisplay) fileNameDisplay.textContent = "";
 }
+
 // ==========================================
 // ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
 // ==========================================
@@ -3625,8 +3626,8 @@ function renderFilteredCards(reportsList) {
     else if (severity === 'Low') sevBadgeColor = '#16a34a';
 
     // =========================================================================
-    // 🚀 STATUS BADGE CONFIGURATION (Explicitly handles Closed & Resolved)
-    // =========================================================================
+// 🚀 ENHANCED STATUS BADGE RESOLVER
+// =========================================================================
     let badgeClass = 'bd-badge-pending';
     let badgeLabel = 'Under Review';
     let actionBtnHtml = `<button class="bd-btn-card-action bd-btn-view" onclick="openViewModal(${report.id})">View Details</button>`;
@@ -3636,17 +3637,17 @@ function renderFilteredCards(reportsList) {
       badgeLabel = 'Action Required';
       actionBtnHtml = `<button class="bd-btn-card-action bd-btn-edit" onclick="openEditModal(${report.id})">✏️ Edit & Resubmit</button>`;
     } else if (sLower.includes('resubmit')) {
-      badgeClass = 'bd-badge-pending';
+      badgeClass = 'bd-badge-resubmitted';
       badgeLabel = 'Resubmitted';
-    } else if (sLower.includes('closed') || sLower.includes('resolved')) {
-      badgeClass = 'bd-badge-validated';
-      badgeLabel = 'Closed / Resolved';
-    } else if (sLower.includes('completed')) {
-      badgeClass = 'bd-badge-validated';
-      badgeLabel = 'Completed (Pending QA)';
     } else if (sLower.includes('progress')) {
-      badgeClass = 'bd-badge-validated';
+      badgeClass = 'bd-badge-progress';
       badgeLabel = 'In Progress';
+    } else if (sLower.includes('completed')) {
+      badgeClass = 'bd-badge-completed';
+      badgeLabel = 'Completed (Pending QA)';
+    } else if (sLower.includes('closed') || sLower.includes('resolved')) {
+      badgeClass = 'bd-badge-closed';
+      badgeLabel = 'Closed / Resolved';
     } else if (sLower.includes('validate') || sLower.includes('dispatch')) {
       badgeClass = 'bd-badge-validated';
       badgeLabel = 'Validated';
@@ -3793,9 +3794,24 @@ function openViewModal(reportId) {
         (report.status === 'Validated' ? 'bd-badge-validated' :
           (report.status === 'Rejected' ? 'bd-badge-rejected' : 'bd-badge-pending'));
 
-      document.getElementById('view-modal-severity').innerText = report.severity || "🤖 Pending AI";
-      document.getElementById('view-modal-severity').style.color =
-        report.severity === 'High' ? '#dc3545' : (report.severity === 'Medium' ? '#f0ad4e' : '#6c757d');
+      // 🧠 AI Severity & Confidence Display
+      const severityEl = document.getElementById('view-modal-severity');
+      if (report.severity) {
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        severityEl.innerText = `${report.severity}${confText}`;
+
+        if (report.severity === 'High') {
+          severityEl.style.color = '#dc2626'; // Red
+        } else if (report.severity === 'Medium') {
+          severityEl.style.color = '#d97706'; // Amber / Orange
+        } else {
+          severityEl.style.color = '#16a34a'; // Emerald Green
+        }
+      } else {
+        severityEl.innerText = "🤖 Pending AI Assessment";
+        severityEl.style.color = '#64748b';
+      }
+
       document.getElementById('view-modal-date').innerText = new Date(report.dateSubmitted).toLocaleDateString();
       document.getElementById('view-modal-gps').innerText =
         (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not provided";
@@ -3835,6 +3851,24 @@ function openViewModal(reportId) {
     });
 }
 
+// 🚀 Toggle "Other" damage type field in the Edit & Resubmit modal
+window.toggleEditOtherDamage = function() {
+  const select = document.getElementById('edit-modal-damage-type');
+  const otherInput = document.getElementById('edit-modal-damage-other');
+
+  if (!select || !otherInput) return;
+
+  if (select.value === 'Other') {
+    otherInput.classList.remove('hidden');
+    otherInput.style.display = 'block';
+    otherInput.focus();
+  } else {
+    otherInput.classList.add('hidden');
+    otherInput.style.display = 'none';
+    otherInput.value = '';
+  }
+};
+
 function openEditModal(reportId) {
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
@@ -3847,7 +3881,15 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-importance').value = report.roadImportance || "N/A";
       document.getElementById('edit-modal-road-type').value = report.roadType || "N/A";
       document.getElementById('edit-modal-terrain').value = report.terrainType || "N/A";
-      document.getElementById('edit-modal-severity').value = report.severity || "🤖 Pending AI Assessment";
+
+      // 🧠 AI Severity & Confidence Display in Edit Field
+      const editSeverityInput = document.getElementById('edit-modal-severity');
+      if (report.severity) {
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}% Confidence)` : '';
+        editSeverityInput.value = `${report.severity}${confText}`;
+      } else {
+        editSeverityInput.value = "🤖 Pending AI Assessment";
+      }
 
       document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not Selected";
       document.getElementById('edit-latitude').value = report.latitude || "";
@@ -3924,13 +3966,29 @@ function submitEditedReport() {
   })
     .then(response => {
       if (!response.ok) throw new Error("Update failed");
-      if (typeof showToast === 'function') showToast("Report successfully updated and resubmitted!", "success");
+      return response.json();
+    })
+    .then(data => {
+      const aiSeverity = data.severity || "Unassessed";
+      const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
+      const hasNewImage = fileInput.files.length > 0;
+
+      if (typeof showToast === 'function') {
+        if (hasNewImage && data.severity) {
+          const icon = aiSeverity === 'High' ? '🚨' : (aiSeverity === 'Medium' ? '⚠️' : '✅');
+          showToast(`${icon} Resubmitted! AI re-evaluated as ${aiSeverity.toUpperCase()} Severity (${aiConfidence}% confidence).`, "success");
+        } else {
+          showToast("Report successfully updated and resubmitted!", "success");
+        }
+      }
+
       closeBdModals();
 
       const storedBarangayId = sessionStorage.getItem("barangayId");
       if (storedBarangayId) loadBarangayReports(storedBarangayId);
     })
     .catch(error => {
+      console.error(error);
       if (typeof showToast === 'function') showToast("Error updating report.", "error");
     });
 }

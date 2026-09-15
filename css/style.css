@@ -1393,6 +1393,82 @@ body.login-page {
 .bd-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; color: #444; }
 .bd-detail-grid div strong { color: #222; }
 
+/* Base Pill Styling */
+.bd-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.bd-status-badge .bd-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* 1. Rejected / Action Required (Red) */
+.bd-badge-rejected {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.bd-badge-rejected .bd-badge-dot { background-color: #ef4444; }
+
+/* 2. Pending / Under Review (Amber) */
+.bd-badge-pending {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.bd-badge-pending .bd-badge-dot { background-color: #f59e0b; }
+
+/* 3. Resubmitted (Sky Blue) */
+.bd-badge-resubmitted {
+  background-color: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.bd-badge-resubmitted .bd-badge-dot { background-color: #0ea5e9; }
+
+/* 4. In Progress (Indigo / Purple) */
+.bd-badge-progress {
+  background-color: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+.bd-badge-progress .bd-badge-dot { background-color: #6366f1; }
+
+/* 5. Completed Pending QA (Teal) */
+.bd-badge-completed {
+  background-color: #f0fdfa;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+}
+.bd-badge-completed .bd-badge-dot { background-color: #14b8a6; }
+
+/* 6. Validated (Emerald Green) */
+.bd-badge-validated {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+.bd-badge-validated .bd-badge-dot { background-color: #10b981; }
+
+/* 7. Closed / Resolved (Slate Gray) */
+.bd-badge-closed {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+.bd-badge-closed .bd-badge-dot { background-color: #64748b; }
+
 /* ==========================================
    ADMIN DASHBOARD MODERNIZED STYLES
    ========================================== */

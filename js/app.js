@@ -577,84 +577,97 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCloseMap = document.getElementById('close-map-btn');
 
     // ------------------------------------------
-    // A. "DEFINE ON MAP" FOR ADD REPORT FORM
-    // ------------------------------------------
+// A. "DEFINE ON MAP" FOR ADD REPORT FORM
+// ------------------------------------------
     const btnDefineMap = document.getElementById('btn-define-map');
 
     if (btnDefineMap && mapModal) {
       btnDefineMap.addEventListener('click', () => {
 
-        // 🧹 1. RESET THE MAP STATE FOR NEW REPORTS 🧹
-        selectedLat = 14.8139; // Default San Jose del Monte Lat
-        selectedLng = 121.0453; // Default San Jose del Monte Lng
+        // 1. Resolve logged-in official's barangay boundary
+        const loggedInBarangay = sessionStorage.getItem("barangayName");
 
-        // If the map is already loaded, sweep off the old Edit marker and reset the camera!
-        if (map) {
-          map.setView([selectedLat, selectedLng], 14);
-          if (mapMarker) {
-            map.removeLayer(mapMarker);
-            mapMarker = null; // Completely clear the old memory
-          }
-        }
+        // Check if the barangay exists in the dictionary and is NOT "Pending Assignment"
+        const brgyConfig = (loggedInBarangay && loggedInBarangay !== "Pending Assignment" && SJDM_BARANGAY_BOUNDS[loggedInBarangay])
+          ? SJDM_BARANGAY_BOUNDS[loggedInBarangay]
+          : SJDM_CITY_FALLBACK;
 
-        // Open the modal
+        selectedLat = brgyConfig.center[0];
+        selectedLng = brgyConfig.center[1];
+
         mapModal.classList.remove('hidden');
 
-        // Load the map if it hasn't been loaded yet
+        // 2. Initialize Leaflet if not already initialized
         if (!map) {
-          map = L.map('roadwiseMap').setView([selectedLat, selectedLng], 14);
+          map = L.map('roadwiseMap', {
+            center: brgyConfig.center,
+            zoom: brgyConfig.minZoom,
+            minZoom: brgyConfig.minZoom,        // Disables zooming out beyond the barangay
+            maxZoom: 19,                        // Allows zooming in to street level
+            maxBounds: brgyConfig.bounds,       // Hard perimeter boundary
+            maxBoundsViscosity: 1.0             // 1.0 makes bounds completely rigid (no rubber-band dragging)
+          });
+
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-          // ==========================================
-          // 🔍 THE NEW GEOCODER (SEARCH BAR)
-          // ==========================================
+          // Search Box restricted strictly to this barangay's bounding box
+          const b = brgyConfig.bounds;
+          const viewboxStr = `${b[0][1]},${b[1][0]},${b[1][1]},${b[0][0]}`;
+
           L.Control.geocoder({
             defaultMarkGeocode: false,
             geocoder: L.Control.Geocoder.nominatim({
               geocodingQueryParams: {
                 countrycodes: 'ph',
-                viewbox: "120.95,14.90,121.15,14.75",
+                viewbox: viewboxStr,
                 bounded: 1
               }
             })
           })
             .on('markgeocode', function(e) {
-
-              // 🚀 THE FIX: Force a close-up street-level zoom (Level 17)
-              // Instead of fitting the whole boundary, we dive straight into the center!
               const targetLatLng = e.geocode.center;
-              map.setView(targetLatLng, 17);
-
-              // Note: The user must still click the road to drop the red pin.
+              map.setView(targetLatLng, 18);
               showToast("Camera moved! Click the exact road to drop the pin.", "success");
             })
             .addTo(map);
-          // ==========================================
 
+          // Enforce boundary check when clicking to drop a pin
           map.on('click', function(e) {
+            if (!L.latLngBounds(brgyConfig.bounds).contains(e.latlng)) {
+              showToast("You cannot drop a pin outside your barangay boundary!", "error");
+              return;
+            }
             selectedLat = e.latlng.lat;
             selectedLng = e.latlng.lng;
             if (mapMarker) map.removeLayer(mapMarker);
             mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
           });
+
+        } else {
+          // 3. Map already exists: re-lock bounds and camera to this barangay
+          map.setMinZoom(brgyConfig.minZoom);
+          map.setMaxBounds(brgyConfig.bounds);
+          map.fitBounds(brgyConfig.bounds);
+
+          if (mapMarker) {
+            map.removeLayer(mapMarker);
+            mapMarker = null;
+          }
         }
 
-        // 🛡️ 2. PREVENT EDIT MODAL CROSS-TALK 🛡️
-        // Grab the button freshly from the DOM every time to avoid detachment bugs
+        // 4. Save handler for ADD form
         const liveSaveBtn = document.getElementById('btn-save-coords');
         const newSaveBtn = liveSaveBtn.cloneNode(true);
         liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
 
         newSaveBtn.addEventListener('click', () => {
-          if(!mapMarker) {
+          if (!mapMarker) {
             alert("Please click on the map to drop a pin first!");
             return;
           }
-          // Save specifically to the ADD form's hidden inputs
           document.getElementById('latitude').value = selectedLat;
           document.getElementById('longitude').value = selectedLng;
-
           document.getElementById('coords-display').textContent = `Locked: ${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
 
           mapModal.classList.add('hidden');
@@ -664,41 +677,58 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { map.invalidateSize(); }, 200);
       });
 
-      // Close buttons logic
       if (btnCloseMap) {
         btnCloseMap.addEventListener('click', () => mapModal.classList.add('hidden'));
       }
     }
 
     // ------------------------------------------
-    // B. "UPDATE LOCATION" FOR EDIT MODAL
-    // ------------------------------------------
+// B. "UPDATE LOCATION" FOR EDIT MODAL
+// ------------------------------------------
     const btnEditDefineMap = document.getElementById('btn-edit-define-map');
 
     if (btnEditDefineMap && mapModal) {
       btnEditDefineMap.addEventListener('click', () => {
 
+        const loggedInBarangay = sessionStorage.getItem("barangayName");
+        const brgyConfig = (loggedInBarangay && loggedInBarangay !== "Pending Assignment" && SJDM_BARANGAY_BOUNDS[loggedInBarangay])
+          ? SJDM_BARANGAY_BOUNDS[loggedInBarangay]
+          : SJDM_CITY_FALLBACK;
+
         const currentLat = parseFloat(document.getElementById('edit-latitude').value);
         const currentLng = parseFloat(document.getElementById('edit-longitude').value);
 
-        // Open the modal
         mapModal.classList.remove('hidden');
 
-        // Load the map if it hasn't been loaded yet
         if (!map) {
-          map = L.map('roadwiseMap').setView([14.8139, 121.0453], 14);
+          map = L.map('roadwiseMap', {
+            center: brgyConfig.center,
+            zoom: brgyConfig.minZoom,
+            minZoom: brgyConfig.minZoom,
+            maxZoom: 19,
+            maxBounds: brgyConfig.bounds,
+            maxBoundsViscosity: 1.0
+          });
+
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
           L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
           map.on('click', function(e) {
+            if (!L.latLngBounds(brgyConfig.bounds).contains(e.latlng)) {
+              showToast("You cannot drop a pin outside your barangay boundary!", "error");
+              return;
+            }
             selectedLat = e.latlng.lat;
             selectedLng = e.latlng.lng;
             if (mapMarker) map.removeLayer(mapMarker);
             mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
           });
+        } else {
+          map.setMinZoom(brgyConfig.minZoom);
+          map.setMaxBounds(brgyConfig.bounds);
         }
 
-        // If they already have coordinates saved, put the pin there and zoom in!
+        // Set existing pin or fallback to barangay center
         if (!isNaN(currentLat) && !isNaN(currentLng)) {
           selectedLat = currentLat;
           selectedLng = currentLng;
@@ -707,22 +737,19 @@ document.addEventListener('DOMContentLoaded', () => {
           if (mapMarker) map.removeLayer(mapMarker);
           mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
         } else {
-          // Failsafe: if they are editing a report that never had a map pin
-          map.setView([14.8139, 121.0453], 14);
+          map.fitBounds(brgyConfig.bounds);
           if (mapMarker) { map.removeLayer(mapMarker); mapMarker = null; }
         }
 
-        // 🛡️ PREVENT ADD MODAL CROSS-TALK 🛡️
         const liveSaveBtn = document.getElementById('btn-save-coords');
         const newSaveBtn = liveSaveBtn.cloneNode(true);
         liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
 
         newSaveBtn.addEventListener('click', () => {
-          if(!mapMarker) {
+          if (!mapMarker) {
             alert("Please click on the map to drop a pin first!");
             return;
           }
-          // Save specifically to the EDIT modal's hidden inputs
           document.getElementById('edit-latitude').value = selectedLat;
           document.getElementById('edit-longitude').value = selectedLng;
           document.getElementById('edit-modal-gps').textContent = `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;

@@ -1,80 +1,3 @@
-// ==========================================
-// 📍 GLOBAL SAN JOSE DEL MONTE BARANGAY BOUNDS
-// ==========================================
-window.SJDM_BARANGAY_BOUNDS = {
-  "Assumption": { center: [14.8475, 121.0582], bounds: [[14.8385, 121.0482], [14.8565, 121.0682]], minZoom: 15 },
-  "Bagong Buhay I": { center: [14.8562, 121.0490], bounds: [[14.8472, 121.0390], [14.8652, 121.0590]], minZoom: 15 },
-  "Bagong Buhay II": { center: [14.8585, 121.0520], bounds: [[14.8495, 121.0420], [14.8675, 121.0620]], minZoom: 15 },
-  "Bagong Buhay III": { center: [14.8610, 121.0550], bounds: [[14.8520, 121.0450], [14.8700, 121.0650]], minZoom: 15 },
-  "Citrus": { center: [14.8620, 121.0760], bounds: [[14.8510, 121.0630], [14.8730, 121.0890]], minZoom: 15 },
-  "Ciudad Real": { center: [14.7925, 121.0740], bounds: [[14.7815, 121.0620], [14.8035, 121.0860]], minZoom: 15 },
-  "Dulong Bayan": { center: [14.8115, 121.0425], bounds: [[14.8025, 121.0325], [14.8205, 121.0525]], minZoom: 15 },
-  "Francisco Homes–Guijo": { center: [14.8160, 121.0340], bounds: [[14.8070, 121.0240], [14.8250, 121.0440]], minZoom: 15 },
-  "Francisco Homes-Guijo": { center: [14.8160, 121.0340], bounds: [[14.8070, 121.0240], [14.8250, 121.0440]], minZoom: 15 },
-  "Francisco Homes–Mulawin": { center: [14.8190, 121.0360], bounds: [[14.8100, 121.0260], [14.8280, 121.0460]], minZoom: 15 },
-  "Francisco Homes-Mulawin": { center: [14.8190, 121.0360], bounds: [[14.8100, 121.0260], [14.8280, 121.0460]], minZoom: 15 },
-  "Francisco Homes–Narra": { center: [14.8210, 121.0380], bounds: [[14.8120, 121.0280], [14.8300, 121.0480]], minZoom: 15 },
-  "Francisco Homes-Narra": { center: [14.8210, 121.0380], bounds: [[14.8120, 121.0280], [14.8300, 121.0480]], minZoom: 15 },
-  "Francisco Homes–Yakal": { center: [14.8235, 121.0355], bounds: [[14.8145, 121.0255], [14.8325, 121.0455]], minZoom: 15 },
-  "Francisco Homes-Yakal": { center: [14.8235, 121.0355], bounds: [[14.8145, 121.0255], [14.8325, 121.0455]], minZoom: 15 },
-  "Fatima I": { center: [14.8460, 121.0510], bounds: [[14.8370, 121.0410], [14.8550, 121.0610]], minZoom: 15 },
-  "Fatima II": { center: [14.8475, 121.0535], bounds: [[14.8385, 121.0435], [14.8565, 121.0635]], minZoom: 15 },
-  "Fatima III": { center: [14.8490, 121.0560], bounds: [[14.8400, 121.0460], [14.8580, 121.0660]], minZoom: 15 },
-  "Fatima IV": { center: [14.8510, 121.0580], bounds: [[14.8420, 121.0480], [14.8600, 121.0680]], minZoom: 15 },
-  "Fatima V": { center: [14.8530, 121.0600], bounds: [[14.8440, 121.0500], [14.8620, 121.0700]], minZoom: 15 },
-  "Gaya-gaya": { center: [14.8065, 121.0345], bounds: [[14.7960, 121.0230], [14.8170, 121.0460]], minZoom: 15 },
-  "Graceville": { center: [14.8120, 121.0180], bounds: [[14.8010, 121.0080], [14.8230, 121.0280]], minZoom: 15 },
-  "Gumaoc Central": { center: [14.8035, 121.0475], bounds: [[14.7945, 121.0375], [14.8125, 121.0575]], minZoom: 15 },
-  "Gumaoc East": { center: [14.8040, 121.0520], bounds: [[14.7950, 121.0420], [14.8130, 121.0620]], minZoom: 15 },
-  "Gumaoc West": { center: [14.8025, 121.0420], bounds: [[14.7935, 121.0320], [14.8115, 121.0520]], minZoom: 15 },
-  "Kaybanban": { center: [14.8580, 121.0960], bounds: [[14.8430, 121.0800], [14.8730, 121.1120]], minZoom: 14 },
-  "Kaypian": { center: [14.8252, 121.0450], bounds: [[14.8120, 121.0320], [14.8380, 121.0580]], minZoom: 15 },
-  "Lawang Pari": { center: [14.8515, 121.0690], bounds: [[14.8425, 121.0590], [14.8605, 121.0790]], minZoom: 15 },
-  "Maharlika": { center: [14.8410, 121.0640], bounds: [[14.8320, 121.0540], [14.8500, 121.0740]], minZoom: 15 },
-  "Minuyan I": { center: [14.8390, 121.0460], bounds: [[14.8300, 121.0360], [14.8480, 121.0560]], minZoom: 15 },
-  "Minuyan II": { center: [14.8415, 121.0485], bounds: [[14.8325, 121.0385], [14.8505, 121.0585]], minZoom: 15 },
-  "Minuyan III": { center: [14.8435, 121.0510], bounds: [[14.8345, 121.0410], [14.8525, 121.0610]], minZoom: 15 },
-  "Minuyan IV": { center: [14.8455, 121.0535], bounds: [[14.8365, 121.0435], [14.8545, 121.0635]], minZoom: 15 },
-  "Minuyan Proper": { center: [14.8440, 121.0440], bounds: [[14.8330, 121.0330], [14.8550, 121.0550]], minZoom: 15 },
-  "Minuyan V": { center: [14.8470, 121.0555], bounds: [[14.8380, 121.0455], [14.8560, 121.0655]], minZoom: 15 },
-  "Muzon East": { center: [14.8080, 121.0120], bounds: [[14.7980, 121.0020], [14.8180, 121.0220]], minZoom: 15 },
-  "Muzon Proper": { center: [14.8040, 121.0020], bounds: [[14.7940, 120.9920], [14.8140, 121.0120]], minZoom: 15 },
-  "Muzon South": { center: [14.7960, 121.0040], bounds: [[14.7860, 120.9940], [14.8060, 121.0140]], minZoom: 15 },
-  "Muzon West": { center: [14.8020, 120.9930], bounds: [[14.7920, 120.9830], [14.8120, 121.0030]], minZoom: 15 },
-  "Paradise III": { center: [14.8060, 121.1120], bounds: [[14.7910, 121.0920], [14.8210, 121.1320]], minZoom: 14 },
-  "Poblacion": { center: [14.8139, 121.0453], bounds: [[14.8039, 121.0353], [14.8239, 121.0553]], minZoom: 15 },
-  "Poblacion I": { center: [14.8155, 121.0475], bounds: [[14.8065, 121.0375], [14.8245, 121.0575]], minZoom: 15 },
-  "San Isidro": { center: [14.8320, 121.0645], bounds: [[14.8220, 121.0520], [14.8420, 121.0770]], minZoom: 15 },
-  "San Manuel": { center: [14.8165, 121.0740], bounds: [[14.8050, 121.0600], [14.8280, 121.0880]], minZoom: 15 },
-  "San Martin de Porres": { center: [14.8550, 121.0660], bounds: [[14.8460, 121.0560], [14.8640, 121.0760]], minZoom: 15 },
-  "San Martin I": { center: [14.8510, 121.0610], bounds: [[14.8420, 121.0510], [14.8600, 121.0710]], minZoom: 15 },
-  "San Martin II": { center: [14.8525, 121.0630], bounds: [[14.8435, 121.0530], [14.8615, 121.0730]], minZoom: 15 },
-  "San Martin III": { center: [14.8540, 121.0645], bounds: [[14.8450, 121.0545], [14.8630, 121.0745]], minZoom: 15 },
-  "San Martin IV": { center: [14.8560, 121.0665], bounds: [[14.8470, 121.0565], [14.8650, 121.0765]], minZoom: 15 },
-  "San Pedro": { center: [14.8385, 121.0520], bounds: [[14.8295, 121.0420], [14.8475, 121.0620]], minZoom: 15 },
-  "San Rafael I": { center: [14.8580, 121.0560], bounds: [[14.8490, 121.0460], [14.8670, 121.0660]], minZoom: 15 },
-  "San Rafael II": { center: [14.8600, 121.0580], bounds: [[14.8510, 121.0480], [14.8690, 121.0680]], minZoom: 15 },
-  "San Rafael III": { center: [14.8620, 121.0600], bounds: [[14.8530, 121.0500], [14.8710, 121.0700]], minZoom: 15 },
-  "San Rafael IV": { center: [14.8640, 121.0620], bounds: [[14.8550, 121.0520], [14.8730, 121.0720]], minZoom: 15 },
-  "San Rafael V": { center: [14.8660, 121.0640], bounds: [[14.8570, 121.0540], [14.8750, 121.0740]], minZoom: 15 },
-  "San Roque": { center: [14.8465, 121.0395], bounds: [[14.8365, 121.0295], [14.8565, 121.0495]], minZoom: 15 },
-  "Sapang Palay Proper": { center: [14.8510, 121.0465], bounds: [[14.8400, 121.0350], [14.8620, 121.0580]], minZoom: 15 },
-  "Sta. Cruz I": { center: [14.8645, 121.0540], bounds: [[14.8555, 121.0440], [14.8735, 121.0640]], minZoom: 15 },
-  "Sta. Cruz II": { center: [14.8665, 121.0565], bounds: [[14.8575, 121.0465], [14.8755, 121.0665]], minZoom: 15 },
-  "Sta. Cruz III": { center: [14.8685, 121.0590], bounds: [[14.8595, 121.0490], [14.8775, 121.0690]], minZoom: 15 },
-  "Sta. Cruz IV": { center: [14.8705, 121.0615], bounds: [[14.8615, 121.0515], [14.8795, 121.0715]], minZoom: 15 },
-  "Sta. Cruz V": { center: [14.8725, 121.0640], bounds: [[14.8635, 121.0540], [14.8815, 121.0740]], minZoom: 15 },
-  "Sto. Cristo": { center: [14.8210, 121.0590], bounds: [[14.8100, 121.0470], [14.8320, 121.0710]], minZoom: 15 },
-  "Sto. Niño I": { center: [14.8555, 121.0440], bounds: [[14.8465, 121.0340], [14.8645, 121.0540]], minZoom: 15 },
-  "Sto. Niño II": { center: [14.8580, 121.0465], bounds: [[14.8490, 121.0365], [14.8670, 121.0565]], minZoom: 15 },
-  "Tungkong Mangga": { center: [14.7980, 121.0590], bounds: [[14.7850, 121.0450], [14.8110, 121.0730]], minZoom: 15 }
-};
-
-window.SJDM_CITY_FALLBACK = {
-  center: [14.8139, 121.0453],
-  bounds: [[14.7400, 120.9500], [14.9200, 121.1500]],
-  minZoom: 13
-};
 
 // ==========================================
 // 🚀 GLOBAL SECURITY BOUNCER (RUNS IMMEDIATELY)
@@ -636,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
     trackingObserver.observe(trackingSection, { attributes: true });
   }
 
-  // ==========================================
+// ==========================================
   // 🛡️ THE LEAFLET SAFETY CHECK 🛡️
   // ==========================================
   if (typeof L !== 'undefined') {
@@ -654,46 +577,134 @@ document.addEventListener('DOMContentLoaded', () => {
     const mapModal = document.getElementById('map-modal');
     const btnCloseMap = document.getElementById('close-map-btn');
 
+    // State trackers for boundary isolation
+    let sjdmGeoJsonData = null;
+    let currentBoundaryLayer = null;
+    let currentMaskLayer = null;
+    let activePolygonCoords = null;
+    let geocoderControl = null;
+
+    // Pre-fetch the GeoJSON boundary file
+    fetch('sjdm_barangays.geojson')
+      .then(res => res.json())
+      .then(data => { sjdmGeoJsonData = data; })
+      .catch(err => console.error("Could not load sjdm_barangays.geojson:", err));
+
+    // Ray-casting algorithm: validates if [lat, lng] is strictly inside the polygon
+    function isPointInsidePolygon(lat, lng, polyCoords) {
+      let inside = false;
+      for (let i = 0, j = polyCoords.length - 1; i < polyCoords.length; j = i++) {
+        const xi = polyCoords[i][0], yi = polyCoords[i][1];
+        const xj = polyCoords[j][0], yj = polyCoords[j][1];
+        const intersect = ((yi > lat) !== (yj > lat)) &&
+          (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // Applies inverted dark spotlight mask and red dashed border
+    function applySpotlightAndLock(targetBarangay) {
+      if (currentBoundaryLayer) map.removeLayer(currentBoundaryLayer);
+      if (currentMaskLayer) map.removeLayer(currentMaskLayer);
+
+      if (!sjdmGeoJsonData) return null;
+
+      // Find feature (defaults to Kaypian for testing)
+      const feature = sjdmGeoJsonData.features.find(f =>
+        (f.properties.name || "").toLowerCase() === (targetBarangay || "Kaypian").toLowerCase()
+      ) || sjdmGeoJsonData.features[0];
+
+      if (!feature) return null;
+
+      // 1. Inverted dark mask covering the outside area
+      const worldOuter = [
+        [90, -180],
+        [90, 180],
+        [-90, 180],
+        [-90, -180]
+      ];
+      const innerRing = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
+      activePolygonCoords = feature.geometry.coordinates[0]; // [lng, lat]
+
+      currentMaskLayer = L.polygon([worldOuter, innerRing], {
+        color: 'transparent',
+        fillColor: '#000000',
+        fillOpacity: 0.65,
+        interactive: false
+      }).addTo(map);
+
+      // 2. Red dashed border (Google Maps style)
+      currentBoundaryLayer = L.geoJSON(feature, {
+        style: {
+          color: '#ef4444',
+          weight: 3,
+          dashArray: '6, 6',
+          fillOpacity: 0
+        },
+        interactive: false
+      }).addTo(map);
+
+      // 3. Lock camera strictly to this barangay
+      const bounds = currentBoundaryLayer.getBounds();
+      map.fitBounds(bounds, { padding: [25, 25] });
+      map.setMaxBounds(bounds.pad(0.05));
+      map.setMinZoom(map.getZoom());
+
+      return bounds;
+    }
+
     // ------------------------------------------
-// A. "DEFINE ON MAP" FOR ADD REPORT FORM
-// ------------------------------------------
+    // A. "DEFINE ON MAP" FOR ADD REPORT FORM
+    // ------------------------------------------
     const btnDefineMap = document.getElementById('btn-define-map');
 
     if (btnDefineMap && mapModal) {
       btnDefineMap.addEventListener('click', () => {
 
-        // 1. Resolve logged-in official's barangay boundary
-        const loggedInBarangay = sessionStorage.getItem("barangayName");
-
-        // Check if the barangay exists in the dictionary and is NOT "Pending Assignment"
-        const brgyConfig = (loggedInBarangay && loggedInBarangay !== "Pending Assignment" && SJDM_BARANGAY_BOUNDS[loggedInBarangay])
-          ? SJDM_BARANGAY_BOUNDS[loggedInBarangay]
-          : SJDM_CITY_FALLBACK;
-
-        selectedLat = brgyConfig.center[0];
-        selectedLng = brgyConfig.center[1];
+        const loggedInBarangay = sessionStorage.getItem("barangayName") || "Kaypian";
 
         mapModal.classList.remove('hidden');
 
-        // 2. Initialize Leaflet if not already initialized
+        // 1. Initialize Leaflet if not already initialized
         if (!map) {
           map = L.map('roadwiseMap', {
-            center: brgyConfig.center,
-            zoom: brgyConfig.minZoom,
-            minZoom: brgyConfig.minZoom,        // Disables zooming out beyond the barangay
-            maxZoom: 19,                        // Allows zooming in to street level
-            maxBounds: brgyConfig.bounds,       // Hard perimeter boundary
-            maxBoundsViscosity: 1.0             // 1.0 makes bounds completely rigid (no rubber-band dragging)
+            maxZoom: 20,
+            maxBoundsViscosity: 1.0 // Rigid boundary wall
           });
 
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
+          // 🛰️ GOOGLE HYBRID SATELLITE TILES (Clear labels, subdivisions, and roads)
+          L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Maps'
+          }).addTo(map);
 
-          // Search Box restricted strictly to this barangay's bounding box
-          const b = brgyConfig.bounds;
-          const viewboxStr = `${b[0][1]},${b[1][0]},${b[1][1]},${b[0][0]}`;
+          // Enforce boundary check when clicking to drop a pin
+          map.on('click', function(e) {
+            if (activePolygonCoords && !isPointInsidePolygon(e.latlng.lat, e.latlng.lng, activePolygonCoords)) {
+              showToast(`You cannot drop a pin outside Barangay ${loggedInBarangay}!`, "error");
+              return;
+            }
+            selectedLat = e.latlng.lat;
+            selectedLng = e.latlng.lng;
+            if (mapMarker) map.removeLayer(mapMarker);
+            mapMarker = L.marker([selectedLat, selectedLng], { icon: redIcon }).addTo(map);
+          });
+        }
 
-          L.Control.geocoder({
+        // 2. Apply spotlight and lock camera
+        const bounds = applySpotlightAndLock(loggedInBarangay);
+
+        // 3. Setup Geocoder search box restricted to this barangay
+        if (bounds && L.Control && L.Control.geocoder) {
+          if (geocoderControl) map.removeControl(geocoderControl);
+
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          const viewboxStr = `${sw.lng},${ne.lat},${ne.lng},${sw.lat}`;
+
+          geocoderControl = L.Control.geocoder({
             defaultMarkGeocode: false,
             geocoder: L.Control.Geocoder.nominatim({
               geocodingQueryParams: {
@@ -705,33 +716,20 @@ document.addEventListener('DOMContentLoaded', () => {
           })
             .on('markgeocode', function(e) {
               const targetLatLng = e.geocode.center;
-              map.setView(targetLatLng, 18);
-              showToast("Camera moved! Click the exact road to drop the pin.", "success");
+              if (activePolygonCoords && isPointInsidePolygon(targetLatLng.lat, targetLatLng.lng, activePolygonCoords)) {
+                map.setView(targetLatLng, 18);
+                showToast("Camera moved! Click the exact road to drop the pin.", "success");
+              } else {
+                showToast("Search result is outside your barangay boundary!", "error");
+              }
             })
             .addTo(map);
+        }
 
-          // Enforce boundary check when clicking to drop a pin
-          map.on('click', function(e) {
-            if (!L.latLngBounds(brgyConfig.bounds).contains(e.latlng)) {
-              showToast("You cannot drop a pin outside your barangay boundary!", "error");
-              return;
-            }
-            selectedLat = e.latlng.lat;
-            selectedLng = e.latlng.lng;
-            if (mapMarker) map.removeLayer(mapMarker);
-            mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
-          });
-
-        } else {
-          // 3. Map already exists: re-lock bounds and camera to this barangay
-          map.setMinZoom(brgyConfig.minZoom);
-          map.setMaxBounds(brgyConfig.bounds);
-          map.fitBounds(brgyConfig.bounds);
-
-          if (mapMarker) {
-            map.removeLayer(mapMarker);
-            mapMarker = null;
-          }
+        // Reset pin on fresh open
+        if (mapMarker) {
+          map.removeLayer(mapMarker);
+          mapMarker = null;
         }
 
         // 4. Save handler for ADD form
@@ -761,64 +759,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ------------------------------------------
-// B. "UPDATE LOCATION" FOR EDIT MODAL
-// ------------------------------------------
+    // B. "UPDATE LOCATION" FOR EDIT MODAL
+    // ------------------------------------------
     const btnEditDefineMap = document.getElementById('btn-edit-define-map');
 
     if (btnEditDefineMap && mapModal) {
       btnEditDefineMap.addEventListener('click', () => {
 
-        const loggedInBarangay = sessionStorage.getItem("barangayName");
-        const brgyConfig = (loggedInBarangay && loggedInBarangay !== "Pending Assignment" && SJDM_BARANGAY_BOUNDS[loggedInBarangay])
-          ? SJDM_BARANGAY_BOUNDS[loggedInBarangay]
-          : SJDM_CITY_FALLBACK;
-
+        const loggedInBarangay = sessionStorage.getItem("barangayName") || "Kaypian";
         const currentLat = parseFloat(document.getElementById('edit-latitude').value);
         const currentLng = parseFloat(document.getElementById('edit-longitude').value);
 
         mapModal.classList.remove('hidden');
 
+        // 1. Initialize Leaflet if not already initialized
         if (!map) {
           map = L.map('roadwiseMap', {
-            center: brgyConfig.center,
-            zoom: brgyConfig.minZoom,
-            minZoom: brgyConfig.minZoom,
-            maxZoom: 19,
-            maxBounds: brgyConfig.bounds,
+            maxZoom: 20,
             maxBoundsViscosity: 1.0
           });
 
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(map);
+          // 🛰️ GOOGLE HYBRID SATELLITE TILES
+          L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Maps'
+          }).addTo(map);
 
           map.on('click', function(e) {
-            if (!L.latLngBounds(brgyConfig.bounds).contains(e.latlng)) {
-              showToast("You cannot drop a pin outside your barangay boundary!", "error");
+            if (activePolygonCoords && !isPointInsidePolygon(e.latlng.lat, e.latlng.lng, activePolygonCoords)) {
+              showToast(`You cannot drop a pin outside Barangay ${loggedInBarangay}!`, "error");
               return;
             }
             selectedLat = e.latlng.lat;
             selectedLng = e.latlng.lng;
             if (mapMarker) map.removeLayer(mapMarker);
-            mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
+            mapMarker = L.marker([selectedLat, selectedLng], { icon: redIcon }).addTo(map);
           });
-        } else {
-          map.setMinZoom(brgyConfig.minZoom);
-          map.setMaxBounds(brgyConfig.bounds);
         }
 
-        // Set existing pin or fallback to barangay center
-        if (!isNaN(currentLat) && !isNaN(currentLng)) {
+        // 2. Apply spotlight and lock camera
+        applySpotlightAndLock(loggedInBarangay);
+
+        // 3. Set existing pin if valid, otherwise clear
+        if (!isNaN(currentLat) && !isNaN(currentLng) && activePolygonCoords && isPointInsidePolygon(currentLat, currentLng, activePolygonCoords)) {
           selectedLat = currentLat;
           selectedLng = currentLng;
           map.setView([selectedLat, selectedLng], 18);
 
           if (mapMarker) map.removeLayer(mapMarker);
-          mapMarker = L.marker([selectedLat, selectedLng], {icon: redIcon}).addTo(map);
+          mapMarker = L.marker([selectedLat, selectedLng], { icon: redIcon }).addTo(map);
         } else {
-          map.fitBounds(brgyConfig.bounds);
-          if (mapMarker) { map.removeLayer(mapMarker); mapMarker = null; }
+          if (mapMarker) {
+            map.removeLayer(mapMarker);
+            mapMarker = null;
+          }
         }
 
+        // 4. Save handler for EDIT form
         const liveSaveBtn = document.getElementById('btn-save-coords');
         const newSaveBtn = liveSaveBtn.cloneNode(true);
         liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
@@ -840,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-  } // <--- END OF THE SAFETY CHECK!
+  } // End of if (typeof L !== 'undefined')
 
 
   // ==========================================

@@ -6184,43 +6184,127 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 let barangayLocalMap = null;
 let barangayMarkerLayer = null;
+let localBoundaryLayer = null;
+let localMaskLayer = null;
+let localGeoJsonData = null;
+
+// Pre-fetch SJDM boundaries if not already loaded globally
+function ensureGeoJsonLoaded() {
+  if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData) {
+    return Promise.resolve(sjdmGeoJsonData);
+  }
+  if (localGeoJsonData) {
+    return Promise.resolve(localGeoJsonData);
+  }
+  return fetch('sjdm_barangays.geojson')
+    .then(res => res.json())
+    .then(data => {
+      localGeoJsonData = data;
+      return data;
+    });
+}
+
+// Normalizer between database names and GeoJSON attributes
+function normalizeBrgyName(str) {
+  return (str || "")
+    .toLowerCase()
+    .replace(/[\u2013\u2014\u2212-]/g, "-")        // Harmonize en-dash and hyphens
+    .replace(/^sto\.\s*|^santo\s*/, "santo ")      // Harmonize Sto. and Santo
+    .replace(/^sta\.\s*|^santa\s*/, "santa ")      // Harmonize Sta. and Santa
+    .replace(/\s+/g, " ")                          // Trim excess whitespace
+    .trim();
+}
 
 window.loadBarangayLocalMap = function() {
   const mapContainer = document.getElementById('barangay-local-map');
   if (!mapContainer) return;
 
-  // 🔒 SECURITY CHECK: Get their specific Barangay ID
+  // 🔒 Security checks
   const loggedInBarangayId = sessionStorage.getItem("barangayId");
+  const loggedInBarangayName = sessionStorage.getItem("barangayName") || "Kaypian";
+
   if (!loggedInBarangayId) {
     console.error("Cannot load map: No Barangay ID found in session.");
     return;
   }
 
-  const sjdmBounds = L.latLngBounds(
-    L.latLng(14.9000, 120.9500),
-    L.latLng(14.7500, 121.1500)
-  );
-
+  // 1. Initialize Map instance if not created
   if (!barangayLocalMap) {
     barangayLocalMap = L.map('barangay-local-map', {
-      center: [14.8139, 121.0453],
-      zoom: 14, // 🚀 Zoomed in a bit closer since they are looking at one barangay
-      minZoom: 12,
-      maxBounds: sjdmBounds,
-      maxBoundsViscosity: 1.0
+      maxZoom: 20,
+      maxBoundsViscosity: 1.0 // Rigid boundary lock
     });
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(barangayLocalMap);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(barangayLocalMap);
+    // 🛰️ Google Hybrid Satellite Tiles
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    }).addTo(barangayLocalMap);
 
     barangayMarkerLayer = L.layerGroup().addTo(barangayLocalMap);
-  } else {
-    barangayLocalMap.setView([14.8139, 121.0453], 14);
   }
+
+  // 2. Load GeoJSON, spotlight the territory, and lock camera
+  ensureGeoJsonLoaded()
+    .then(geoJson => {
+      if (localBoundaryLayer) barangayLocalMap.removeLayer(localBoundaryLayer);
+      if (localMaskLayer) barangayLocalMap.removeLayer(localMaskLayer);
+
+      const targetClean = normalizeBrgyName(loggedInBarangayName);
+
+      const feature = geoJson.features.find(f => {
+        const geoNameClean = normalizeBrgyName(f.properties.name || f.properties.adm4_name || "");
+        if (geoNameClean === targetClean) return true;
+        if (targetClean === "sapang palay proper" && geoNameClean === "sapang palay") return true;
+        if (targetClean === "sapang palay" && geoNameClean === "sapang palay proper") return true;
+        return false;
+      }) || geoJson.features.find(f => normalizeBrgyName(f.properties.name) === "kaypian") || geoJson.features[0];
+
+      if (feature) {
+        const coords = feature.geometry.type === 'MultiPolygon'
+          ? feature.geometry.coordinates[0][0]
+          : feature.geometry.coordinates[0];
+
+        // Inverted mask covering everything outside the territory
+        const worldOuter = [
+          [90, -180],
+          [90, 180],
+          [-90, 180],
+          [-90, -180]
+        ];
+        const innerRing = coords.map(c => [c[1], c[0]]);
+
+        localMaskLayer = L.polygon([worldOuter, innerRing], {
+          color: 'transparent',
+          fillColor: '#000000',
+          fillOpacity: 0.60,
+          interactive: false
+        }).addTo(barangayLocalMap);
+
+        // Official red dashed boundary
+        localBoundaryLayer = L.geoJSON(feature, {
+          style: {
+            color: '#ef4444',
+            weight: 3,
+            dashArray: '6, 6',
+            fillOpacity: 0
+          },
+          interactive: false
+        }).addTo(barangayLocalMap);
+
+        // Clamp camera strictly to this barangay
+        const bounds = localBoundaryLayer.getBounds();
+        barangayLocalMap.fitBounds(bounds, { padding: [25, 25] });
+        barangayLocalMap.setMaxBounds(bounds.pad(0.06));
+        barangayLocalMap.setMinZoom(barangayLocalMap.getZoom());
+      }
+    })
+    .catch(err => console.error("Error loading territory boundaries:", err));
 
   setTimeout(() => { barangayLocalMap.invalidateSize(); }, 300);
 
-  // 🚀 THE FIX: Fetch ONLY reports belonging to this specific Barangay!
+  // 3. Fetch reports strictly belonging to this Barangay
   apiFetch(`/api/reports/barangay/${loggedInBarangayId}`, { cache: 'no-store' })
     .then(reports => {
       barangayMarkerLayer.clearLayers();
@@ -6228,7 +6312,6 @@ window.loadBarangayLocalMap = function() {
       // Filter out finished projects to keep the map focused on active hazards
       const activeLocalHazards = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
-        // 🚀 THE FIX: Hide Completed, Closed, AND Archived!
         return !s.includes('complet') && !s.includes('clos') && !s.includes('archiv');
       });
 
@@ -6251,7 +6334,6 @@ window.loadBarangayLocalMap = function() {
         else if (severity === 'medium') selectedIcon = pinOrange;
         else if (severity === 'low') selectedIcon = pinGreen;
 
-        // 🎨 SMART BUTTON LOGIC: Changes depending on report status
         let buttonHtml = `<button class="btn-small validate-btn" style="width: 100%; margin-top: 5px; background-color: #6c757d; border-color: #6c757d;" onclick="openViewModal(${report.id})">View Status</button>`;
 
         if (status.includes('reject')) {
@@ -6259,16 +6341,16 @@ window.loadBarangayLocalMap = function() {
         }
 
         const popupHtml = `
-                    <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
-                        <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#RPT-${String(report.id).padStart(4, '0')}</h4>
-                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
-                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
-                        <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
-                            SEVERITY: ${severity.toUpperCase()}
-                        </span>
-                        ${buttonHtml}
-                    </div>
-                `;
+          <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
+              <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#RPT-${String(report.id).padStart(4, '0')}</h4>
+              <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
+              <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
+              <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
+                  SEVERITY: ${severity.toUpperCase()}
+              </span>
+              ${buttonHtml}
+          </div>
+        `;
 
         L.marker([lat, lng], { icon: selectedIcon })
           .bindPopup(popupHtml)
@@ -6286,7 +6368,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (brgyMapSection) {
     const brgyMapObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        // Trigger map refresh when the user clicks the Map tab
         if (mutation.attributeName === 'class' && !brgyMapSection.classList.contains('hidden')) {
           if (typeof loadBarangayLocalMap === 'function') loadBarangayLocalMap();
         }

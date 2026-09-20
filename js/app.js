@@ -603,29 +603,56 @@ document.addEventListener('DOMContentLoaded', () => {
       return inside;
     }
 
-    // Applies inverted dark spotlight mask and red dashed border
+    // Mangipakat ti spotlight mask ken red dashed border a mangtumpong iti database
     function applySpotlightAndLock(targetBarangay) {
       if (currentBoundaryLayer) map.removeLayer(currentBoundaryLayer);
       if (currentMaskLayer) map.removeLayer(currentMaskLayer);
 
       if (!sjdmGeoJsonData) return null;
 
-      // Find feature (defaults to Kaypian for testing)
-      const feature = sjdmGeoJsonData.features.find(f =>
-        (f.properties.name || "").toLowerCase() === (targetBarangay || "Kaypian").toLowerCase()
-      ) || sjdmGeoJsonData.features[0];
+      // Normalizer a mangbaliw kadagiti nagan tapno agtumpong ti database ken GeoJSON
+      function normalizeBrgyName(str) {
+        return (str || "")
+          .toLowerCase()
+          .replace(/[\u2013\u2014\u2212-]/g, "-")        // Paagpadaen ti en-dash (–) ken hyphen (-)
+          .replace(/^sto\.\s*|^santo\s*/, "santo ")      // Paagpadaen ti Sto. ken Santo
+          .replace(/^sta\.\s*|^santa\s*/, "santa ")      // Paagpadaen ti Sta. ken Santa
+          .replace(/\s+/g, " ")                          // Ikkaten dagiti sobra nga espasio
+          .trim();
+      }
+
+      const targetClean = normalizeBrgyName(targetBarangay || "Kaypian");
+
+      // Biruken ti feature uray adda nagdumaan ti pannakaisuratna iti GeoJSON
+      const feature = sjdmGeoJsonData.features.find(f => {
+        const geoNameClean = normalizeBrgyName(f.properties.name || f.properties.adm4_name || "");
+
+        // 1. Direkta a panagtumpong kalpasan ti panang-normalize
+        if (geoNameClean === targetClean) return true;
+
+        // 2. Panagtumpong para iti "Sapang Palay Proper" (Database) ken "Sapang Palay" (GeoJSON)
+        if (targetClean === "sapang palay proper" && geoNameClean === "sapang palay") return true;
+        if (targetClean === "sapang palay" && geoNameClean === "sapang palay proper") return true;
+
+        return false;
+      }) || sjdmGeoJsonData.features.find(f => normalizeBrgyName(f.properties.name) === "kaypian") || sjdmGeoJsonData.features[0];
 
       if (!feature) return null;
 
-      // 1. Inverted dark mask covering the outside area
+      // Siguraduen a maala ti husto a coordinates (Polygon man wenno MultiPolygon)
+      const coords = feature.geometry.type === 'MultiPolygon'
+        ? feature.geometry.coordinates[0][0]
+        : feature.geometry.coordinates[0];
+
+      // 1. Inverted dark mask iti ruar ti barangay
       const worldOuter = [
         [90, -180],
         [90, 180],
         [-90, 180],
         [-90, -180]
       ];
-      const innerRing = feature.geometry.coordinates[0].map(c => [c[1], c[0]]);
-      activePolygonCoords = feature.geometry.coordinates[0]; // [lng, lat]
+      const innerRing = coords.map(c => [c[1], c[0]]);
+      activePolygonCoords = coords; // [lng, lat]
 
       currentMaskLayer = L.polygon([worldOuter, innerRing], {
         color: 'transparent',
@@ -634,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
         interactive: false
       }).addTo(map);
 
-      // 2. Red dashed border (Google Maps style)
+      // 2. Nalabbaga a dashed border (Google Maps style)
       currentBoundaryLayer = L.geoJSON(feature, {
         style: {
           color: '#ef4444',
@@ -645,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
         interactive: false
       }).addTo(map);
 
-      // 3. Lock camera strictly to this barangay
+      // 3. I-lock ti camera iti sakup daytoy a barangay
       const bounds = currentBoundaryLayer.getBounds();
       map.fitBounds(bounds, { padding: [25, 25] });
       map.setMaxBounds(bounds.pad(0.05));

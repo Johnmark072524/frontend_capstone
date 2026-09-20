@@ -5957,56 +5957,137 @@ window.submitReworkFeedback = function() {
 // ==========================================
 let adminGlobalMap = null;
 let globalMarkerLayer = null;
+let adminBoundaryLayer = null;
+let adminCityMaskLayer = null;
+let adminGeoJsonData = null;
+
+function ensureAdminGeoJsonLoaded() {
+  if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData) {
+    return Promise.resolve(sjdmGeoJsonData);
+  }
+  if (adminGeoJsonData) {
+    return Promise.resolve(adminGeoJsonData);
+  }
+  return fetch('sjdm_barangays.geojson')
+    .then(res => res.json())
+    .then(data => {
+      adminGeoJsonData = data;
+      return data;
+    });
+}
 
 window.loadAdminGlobalMap = function() {
   const mapContainer = document.getElementById('admin-global-map');
   if (!mapContainer) return;
 
-  // 🚀 THE FIX: The pins are now safely INSIDE the function!
-  const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-  const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-  const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-  const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-
-  // 🚀 1. Define the strict boundaries of San Jose Del Monte City
-  const sjdmBounds = L.latLngBounds(
-    L.latLng(14.9000, 120.9500), // North West corner
-    L.latLng(14.7500, 121.1500)  // South East corner
-  );
-
-  // 2. Build the map if it hasn't been built yet
+  // 1. Initialize Leaflet Map instance
   if (!adminGlobalMap) {
     adminGlobalMap = L.map('admin-global-map', {
-      center: [14.8139, 121.0453], // Center of SJDM
-      zoom: 13,
-      minZoom: 12, // Prevents zooming out too far
-      maxBounds: sjdmBounds, // 🚀 Locks the camera to SJDM!
-      maxBoundsViscosity: 1.0 // Adds a "bouncy wall" effect if they try to drag away
+      maxZoom: 20,
+      maxBoundsViscosity: 1.0 // Rigid boundary wall
     });
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(adminGlobalMap);
-
-    // Overlay the labels (Barangay names, roads, etc.) on top of the satellite imagery
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(adminGlobalMap);
+    // 🛰️ Google Hybrid Satellite Tiles (subdivisions, streets, and place labels)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    }).addTo(adminGlobalMap);
 
     globalMarkerLayer = L.layerGroup().addTo(adminGlobalMap);
-  } else {
-    // If the map already exists, reset the camera back to the center!
-    adminGlobalMap.setView([14.8139, 121.0453], 13);
   }
 
-  // Force map to calculate its size so it doesn't show grey boxes
+  // 2. Load Boundaries & City-Level Overlay
+  ensureAdminGeoJsonLoaded()
+    .then(geoJson => {
+      if (adminBoundaryLayer) adminGlobalMap.removeLayer(adminBoundaryLayer);
+      if (adminCityMaskLayer) adminGlobalMap.removeLayer(adminCityMaskLayer);
+
+      // Collect all polygon rings across all 62 barangays to mask outside cities
+      const innerRings = [];
+      geoJson.features.forEach(f => {
+        if (f.geometry.type === 'Polygon') {
+          innerRings.push(f.geometry.coordinates[0].map(c => [c[1], c[0]]));
+        } else if (f.geometry.type === 'MultiPolygon') {
+          f.geometry.coordinates.forEach(poly => {
+            innerRings.push(poly[0].map(c => [c[1], c[0]]));
+          });
+        }
+      });
+
+      const worldOuter = [
+        [90, -180],
+        [90, 180],
+        [-90, 180],
+        [-90, -180]
+      ];
+
+      // A. Darken everything outside SJDM city limits
+      adminCityMaskLayer = L.polygon([worldOuter, ...innerRings], {
+        color: 'transparent',
+        fillColor: '#000000',
+        fillOpacity: 0.50,
+        interactive: false
+      }).addTo(adminGlobalMap);
+
+      // B. Render interactive mesh for all 62 barangays
+      adminBoundaryLayer = L.geoJSON(geoJson, {
+        style: () => ({
+          color: '#38bdf8',       // Light sky-blue border lines
+          weight: 1.5,
+          dashArray: '4, 4',
+          fillColor: '#0284c7',
+          fillOpacity: 0.05
+        }),
+        onEachFeature: (feature, layer) => {
+          const brgyName = feature.properties.name || feature.properties.adm4_name || 'Barangay';
+
+          // Tooltip on hover
+          layer.bindTooltip(`<b>${brgyName}</b>`, {
+            sticky: true,
+            direction: 'top',
+            className: 'admin-brgy-tooltip'
+          });
+
+          // Highlight effect on mouse hover
+          layer.on({
+            mouseover: (e) => {
+              const l = e.target;
+              l.setStyle({
+                weight: 2.5,
+                color: '#facc15', // Gold border on hover
+                dashArray: '',
+                fillOpacity: 0.20
+              });
+              if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                l.bringToFront();
+              }
+            },
+            mouseout: (e) => {
+              adminBoundaryLayer.resetStyle(e.target);
+            }
+          });
+        }
+      }).addTo(adminGlobalMap);
+
+      // Lock camera to the official SJDM city bounds
+      const cityBounds = adminBoundaryLayer.getBounds();
+      adminGlobalMap.fitBounds(cityBounds, { padding: [15, 15] });
+      adminGlobalMap.setMaxBounds(cityBounds.pad(0.08));
+      adminGlobalMap.setMinZoom(adminGlobalMap.getZoom());
+    })
+    .catch(err => console.error("Error loading SJDM boundaries for Admin map:", err));
+
   setTimeout(() => { adminGlobalMap.invalidateSize(); }, 300);
 
-  // 3. Fetch all reports and drop the pins!
+  // 3. Fetch all active hazard reports across the city
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .then(reports => {
       globalMarkerLayer.clearLayers();
 
-      // Filter out the fixed roads so the map only shows active hazards!
+      // Filter out fixed/archived roads so the map focuses on actionable hazards
       const activeHazards = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
-        // 🚀 THE FIX: Hide Completed, Closed, Rejected, AND Archived!
         return !s.includes('complet') && !s.includes('clos') && !s.includes('reject') && !s.includes('archiv');
       });
 
@@ -6016,6 +6097,11 @@ window.loadAdminGlobalMap = function() {
 
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
 
+        const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+        const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
         const severity = String(report.severity || 'Unassessed').toLowerCase();
         let selectedIcon = pinGrey;
 
@@ -6023,39 +6109,37 @@ window.loadAdminGlobalMap = function() {
         else if (severity === 'medium') selectedIcon = pinOrange;
         else if (severity === 'low') selectedIcon = pinGreen;
 
-        // Build the interactive pop-up window
         const popupHtml = `
-                    <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
-                        <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#RPT-${String(report.id).padStart(4, '0')}</h4>
-                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
-                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
-                        <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
-                            SEVERITY: ${severity.toUpperCase()}
-                        </span>
+          <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
+              <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#RPT-${String(report.id).padStart(4, '0')}</h4>
+              <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
+              <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
+              <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
+                  SEVERITY: ${severity.toUpperCase()}
+              </span>
 
-                        <button class="btn-small validate-btn" style="width: 100%; margin-top: 5px;" onclick="reviewReport(${report.id})">
-                            Review Full Report
-                        </button>
-                    </div>
-                `;
+              <button class="btn-small validate-btn" style="width: 100%; margin-top: 5px;" onclick="reviewReport(${report.id})">
+                  Review Full Report
+              </button>
+          </div>
+        `;
 
         L.marker([lat, lng], { icon: selectedIcon })
           .bindPopup(popupHtml)
           .addTo(globalMarkerLayer);
       });
     })
-    .catch(err => console.error("Error loading map data:", err));
+    .catch(err => console.error("Error loading Admin map data:", err));
 };
 
 // ==========================================
-// 🚀 THE MAP WATCHDOG (Connects to your sidebar button)
+// 🚀 THE MAP WATCHDOG (Connects to sidebar tab)
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
   const adminMapSection = document.getElementById('view-map');
   if (adminMapSection) {
     const mapObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        // If the 'hidden' class is removed (meaning the user clicked the sidebar button)
         if (mutation.attributeName === 'class' && !adminMapSection.classList.contains('hidden')) {
           if (typeof loadAdminGlobalMap === 'function') loadAdminGlobalMap();
         }
@@ -6071,48 +6155,135 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==========================================
 let ceoGlobalMap = null;
 let ceoGlobalMarkerLayer = null;
+let ceoBoundaryLayer = null;
+let ceoCityMaskLayer = null;
+let ceoGeoJsonData = null;
+
+function ensureCEOGeoJsonLoaded() {
+  if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData) {
+    return Promise.resolve(sjdmGeoJsonData);
+  }
+  if (ceoGeoJsonData) {
+    return Promise.resolve(ceoGeoJsonData);
+  }
+  return fetch('sjdm_barangays.geojson')
+    .then(res => res.json())
+    .then(data => {
+      ceoGeoJsonData = data;
+      return data;
+    });
+}
 
 window.loadCEOGlobalMap = function() {
   const mapContainer = document.getElementById('ceo-global-map');
   if (!mapContainer) return;
 
-  // 🚀 1. Define the strict boundaries of San Jose Del Monte City
-  const sjdmBounds = L.latLngBounds(
-    L.latLng(14.9000, 120.9500), // North West corner
-    L.latLng(14.7500, 121.1500)  // South East corner
-  );
-
-  // 2. Build the map or reset the camera if it already exists
+  // 1. Initialize Leaflet Map
   if (!ceoGlobalMap) {
     ceoGlobalMap = L.map('ceo-global-map', {
-      center: [14.8139, 121.0453], // Center of SJDM
-      zoom: 13,
-      minZoom: 12, // 🚀 Prevents zooming out too far
-      maxBounds: sjdmBounds, // 🚀 Locks the camera to SJDM
-      maxBoundsViscosity: 1.0 // Adds the "bouncy wall" effect
+      maxZoom: 20,
+      maxBoundsViscosity: 1.0
     });
 
-    // Base Satellite Layer
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(ceoGlobalMap);
-
-    // 🚀 Overlay the labels (Barangay names, roads, etc.)
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(ceoGlobalMap);
+    // 🛰️ Google Hybrid Satellite Tiles (Subdivisions, landmarks, and street names)
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    }).addTo(ceoGlobalMap);
 
     ceoGlobalMarkerLayer = L.layerGroup().addTo(ceoGlobalMap);
-  } else {
-    // Reset camera if they revisit the tab
-    ceoGlobalMap.setView([14.8139, 121.0453], 13);
   }
 
-  // Force map to calculate its size so it doesn't break
+  // 2. Load Boundaries & City-Level Overlay
+  ensureCEOGeoJsonLoaded()
+    .then(geoJson => {
+      if (ceoBoundaryLayer) ceoGlobalMap.removeLayer(ceoBoundaryLayer);
+      if (ceoCityMaskLayer) ceoGlobalMap.removeLayer(ceoCityMaskLayer);
+
+      // Collect all polygon rings across all 62 barangays to mask the outside perimeter
+      const innerRings = [];
+      geoJson.features.forEach(f => {
+        if (f.geometry.type === 'Polygon') {
+          innerRings.push(f.geometry.coordinates[0].map(c => [c[1], c[0]]));
+        } else if (f.geometry.type === 'MultiPolygon') {
+          f.geometry.coordinates.forEach(poly => {
+            innerRings.push(poly[0].map(c => [c[1], c[0]]));
+          });
+        }
+      });
+
+      // World outer boundary
+      const worldOuter = [
+        [90, -180],
+        [90, 180],
+        [-90, 180],
+        [-90, -180]
+      ];
+
+      // A. Darken everything outside SJDM city limits
+      ceoCityMaskLayer = L.polygon([worldOuter, ...innerRings], {
+        color: 'transparent',
+        fillColor: '#000000',
+        fillOpacity: 0.50,
+        interactive: false
+      }).addTo(ceoGlobalMap);
+
+      // B. Render thin, interactive boundaries for each of the 62 barangays
+      ceoBoundaryLayer = L.geoJSON(geoJson, {
+        style: () => ({
+          color: '#38bdf8',       // Light sky-blue border lines
+          weight: 1.5,
+          dashArray: '4, 4',
+          fillColor: '#0284c7',
+          fillOpacity: 0.05
+        }),
+        onEachFeature: (feature, layer) => {
+          const brgyName = feature.properties.name || feature.properties.adm4_name || 'Barangay';
+
+          // Tooltip on hover
+          layer.bindTooltip(`<b>${brgyName}</b>`, {
+            sticky: true,
+            direction: 'top',
+            className: 'ceo-brgy-tooltip'
+          });
+
+          // Subtle highlight on mouse hover
+          layer.on({
+            mouseover: (e) => {
+              const l = e.target;
+              l.setStyle({
+                weight: 2.5,
+                color: '#facc15', // Gold hover border
+                dashArray: '',
+                fillOpacity: 0.20
+              });
+              if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                l.bringToFront();
+              }
+            },
+            mouseout: (e) => {
+              ceoBoundaryLayer.resetStyle(e.target);
+            }
+          });
+        }
+      }).addTo(ceoGlobalMap);
+
+      // Lock camera to the official SJDM city bounds
+      const cityBounds = ceoBoundaryLayer.getBounds();
+      ceoGlobalMap.fitBounds(cityBounds, { padding: [15, 15] });
+      ceoGlobalMap.setMaxBounds(cityBounds.pad(0.08));
+      ceoGlobalMap.setMinZoom(ceoGlobalMap.getZoom());
+    })
+    .catch(err => console.error("Error loading SJDM boundaries for CEO map:", err));
+
   setTimeout(() => { ceoGlobalMap.invalidateSize(); }, 300);
 
-  // 3. Fetch all reports and filter for the CEO
+  // 3. Fetch all active projects dispatched to CEO
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .then(reports => {
       ceoGlobalMarkerLayer.clearLayers();
 
-      // 🛡️ THE GATEKEEPER: Only show ACTIVE CEO Projects!
       const activeCEOProjects = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress';
@@ -6136,21 +6307,20 @@ window.loadCEOGlobalMap = function() {
         else if (severity === 'medium') selectedIcon = pinOrange;
         else if (severity === 'low') selectedIcon = pinGreen;
 
-        // 🎨 CEO-Specific Pop-up Window
         const popupHtml = `
-                    <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
-                        <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#PRJ-${String(report.id).padStart(4, '0')}</h4>
-                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
-                        <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
-                        <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
-                            SEVERITY: ${severity.toUpperCase()}
-                        </span>
+          <div style="font-family: sans-serif; min-width: 220px; text-align: center;">
+              <h4 style="margin: 0 0 5px 0; color: #1e40af; font-size: 16px;">#PRJ-${String(report.id).padStart(4, '0')}</h4>
+              <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Road:</b> ${report.cityRoadName || 'Unknown'}</p>
+              <p style="margin: 0 0 5px 0; font-size: 13px;"><b>Status:</b> ${report.status || 'Pending'}</p>
+              <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; background-color: ${selectedIcon === pinRed ? '#dc3545' : selectedIcon === pinOrange ? '#ff8c00' : selectedIcon === pinGreen ? '#28a745' : '#6c757d'}; color: white;">
+                  SEVERITY: ${severity.toUpperCase()}
+              </span>
 
-                        <button class="btn-small validate-btn" style="width: 100%; margin-top: 5px; background-color: #1e40af; border-color: #1e40af;" onclick="openCEOManageModal(${report.id})">
-                            Manage Project
-                        </button>
-                    </div>
-                `;
+              <button class="btn-small validate-btn" style="width: 100%; margin-top: 5px; background-color: #1e40af; border-color: #1e40af;" onclick="openCEOManageModal(${report.id})">
+                  Manage Project
+              </button>
+          </div>
+        `;
 
         L.marker([lat, lng], { icon: selectedIcon })
           .bindPopup(popupHtml)
@@ -6168,7 +6338,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (ceoMapSection) {
     const ceoMapObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
-        // Trigger map refresh when the user clicks the Map tab
         if (mutation.attributeName === 'class' && !ceoMapSection.classList.contains('hidden')) {
           if (typeof loadCEOGlobalMap === 'function') loadCEOGlobalMap();
         }

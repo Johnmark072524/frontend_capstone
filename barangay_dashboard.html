@@ -648,20 +648,51 @@
       </div>
 
     </main>
-  </div> </div> <div id="map-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-  <div style="background: white; padding: 25px; border-radius: 12px; width: 80%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h2 style="margin: 0; color: #333;">Pinpoint Damage Location</h2>
-      <button type="button" id="close-map-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #888;">&times;</button>
-    </div>
-    <p style="margin-top: 0; color: #666; font-size: 14px;">Click anywhere on the map to drop a pin. This will record the exact satellite coordinates.</p>
 
-    <div id="roadwiseMap" style="height: 400px; width: 100%; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 20px;"></div>
 
-    <div style="text-align: right;">
-      <button type="button" id="btn-save-coords" class="btn-submit" style="padding: 10px 20px;">Save Coordinates</button>
+    <div id="map-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 850px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative;">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h2 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">Pinpoint Damage Location</h2>
+          <button type="button" id="close-map-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #64748b; line-height: 1;">&times;</button>
+        </div>
+        <p style="margin-top: 0; color: #64748b; font-size: 13px; margin-bottom: 14px;">Search for a road or landmark, or click on the map within your barangay boundary to drop a pin.</p>
+
+        <!-- MAP WRAPPER WITH EMBEDDED FLOATING SEARCH -->
+        <div style="position: relative; width: 100%; height: 420px; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; margin-bottom: 18px;">
+
+          <!-- 🔍 FLOATING SEARCH BAR -->
+          <div class="google-search-container">
+            <div class="google-search-bar">
+              <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#64748b" stroke-width="2.2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="text"
+                id="custom-map-search"
+                placeholder="Search road, subdivision, or landmark..."
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="button" id="clear-search-btn" class="clear-btn hidden">&times;</button>
+            </div>
+            <ul id="search-suggestions" class="search-suggestions hidden"></ul>
+          </div>
+
+          <!-- LEAFLET CANVAS -->
+          <div id="roadwiseMap" style="height: 100%; width: 100%;"></div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" onclick="document.getElementById('map-modal').classList.add('hidden')" style="padding: 9px 18px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer;">Cancel</button>
+          <button type="button" id="btn-save-coords" class="btn-submit" style="padding: 9px 22px; background-color: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Save Coordinates</button>
+        </div>
+
+      </div>
     </div>
-  </div>
+
 </div>
 
 <!-- ========================================== -->

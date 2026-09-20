@@ -560,8 +560,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 // ==========================================
-  // 🛡️ THE LEAFLET SAFETY CHECK 🛡️
-  // ==========================================
+// 🛡️ THE LEAFLET SAFETY CHECK 🛡️
+// ==========================================
   if (typeof L !== 'undefined') {
 
     // ⬇️ 1. SAFE TO DEFINE THE RED ICON HERE ⬇️
@@ -582,7 +582,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBoundaryLayer = null;
     let currentMaskLayer = null;
     let activePolygonCoords = null;
-    let geocoderControl = null;
 
     // Pre-fetch the GeoJSON boundary file
     fetch('sjdm_barangays.geojson')
@@ -603,34 +602,30 @@ document.addEventListener('DOMContentLoaded', () => {
       return inside;
     }
 
-    // Mangipakat ti spotlight mask ken red dashed border a mangtumpong iti database
+    // Applies inverted dark spotlight mask and red dashed border
     function applySpotlightAndLock(targetBarangay) {
       if (currentBoundaryLayer) map.removeLayer(currentBoundaryLayer);
       if (currentMaskLayer) map.removeLayer(currentMaskLayer);
 
       if (!sjdmGeoJsonData) return null;
 
-      // Normalizer a mangbaliw kadagiti nagan tapno agtumpong ti database ken GeoJSON
+      // Normalizer to align database names with official GeoJSON names
       function normalizeBrgyName(str) {
         return (str || "")
           .toLowerCase()
-          .replace(/[\u2013\u2014\u2212-]/g, "-")        // Paagpadaen ti en-dash (–) ken hyphen (-)
-          .replace(/^sto\.\s*|^santo\s*/, "santo ")      // Paagpadaen ti Sto. ken Santo
-          .replace(/^sta\.\s*|^santa\s*/, "santa ")      // Paagpadaen ti Sta. ken Santa
-          .replace(/\s+/g, " ")                          // Ikkaten dagiti sobra nga espasio
+          .replace(/[\u2013\u2014\u2212-]/g, "-")        // En-dash (–) to hyphen (-)
+          .replace(/^sto\.\s*|^santo\s*/, "santo ")      // Sto. to Santo
+          .replace(/^sta\.\s*|^santa\s*/, "santa ")      // Sta. to Santa
+          .replace(/\s+/g, " ")                          // Normalize spaces
           .trim();
       }
 
       const targetClean = normalizeBrgyName(targetBarangay || "Kaypian");
 
-      // Biruken ti feature uray adda nagdumaan ti pannakaisuratna iti GeoJSON
       const feature = sjdmGeoJsonData.features.find(f => {
         const geoNameClean = normalizeBrgyName(f.properties.name || f.properties.adm4_name || "");
 
-        // 1. Direkta a panagtumpong kalpasan ti panang-normalize
         if (geoNameClean === targetClean) return true;
-
-        // 2. Panagtumpong para iti "Sapang Palay Proper" (Database) ken "Sapang Palay" (GeoJSON)
         if (targetClean === "sapang palay proper" && geoNameClean === "sapang palay") return true;
         if (targetClean === "sapang palay" && geoNameClean === "sapang palay proper") return true;
 
@@ -639,12 +634,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!feature) return null;
 
-      // Siguraduen a maala ti husto a coordinates (Polygon man wenno MultiPolygon)
       const coords = feature.geometry.type === 'MultiPolygon'
         ? feature.geometry.coordinates[0][0]
         : feature.geometry.coordinates[0];
 
-      // 1. Inverted dark mask iti ruar ti barangay
+      // 1. Inverted dark mask covering outside area
       const worldOuter = [
         [90, -180],
         [90, 180],
@@ -661,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
         interactive: false
       }).addTo(map);
 
-      // 2. Nalabbaga a dashed border (Google Maps style)
+      // 2. Red dashed border (Google Maps style)
       currentBoundaryLayer = L.geoJSON(feature, {
         style: {
           color: '#ef4444',
@@ -672,13 +666,133 @@ document.addEventListener('DOMContentLoaded', () => {
         interactive: false
       }).addTo(map);
 
-      // 3. I-lock ti camera iti sakup daytoy a barangay
+      // 3. Lock camera strictly to this barangay
       const bounds = currentBoundaryLayer.getBounds();
       map.fitBounds(bounds, { padding: [25, 25] });
       map.setMaxBounds(bounds.pad(0.05));
       map.setMinZoom(map.getZoom());
 
       return bounds;
+    }
+
+    // ==========================================
+    // 🔍 FLOATING GOOGLE-STYLE SEARCH ENGINE
+    // ==========================================
+    const searchInput = document.getElementById('custom-map-search');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    const suggestionsList = document.getElementById('search-suggestions');
+    let searchDebounceTimer = null;
+
+    function debounce(callback, delay = 350) {
+      return function(...args) {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => callback.apply(this, args), delay);
+      };
+    }
+
+    function resetSearchUI() {
+      if (searchInput) searchInput.value = '';
+      if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
+      if (suggestionsList) {
+        suggestionsList.innerHTML = '';
+        suggestionsList.classList.add('hidden');
+      }
+    }
+
+    if (searchInput && suggestionsList) {
+      // 1. Live debounced search input
+      searchInput.addEventListener('input', debounce(function() {
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+          suggestionsList.classList.add('hidden');
+          suggestionsList.innerHTML = '';
+          if (clearSearchBtn) clearSearchBtn.classList.add('hidden');
+          return;
+        }
+
+        if (clearSearchBtn) clearSearchBtn.classList.remove('hidden');
+
+        // Derive boundary coordinates for the active barangay
+        if (!currentBoundaryLayer) return;
+        const bounds = currentBoundaryLayer.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+
+        // Query Nominatim restricted to the active territory bounding box
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ph&viewbox=${sw.lng},${ne.lat},${ne.lng},${sw.lat}&bounded=1&limit=6&addressdetails=1`;
+
+        fetch(url)
+          .then(res => res.json())
+          .then(results => {
+            suggestionsList.innerHTML = '';
+
+            // Filter out any results falling outside the official polygon perimeter
+            const validResults = results.filter(item => {
+              const lat = parseFloat(item.lat);
+              const lon = parseFloat(item.lon);
+              return activePolygonCoords && isPointInsidePolygon(lat, lon, activePolygonCoords);
+            });
+
+            if (validResults.length === 0) {
+              suggestionsList.innerHTML = `
+                <li style="cursor: default; color: #94a3b8; padding: 10px 14px; font-size: 12.5px;">
+                  No matching places found within this barangay.
+                </li>`;
+              suggestionsList.classList.remove('hidden');
+              return;
+            }
+
+            validResults.forEach(item => {
+              const li = document.createElement('li');
+              const parts = item.display_name.split(',');
+              const mainTitle = parts[0].trim();
+              const subtitle = parts.slice(1, 4).join(',').trim();
+
+              li.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" style="flex-shrink: 0;">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                <div style="overflow: hidden; text-align: left;">
+                  <span class="place-title">${mainTitle}</span>
+                  <span class="place-subtitle">${subtitle}</span>
+                </div>
+              `;
+
+              li.addEventListener('click', () => {
+                const lat = parseFloat(item.lat);
+                const lon = parseFloat(item.lon);
+
+                // Smoothly pan and zoom to street level
+                map.flyTo([lat, lon], 18, { animate: true, duration: 1.2 });
+                searchInput.value = mainTitle;
+                suggestionsList.classList.add('hidden');
+
+                showToast("Camera moved! Click on the road to place the pin.", "success");
+              });
+
+              suggestionsList.appendChild(li);
+            });
+
+            suggestionsList.classList.remove('hidden');
+          })
+          .catch(err => console.error("Geocoding fetch error:", err));
+      }));
+
+      // 2. Clear input button
+      if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+          resetSearchUI();
+          searchInput.focus();
+        });
+      }
+
+      // 3. Close suggestion dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+          suggestionsList.classList.add('hidden');
+        }
+      });
     }
 
     // ------------------------------------------
@@ -692,6 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const loggedInBarangay = sessionStorage.getItem("barangayName") || "Kaypian";
 
         mapModal.classList.remove('hidden');
+        resetSearchUI();
 
         // 1. Initialize Leaflet if not already initialized
         if (!map) {
@@ -700,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
             maxBoundsViscosity: 1.0 // Rigid boundary wall
           });
 
-          // 🛰️ GOOGLE HYBRID SATELLITE TILES (Clear labels, subdivisions, and roads)
+          // 🛰️ GOOGLE HYBRID SATELLITE TILES
           L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
             maxZoom: 20,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
@@ -721,37 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 2. Apply spotlight and lock camera
-        const bounds = applySpotlightAndLock(loggedInBarangay);
-
-        // 3. Setup Geocoder search box restricted to this barangay
-        if (bounds && L.Control && L.Control.geocoder) {
-          if (geocoderControl) map.removeControl(geocoderControl);
-
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const viewboxStr = `${sw.lng},${ne.lat},${ne.lng},${sw.lat}`;
-
-          geocoderControl = L.Control.geocoder({
-            defaultMarkGeocode: false,
-            geocoder: L.Control.Geocoder.nominatim({
-              geocodingQueryParams: {
-                countrycodes: 'ph',
-                viewbox: viewboxStr,
-                bounded: 1
-              }
-            })
-          })
-            .on('markgeocode', function(e) {
-              const targetLatLng = e.geocode.center;
-              if (activePolygonCoords && isPointInsidePolygon(targetLatLng.lat, targetLatLng.lng, activePolygonCoords)) {
-                map.setView(targetLatLng, 18);
-                showToast("Camera moved! Click the exact road to drop the pin.", "success");
-              } else {
-                showToast("Search result is outside your barangay boundary!", "error");
-              }
-            })
-            .addTo(map);
-        }
+        applySpotlightAndLock(loggedInBarangay);
 
         // Reset pin on fresh open
         if (mapMarker) {
@@ -759,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
           mapMarker = null;
         }
 
-        // 4. Save handler for ADD form
+        // 3. Save handler for ADD form
         const liveSaveBtn = document.getElementById('btn-save-coords');
         const newSaveBtn = liveSaveBtn.cloneNode(true);
         liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
@@ -798,6 +883,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentLng = parseFloat(document.getElementById('edit-longitude').value);
 
         mapModal.classList.remove('hidden');
+        resetSearchUI();
 
         // 1. Initialize Leaflet if not already initialized
         if (!map) {

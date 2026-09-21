@@ -3488,7 +3488,9 @@ let adminReviewMarker = null;
 let currentReviewReportId = null;
 
 // Ensure it runs when the script loads
-loadAdminReports();
+if (typeof loadAdminReports === 'function') {
+  loadAdminReports();
+}
 
 // ==========================================
 // ADMIN DASHBOARD: OPEN REVIEW MODAL
@@ -3516,6 +3518,15 @@ function reviewReport(reportId) {
   const mapContainer = document.getElementById('admin-review-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
+  // ⬇️ RESET REJECTION FORM & ACTIONS STATE ⬇️
+  const primaryActions = document.getElementById('primary-actions');
+  const rejectFeedbackForm = document.getElementById('reject-feedback-form');
+  const adminRemarksInput = document.getElementById('admin-remarks-input');
+
+  if (primaryActions) primaryActions.classList.remove('hidden');
+  if (rejectFeedbackForm) rejectFeedbackForm.classList.add('hidden');
+  if (adminRemarksInput) adminRemarksInput.value = '';
+
   // Temporary loading text
   document.getElementById('modal-header-id').textContent = `#RPT-${String(reportId).padStart(4, '0')} (Loading...)`;
 
@@ -3533,8 +3544,8 @@ function reviewReport(reportId) {
       document.getElementById('modal-report-id').textContent = formattedId;
 
       // ========================================================
-// 🚀 SOLID SEVERITY BADGE (WITH OPTIONAL AI CONFIDENCE)
-// ========================================================
+      // 🚀 SOLID SEVERITY BADGE (WITH OPTIONAL AI CONFIDENCE)
+      // ========================================================
       const rawSev = String(report.severity || '').trim().toLowerCase();
       const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
       const severityBadge = document.getElementById('modal-severity');
@@ -3557,7 +3568,7 @@ function reviewReport(reportId) {
 
       document.getElementById('modal-date').textContent = report.dateSubmitted || 'N/A';
       document.getElementById('modal-gps').textContent = (currentReviewLat !== 0 && currentReviewLng !== 0)
-        ? `${currentReviewLat}° N, ${currentReviewLng}° E`
+        ? `${currentReviewLat.toFixed(5)}° N, ${currentReviewLng.toFixed(5)}° E`
         : '0° N, 0° E';
       document.getElementById('modal-barangay').textContent = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
 
@@ -3594,6 +3605,11 @@ function reviewReport(reportId) {
       if (placeholderEl) placeholderEl.style.display = 'none';
       if (typeof loadSecureImage === 'function') {
         loadSecureImage('modal-damage-image', report.damageImage);
+      }
+
+      // 🕒 Load Lifecycle & Revision History Timeline
+      if (typeof loadReportTimeline === 'function') {
+        loadReportTimeline(report.id, 'admin-review-timeline');
       }
     })
     .catch(error => {
@@ -5871,7 +5887,7 @@ window.executeBatchArchive = function() {
 // ==========================================
 let currentTrackingReportId = null;
 
-// 🗺️ 1. MAP STATE VARIABLES (Added here)
+// 🗺️ 1. MAP STATE VARIABLES
 let currentTrackLat = 0;
 let currentTrackLng = 0;
 let trackModalMap = null;
@@ -5928,7 +5944,7 @@ window.openTrackingModal = function(reportId) {
       setText('track-modal-road-length', report.length ? `${report.length} km` : '0 km');
       setText('track-modal-road-width', report.width ? `${report.width} m` : '0 m');
       setText('track-modal-culverts', report.lengthOfCulverts ? `${report.lengthOfCulverts} m` : '0 m');
-      setText('track-modal-gps', (report.latitude && report.longitude) ? `${report.latitude}° N, ${report.longitude}° E` : 'No GPS data');
+      setText('track-modal-gps', (report.latitude && report.longitude) ? `${report.latitude.toFixed(5)}° N, ${report.longitude.toFixed(5)}° E` : 'No GPS data');
 
       // 2. Submitter Info
       let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
@@ -6069,13 +6085,19 @@ window.openTrackingModal = function(reportId) {
         if (proofPlaceholder) proofPlaceholder.style.display = 'block';
         if (resolutionData) resolutionData.style.display = 'none';
       }
+
+      // 🕒 6. LOAD FULL PROJECT AUDIT TIMELINE
+      if (typeof loadReportTimeline === 'function') {
+        loadReportTimeline(report.id, 'track-modal-timeline');
+      }
     })
     .catch(err => {
       console.error("Error loading tracking details:", err);
       if (typeof showToast === 'function') showToast("Error loading project details.", "error");
     });
 };
-// 🗺️ 4. TOGGLE MAP FUNCTION (Added here)
+
+// 🗺️ 4. TOGGLE MAP FUNCTION
 window.toggleTrackMap = function() {
   const mapContainer = document.getElementById('track-modal-map-container');
   if (!mapContainer) return;
@@ -6173,13 +6195,18 @@ window.handleApproveProject = function() {
   btnApprove.innerHTML = loadingText;
   btnApprove.disabled = true;
 
+  const currentUserId = sessionStorage.getItem("userId");
+
   fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'ngrok-skip-browser-warning': 'true'
     },
-    body: JSON.stringify({ status: targetStatus })
+    body: JSON.stringify({
+      status: targetStatus,
+      userId: currentUserId
+    })
   })
     .then(res => {
       if (!res.ok) throw new Error("Failed to update project status");
@@ -6219,6 +6246,8 @@ window.submitReworkFeedback = function() {
     btnConfirmRework.disabled = true;
   }
 
+  const currentUserId = sessionStorage.getItem("userId");
+
   fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/status`, {
     method: 'PUT',
     headers: {
@@ -6227,7 +6256,8 @@ window.submitReworkFeedback = function() {
     },
     body: JSON.stringify({
       status: "In Progress",
-      adminRemarks: remarks
+      adminRemarks: remarks,
+      userId: currentUserId
     })
   })
     .then(res => {

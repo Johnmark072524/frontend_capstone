@@ -1982,6 +1982,7 @@
         </div>
 
         <div class="modal-body">
+          <!-- SECTION 1: ASSESSMENT OVERVIEW & LOCATE MAP -->
           <div class="report-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
               <h3 class="section-title" style="margin-bottom: 0;">Assessment Overview</h3>
@@ -2005,6 +2006,7 @@
             </div>
           </div>
 
+          <!-- SECTION 2: ROAD DETAILS -->
           <div class="report-section">
             <h3 class="section-title">Road Details</h3>
             <div class="report-detail-grid">
@@ -2026,7 +2028,8 @@
             </div>
           </div>
 
-          <div class="report-section" style="border-bottom: none;">
+          <!-- SECTION 3: DAMAGE EVIDENCE -->
+          <div class="report-section" style="border-bottom: 1px solid #eee; padding-bottom: 20px;">
             <h3 class="section-title">Damage Evidence</h3>
 
             <div class="modal-image-container">
@@ -2039,11 +2042,28 @@
             </div>
           </div>
 
-          <div class="modal-actions" id="primary-actions">
+          <!-- 🕒 SECTION 4: REVISION & LIFECYCLE HISTORY -->
+          <div class="report-section" style="border-bottom: none; margin-top: 15px; padding-top: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <h3 class="section-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
+                <span>⏱️</span> Revision & Lifecycle History
+              </h3>
+              <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600;">Full Transparency</span>
+            </div>
+
+            <!-- Dynamic Timeline Container -->
+            <div id="admin-review-timeline" class="report-timeline">
+              <!-- Populated dynamically by loadReportTimeline -->
+            </div>
+          </div>
+
+          <!-- ACTION BUTTONS -->
+          <div class="modal-actions" id="primary-actions" style="margin-top: 20px;">
             <button type="button" class="btn-reject" id="btn-show-reject"><span class="icon">❌</span> Reject</button>
             <button type="button" class="btn-submit" id="btn-accept-validate"><span class="icon">✅</span> Accept & Validate</button>
           </div>
 
+          <!-- REJECTION REASON FORM -->
           <div id="reject-feedback-form" class="hidden" style="margin-top: 15px;">
             <label for="admin-remarks-input" style="font-weight: bold; color: #d9534f;">Reason for Rejection:</label>
             <textarea id="admin-remarks-input" rows="3" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Tell the Barangay Official what needs to be fixed..."></textarea>
@@ -2083,7 +2103,6 @@
 
       <div class="modal-header">
         <h2>Track Project <span id="track-modal-id" class="highlight">#PRJ-0000</span></h2>
-        <!-- 🚀 Direct onclick for X button -->
         <button type="button" class="close-tracking-btn close-modal-btn" onclick="closeTrackingModal()">✕</button>
       </div>
 
@@ -2097,7 +2116,7 @@
             </button>
           </div>
 
-          <!-- 🚀 MOVED HERE: Satellite Map now expands directly below the header & above the details -->
+          <!-- Satellite Map expands directly below header -->
           <div id="track-modal-map-container" style="display: none; margin-bottom: 18px; border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; height: 260px; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
             <div id="track-modal-map" style="height: 100%; width: 100%;"></div>
           </div>
@@ -2169,6 +2188,19 @@
           </div>
         </div>
 
+        <!-- 🕒 SECTION 4: FULL PROJECT LIFECYCLE & AUDIT TRAIL -->
+        <div class="report-section" style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase; display: flex; align-items: center; gap: 8px;">
+              <span>⏱️</span> Full Lifecycle & Audit History
+            </h3>
+            <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600;">Full Transparency</span>
+          </div>
+          <div id="track-modal-timeline" class="report-timeline">
+            <!-- Populated dynamically by loadReportTimeline -->
+          </div>
+        </div>
+
         <!-- MODAL ACTIONS -->
         <div id="tracking-primary-actions" class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
           <button type="button" id="btn-rework-project" class="btn-submit hidden" onclick="openReworkForm()" style="background-color: #dc3545; border-color: #dc3545; transition: 0.3s;">
@@ -2193,7 +2225,6 @@
       </div>
     </div>
   </div>
-
   <!-- ========================================== -->
   <!-- POLISHED ADD BARANGAY MODAL (UI Upgraded) -->
   <!-- ========================================== -->

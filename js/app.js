@@ -4056,6 +4056,165 @@ function closeBdModals() {
   if (editModal !== null) editModal.classList.remove('active');
 }
 
+// ==========================================
+// 🗺️ VIEW MODAL LEAFLET MAP INSTANCE
+// ==========================================
+let viewModalMap = null;
+let viewModalMarker = null;
+
+function renderViewModalMap(lat, lng) {
+  const mapDiv = document.getElementById('view-modal-map');
+  const noMapMsg = document.getElementById('view-modal-no-map');
+
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    if (mapDiv) mapDiv.classList.add('hidden');
+    if (noMapMsg) noMapMsg.classList.remove('hidden');
+    return;
+  }
+
+  if (mapDiv) mapDiv.classList.remove('hidden');
+  if (noMapMsg) noMapMsg.classList.add('hidden');
+
+  // Initialize map instance once
+  if (!viewModalMap) {
+    viewModalMap = L.map('view-modal-map', {
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    // Google Hybrid satellite tiles
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    }).addTo(viewModalMap);
+  }
+
+  // Position camera and update marker
+  viewModalMap.setView([lat, lng], 18);
+
+  if (viewModalMarker) {
+    viewModalMap.removeLayer(viewModalMarker);
+  }
+
+  const iconToUse = (typeof redIcon !== 'undefined') ? redIcon : new L.Icon.Default();
+  viewModalMarker = L.marker([lat, lng], { icon: iconToUse }).addTo(viewModalMap);
+
+  // Recalculate container dimensions when modal is unhidden
+  setTimeout(() => {
+    if (viewModalMap) viewModalMap.invalidateSize();
+  }, 300);
+}
+
+// ==========================================
+// 🕒 TIMELINE AUDIT TRAIL RENDERER
+// ==========================================
+function loadReportTimeline(reportId, targetContainerId) {
+  const container = document.getElementById(targetContainerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 13px;">
+      <span>⏳ Loading project history...</span>
+    </div>
+  `;
+
+  apiFetch(`/api/reports/${reportId}/timeline`)
+    .then(timeline => {
+      if (!timeline || timeline.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 15px; color: #94a3b8; font-size: 12.5px; background: #f8fafc; border-radius: 8px; border: 1px dashed #e2e8f0;">
+            No lifecycle events recorded for this report.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+
+      timeline.forEach(event => {
+        const item = document.createElement('div');
+        const actionLower = (event.action || '').toLowerCase();
+        item.className = `timeline-item ${actionLower}`;
+
+        // Select badge style
+        let badgeClass = 'badge-green';
+        if (['rejected', 'repair_rework_requested'].includes(actionLower)) {
+          badgeClass = 'badge-red';
+        } else if (['in_progress', 'dispatched', 'resubmitted'].includes(actionLower)) {
+          badgeClass = 'badge-blue';
+        } else if (actionLower === 'pending_budget') {
+          badgeClass = 'badge-yellow';
+        }
+
+        // Format label
+        const displayAction = (event.action || '').replace(/_/g, ' ');
+        const dateStr = event.createdAt ? new Date(event.createdAt).toLocaleString([], {
+          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : 'Recent';
+
+        // Build remarks block
+        let remarksHtml = '';
+        if (event.remarks && event.remarks.trim()) {
+          const isRedBox = ['rejected', 'repair_rework_requested'].includes(actionLower);
+          remarksHtml = `
+            <div class="timeline-remarks-box ${isRedBox ? 'remarks-red' : 'remarks-default'}">
+              <strong>${isRedBox ? '⚠️ Feedback / Reason:' : '📝 Remarks:'}</strong> ${escapeHtml(event.remarks)}
+            </div>
+          `;
+        }
+
+        // Build attachment thumbnail link
+        let attachmentHtml = '';
+        if (event.attachmentUrl && event.attachmentUrl !== 'no_image.jpg') {
+          attachmentHtml = `
+            <a class="timeline-attachment-link" onclick="openFullscreenImage({ src: '${event.attachmentUrl}' })">
+              <span>📸</span> View Logged Attachment
+            </a>
+          `;
+        }
+
+        item.innerHTML = `
+          <div class="timeline-card">
+            <div class="timeline-header">
+              <span class="timeline-badge ${badgeClass}">${displayAction}</span>
+              <span class="timeline-date">${dateStr}</span>
+            </div>
+            <div class="timeline-actor">
+              By: <strong>${escapeHtml(event.actorName || 'System')}</strong>
+              <span style="color: #64748b; font-size: 11px;">(${escapeHtml(event.actorRole || 'Official')})</span>
+            </div>
+            ${remarksHtml}
+            ${attachmentHtml}
+          </div>
+        `;
+
+        container.appendChild(item);
+      });
+    })
+    .catch(err => {
+      console.error("Failed to load timeline:", err);
+      container.innerHTML = `
+        <div style="color: #ef4444; font-size: 12px; padding: 10px; background: #fef2f2; border-radius: 6px;">
+          Failed to load lifecycle audit trail.
+        </div>
+      `;
+    });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag] || tag));
+}
+
+// ==========================================
+// 🔍 OPEN VIEW MODAL CONTROLLER
+// ==========================================
 function openViewModal(reportId) {
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
@@ -4066,18 +4225,18 @@ function openViewModal(reportId) {
         (report.status === 'Validated' ? 'bd-badge-validated' :
           (report.status === 'Rejected' ? 'bd-badge-rejected' : 'bd-badge-pending'));
 
-      // 🧠 AI Severity & Confidence Display
+      // AI Severity Display
       const severityEl = document.getElementById('view-modal-severity');
       if (report.severity) {
         const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
         severityEl.innerText = `${report.severity}${confText}`;
 
         if (report.severity === 'High') {
-          severityEl.style.color = '#dc2626'; // Red
+          severityEl.style.color = '#dc2626';
         } else if (report.severity === 'Medium') {
-          severityEl.style.color = '#d97706'; // Amber / Orange
+          severityEl.style.color = '#d97706';
         } else {
-          severityEl.style.color = '#16a34a'; // Emerald Green
+          severityEl.style.color = '#16a34a';
         }
       } else {
         severityEl.innerText = "🤖 Pending AI Assessment";
@@ -4086,7 +4245,7 @@ function openViewModal(reportId) {
 
       document.getElementById('view-modal-date').innerText = new Date(report.dateSubmitted).toLocaleDateString();
       document.getElementById('view-modal-gps').innerText =
-        (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not provided";
+        (report.latitude && report.longitude) ? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}` : "Not provided";
 
       document.getElementById('view-modal-road-name').innerText = report.cityRoadName || "N/A";
       document.getElementById('view-modal-road-id').innerText = report.cityRoadId || "N/A";
@@ -4104,13 +4263,12 @@ function openViewModal(reportId) {
       document.getElementById('view-modal-desc').innerText = report.damageDescription || "No description provided.";
 
       loadSecureImage('view-modal-img', report.damageImage);
-      const feedbackBox = document.getElementById('view-modal-feedback');
-      if (report.adminRemarks) {
-        feedbackBox.style.display = "block";
-        document.getElementById('view-modal-remarks').innerText = report.adminRemarks;
-      } else {
-        feedbackBox.style.display = "none";
-      }
+
+      // Render satellite map pin
+      renderViewModalMap(report.latitude, report.longitude);
+
+      // Render audit trail timeline
+      loadReportTimeline(report.id, 'view-modal-timeline');
 
       const viewModal = document.getElementById('bd-view-modal');
       viewModal.classList.add('active');
@@ -4122,24 +4280,6 @@ function openViewModal(reportId) {
       if (typeof showToast === 'function') showToast("Error loading details.", "error");
     });
 }
-
-// 🚀 Toggle "Other" damage type field in the Edit & Resubmit modal
-window.toggleEditOtherDamage = function() {
-  const select = document.getElementById('edit-modal-damage-type');
-  const otherInput = document.getElementById('edit-modal-damage-other');
-
-  if (!select || !otherInput) return;
-
-  if (select.value === 'Other') {
-    otherInput.classList.remove('hidden');
-    otherInput.style.display = 'block';
-    otherInput.focus();
-  } else {
-    otherInput.classList.add('hidden');
-    otherInput.style.display = 'none';
-    otherInput.value = '';
-  }
-};
 
 function openEditModal(reportId) {
   apiFetch(`/api/reports/${reportId}`)

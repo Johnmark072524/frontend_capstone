@@ -730,6 +730,7 @@
 <div id="bd-view-modal" class="bd-modal-overlay">
   <div class="bd-modal-box" style="max-width: 650px; display: flex; flex-direction: column; padding: 0; overflow: hidden; max-height: 90vh;">
 
+    <!-- MODAL HEADER -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding: 20px; background: white; z-index: 10; flex-shrink: 0;">
       <div style="display: flex; align-items: center; gap: 15px;">
         <h2 style="margin: 0; color:#2c3e50;">Report <span id="view-modal-id-header" style="color: #007bff;">#</span></h2>
@@ -738,17 +739,31 @@
       <span class="bd-close-btn" onclick="closeBdModals()" style="position: static; font-size: 28px; cursor: pointer; line-height: 1; color: #666;">&times;</span>
     </div>
 
+    <!-- MODAL BODY -->
     <div class="bd-modal-body" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
 
+      <!-- SECTION 1: ASSESSMENT OVERVIEW & SATELLITE PIN -->
       <div class="bd-report-section">
         <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Assessment Overview</h3>
         <div class="bd-detail-grid">
           <div><strong>Severity Level:</strong> <span id="view-modal-severity" style="font-weight: bold;"></span></div>
           <div><strong>Date Submitted:</strong> <span id="view-modal-date"></span></div>
-          <div style="grid-column: 1 / -1;"><strong>GPS:</strong> <span id="view-modal-gps" style="color: #28a745; font-family: monospace;"></span></div>
+          <div style="grid-column: 1 / -1;">
+            <strong>GPS Coordinates:</strong>
+            <span id="view-modal-gps" style="color: #28a745; font-family: monospace; font-weight: 700;"></span>
+          </div>
+        </div>
+
+        <!-- 🗺️ LEAFLET SATELLITE PREVIEW MAP -->
+        <div id="view-modal-map-container" style="margin-top: 14px;">
+          <div id="view-modal-map" style="height: 220px; width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; z-index: 1;"></div>
+          <p id="view-modal-no-map" class="hidden" style="margin: 10px 0 0; font-size: 12.5px; color: #94a3b8; font-style: italic; text-align: center; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+            📍 No GPS coordinates recorded for this report.
+          </p>
         </div>
       </div>
 
+      <!-- SECTION 2: ROAD & DAMAGE DETAILS -->
       <div class="bd-report-section">
         <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Road & Damage Details</h3>
         <div class="bd-detail-grid">
@@ -769,15 +784,26 @@
         </div>
       </div>
 
-      <div class="bd-report-section" style="border-bottom: none;">
+      <!-- SECTION 3: DAMAGE EVIDENCE -->
+      <div class="bd-report-section" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;">
         <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Damage Evidence</h3>
         <div class="modal-image-container">
           <img id="view-modal-img" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
         </div>
         <p style="margin-top: 10px; font-size: 14px; line-height: 1.5;"><strong>Description:</strong> <span id="view-modal-desc"></span></p>
+      </div>
 
-        <div id="view-modal-feedback" class="bd-feedback-box" style="display:none; margin-top:15px; background-color: #fff3cd; border-left-color: #ffc107;">
-          <strong style="color: #856404;">Admin Remarks:</strong> <span id="view-modal-remarks" style="color: #533f03;"></span>
+      <!-- 🕒 SECTION 4: ACTIVITY HISTORY & AUDIT TRAIL -->
+      <div class="bd-report-section" style="border-bottom: none; margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h3 style="margin: 0; font-size: 16px; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <span>⏱️</span> Project Activity & Audit History
+          </h3>
+          <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600;">Full Transparency</span>
+        </div>
+
+        <div id="view-modal-timeline" class="report-timeline">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
@@ -900,10 +926,31 @@
 
     <div class="bd-modal-body" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
 
-      <div class="bd-feedback-box" style="margin-bottom: 20px; font-size: 15px; padding: 12px; border-left: 5px solid #dc3545; background-color: #f8d7da; color: #721c24;">
+      <!-- 1. LATEST ADMIN FEEDBACK (ALWAYS VISIBLE) -->
+      <div class="bd-feedback-box" style="margin-bottom: 12px; font-size: 15px; padding: 12px; border-left: 5px solid #dc3545; background-color: #f8d7da; color: #721c24;">
         <strong>⚠️ Admin Feedback:</strong> <span id="edit-modal-remarks"></span>
       </div>
 
+      <!-- ⏱️ 2. COLLAPSIBLE REVISION & AUDIT HISTORY ACCORDION -->
+      <div class="edit-timeline-accordion" style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+        <button
+          type="button"
+          id="toggle-edit-timeline-btn"
+          onclick="toggleEditTimeline()"
+          style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
+        >
+          <span>⏱️ View Past Revisions & Rejection History</span>
+          <span id="edit-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
+        </button>
+
+        <div id="edit-modal-timeline-container" class="hidden" style="padding: 14px; background: #ffffff; border-top: 1px solid #e2e8f0; max-height: 250px; overflow-y: auto;">
+          <div id="edit-modal-timeline" class="report-timeline">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. REVISION SUBMISSION FORM -->
       <form id="bd-edit-form" onsubmit="event.preventDefault();">
         <input type="hidden" id="edit-report-id">
 

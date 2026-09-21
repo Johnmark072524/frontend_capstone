@@ -4061,8 +4061,9 @@ function closeBdModals() {
 // ==========================================
 let viewModalMap = null;
 let viewModalMarker = null;
+let viewModalBoundaryLayer = null;
 
-function renderViewModalMap(lat, lng) {
+function renderViewModalMap(lat, lng, targetBarangay) {
   const mapDiv = document.getElementById('view-modal-map');
   const noMapMsg = document.getElementById('view-modal-no-map');
 
@@ -4075,7 +4076,7 @@ function renderViewModalMap(lat, lng) {
   if (mapDiv) mapDiv.classList.remove('hidden');
   if (noMapMsg) noMapMsg.classList.add('hidden');
 
-  // Initialize map instance once
+  // 1. Initialize map instance once
   if (!viewModalMap) {
     viewModalMap = L.map('view-modal-map', {
       zoomControl: true,
@@ -4089,8 +4090,48 @@ function renderViewModalMap(lat, lng) {
     }).addTo(viewModalMap);
   }
 
-  // Position camera and update marker
-  viewModalMap.setView([lat, lng], 18);
+  // 2. Remove previous boundary layer if exists
+  if (viewModalBoundaryLayer) {
+    viewModalMap.removeLayer(viewModalBoundaryLayer);
+    viewModalBoundaryLayer = null;
+  }
+
+  // 3. Render red dashed boundary line of the assigned barangay
+  if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData && targetBarangay) {
+    function normalizeBrgy(str) {
+      return (str || "")
+        .toLowerCase()
+        .replace(/[\u2013\u2014\u2212-]/g, "-")
+        .replace(/^sto\.\s*|^santo\s*/, "santo ")
+        .replace(/^sta\.\s*|^santa\s*/, "santa ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    const cleanTarget = normalizeBrgy(targetBarangay);
+    const feature = sjdmGeoJsonData.features.find(f => {
+      const geoName = normalizeBrgy(f.properties.name || f.properties.adm4_name || "");
+      if (geoName === cleanTarget) return true;
+      if (cleanTarget === "sapang palay proper" && geoName === "sapang palay") return true;
+      if (cleanTarget === "sapang palay" && geoName === "sapang palay proper") return true;
+      return false;
+    });
+
+    if (feature) {
+      viewModalBoundaryLayer = L.geoJSON(feature, {
+        style: {
+          color: '#ef4444',
+          weight: 2.5,
+          dashArray: '5, 5',
+          fillOpacity: 0
+        },
+        interactive: false
+      }).addTo(viewModalMap);
+    }
+  }
+
+  // 4. Center map and position marker on incident coordinates
+  viewModalMap.setView([lat, lng], 17);
 
   if (viewModalMarker) {
     viewModalMap.removeLayer(viewModalMarker);
@@ -4099,10 +4140,10 @@ function renderViewModalMap(lat, lng) {
   const iconToUse = (typeof redIcon !== 'undefined') ? redIcon : new L.Icon.Default();
   viewModalMarker = L.marker([lat, lng], { icon: iconToUse }).addTo(viewModalMap);
 
-  // Recalculate container dimensions when modal is unhidden
+  // Recalculate dimensions after modal becomes visible
   setTimeout(() => {
     if (viewModalMap) viewModalMap.invalidateSize();
-  }, 300);
+  }, 250);
 }
 
 // ==========================================
@@ -4264,8 +4305,13 @@ function openViewModal(reportId) {
 
       loadSecureImage('view-modal-img', report.damageImage);
 
-      // Render satellite map pin
-      renderViewModalMap(report.latitude, report.longitude);
+      // Extract assigned barangay name
+      const reportBarangayName = (report.barangay && report.barangay.name)
+        ? report.barangay.name
+        : (sessionStorage.getItem("barangayName") || "Kaypian");
+
+      // Render satellite map pin with the barangay boundary overlay
+      renderViewModalMap(report.latitude, report.longitude, reportBarangayName);
 
       // Render audit trail timeline
       loadReportTimeline(report.id, 'view-modal-timeline');
@@ -4281,6 +4327,23 @@ function openViewModal(reportId) {
     });
 }
 
+// ==========================================
+// 📜 EDIT MODAL ACCORDION TOGGLE
+// ==========================================
+window.toggleEditTimeline = function() {
+  const container = document.getElementById('edit-modal-timeline-container');
+  const arrow = document.getElementById('edit-timeline-arrow');
+
+  if (!container) return;
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) {
+    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+};
+
+// ==========================================
+// ✏️ OPEN EDIT MODAL CONTROLLER
+// ==========================================
 function openEditModal(reportId) {
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
@@ -4332,6 +4395,17 @@ function openEditModal(reportId) {
 
       document.getElementById('edit-modal-img').value = "";
       document.getElementById('edit-modal-filename').innerText = "";
+
+      // 🕒 Load timeline audit trail into the Edit Modal
+      if (typeof loadReportTimeline === 'function') {
+        loadReportTimeline(report.id, 'edit-modal-timeline');
+      }
+
+      // Reset accordion state to collapsed when opening
+      const timelineContainer = document.getElementById('edit-modal-timeline-container');
+      if (timelineContainer) timelineContainer.classList.add('hidden');
+      const arrow = document.getElementById('edit-timeline-arrow');
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
 
       const editModal = document.getElementById('bd-edit-modal');
       editModal.classList.add('active');

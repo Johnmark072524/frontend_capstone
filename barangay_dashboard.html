@@ -742,6 +742,25 @@
     <!-- MODAL BODY -->
     <div class="bd-modal-body" style="padding: 20px; overflow-y: auto; flex-grow: 1;">
 
+      <!-- ⏱️ TOP ACCORDION: PROJECT ACTIVITY & AUDIT HISTORY -->
+      <div class="edit-timeline-accordion" style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+        <button
+          type="button"
+          id="toggle-view-timeline-btn"
+          onclick="toggleViewTimeline()"
+          style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
+        >
+          <span>⏱️ View Project Activity & Audit History</span>
+          <span id="view-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
+        </button>
+
+        <div id="view-modal-timeline-container" class="hidden" style="padding: 14px; background: #ffffff; border-top: 1px solid #e2e8f0; max-height: 250px; overflow-y: auto;">
+          <div id="view-modal-timeline" class="report-timeline">
+            <!-- Populated dynamically by loadReportTimeline -->
+          </div>
+        </div>
+      </div>
+
       <!-- SECTION 1: ASSESSMENT OVERVIEW & SATELLITE PIN -->
       <div class="bd-report-section">
         <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Assessment Overview</h3>
@@ -785,26 +804,12 @@
       </div>
 
       <!-- SECTION 3: DAMAGE EVIDENCE -->
-      <div class="bd-report-section" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;">
+      <div class="bd-report-section" style="border-bottom: none; padding-bottom: 20px;">
         <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #333;">Damage Evidence</h3>
         <div class="modal-image-container">
           <img id="view-modal-img" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
         </div>
         <p style="margin-top: 10px; font-size: 14px; line-height: 1.5;"><strong>Description:</strong> <span id="view-modal-desc"></span></p>
-      </div>
-
-      <!-- 🕒 SECTION 4: ACTIVITY HISTORY & AUDIT TRAIL -->
-      <div class="bd-report-section" style="border-bottom: none; margin-top: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-          <h3 style="margin: 0; font-size: 16px; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-            <span>⏱️</span> Project Activity & Audit History
-          </h3>
-          <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600;">Full Transparency</span>
-        </div>
-
-        <div id="view-modal-timeline" class="report-timeline">
-          <!-- Populated dynamically -->
-        </div>
       </div>
 
     </div>

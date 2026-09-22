@@ -3518,7 +3518,7 @@ function reviewReport(reportId) {
 
   modal.classList.remove('hidden');
 
-  // 2. Reset modal scroll
+  // 2. 🚀 RESET MODAL SCROLL TO TOP
   setTimeout(() => {
     const modalBody = modal.querySelector('.modal-body');
     const modalContent = modal.querySelector('.modal-content');
@@ -3540,7 +3540,7 @@ function reviewReport(reportId) {
   if (rejectFeedbackForm) rejectFeedbackForm.classList.add('hidden');
   if (adminRemarksInput) adminRemarksInput.value = '';
 
-  // 5. Reset Accordion to collapsed state
+  // 5. ⏱️ RESET ACCORDION TO COLLAPSED STATE (AT TOP)
   const timelineContainer = document.getElementById('admin-review-timeline-container');
   if (timelineContainer) timelineContainer.classList.add('hidden');
   const arrow = document.getElementById('admin-timeline-arrow');
@@ -3705,6 +3705,140 @@ window.toggleAdminReviewMap = toggleAdminReviewMap;
 const btnLocateMap = document.getElementById('btn-admin-locate-map');
 if (btnLocateMap) {
   btnLocateMap.onclick = toggleAdminReviewMap;
+}
+
+// ==========================================
+// 🎯 REVIEW MODAL ACTION CONTROLLERS (ACCEPT / REJECT)
+// ==========================================
+
+// 1. Show Rejection Form
+const btnShowReject = document.getElementById('btn-show-reject');
+if (btnShowReject) {
+  btnShowReject.onclick = function() {
+    const primaryActions = document.getElementById('primary-actions');
+    const rejectForm = document.getElementById('reject-feedback-form');
+    const remarksInput = document.getElementById('admin-remarks-input');
+    if (primaryActions) primaryActions.classList.add('hidden');
+    if (rejectForm) rejectForm.classList.remove('hidden');
+    if (remarksInput) remarksInput.focus();
+  };
+}
+
+// 2. Cancel Rejection
+const btnCancelReject = document.getElementById('btn-cancel-reject');
+if (btnCancelReject) {
+  btnCancelReject.onclick = function() {
+    const primaryActions = document.getElementById('primary-actions');
+    const rejectForm = document.getElementById('reject-feedback-form');
+    const remarksInput = document.getElementById('admin-remarks-input');
+    if (rejectForm) rejectForm.classList.add('hidden');
+    if (primaryActions) primaryActions.classList.remove('hidden');
+    if (remarksInput) remarksInput.value = '';
+  };
+}
+
+// 3. Confirm Rejection (Attaches userId for audit trail)
+const btnConfirmReject = document.getElementById('btn-confirm-reject');
+if (btnConfirmReject) {
+  btnConfirmReject.onclick = function() {
+    if (!currentReviewReportId) return;
+    const remarksInput = document.getElementById('admin-remarks-input');
+    const remarks = remarksInput ? remarksInput.value.trim() : '';
+
+    if (!remarks) {
+      if (typeof showToast === 'function') {
+        showToast("Please provide a reason for rejecting this report.", "error");
+      } else {
+        alert("Please provide a reason for rejecting this report.");
+      }
+      return;
+    }
+
+    const originalText = btnConfirmReject.innerHTML;
+    btnConfirmReject.innerHTML = "⏳ Submitting...";
+    btnConfirmReject.disabled = true;
+
+    const currentUserId = sessionStorage.getItem("userId");
+
+    fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
+      body: JSON.stringify({
+        status: "Rejected",
+        adminRemarks: remarks,
+        userId: currentUserId
+      })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to reject report");
+        return res.text();
+      })
+      .then(() => {
+        if (typeof showToast === 'function') {
+          showToast("Report rejected and returned to Barangay official.", "success");
+        }
+        closeReviewModal();
+        if (typeof loadAdminReports === 'function') loadAdminReports();
+        if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
+      })
+      .catch(err => {
+        console.error(err);
+        if (typeof showToast === 'function') showToast("Error rejecting report.", "error");
+      })
+      .finally(() => {
+        btnConfirmReject.innerHTML = originalText;
+        btnConfirmReject.disabled = false;
+      });
+  };
+}
+
+// 4. Accept & Validate (Attaches userId for audit trail)
+const btnAcceptValidate = document.getElementById('btn-accept-validate');
+if (btnAcceptValidate) {
+  btnAcceptValidate.onclick = function() {
+    if (!currentReviewReportId) return;
+
+    const originalText = btnAcceptValidate.innerHTML;
+    btnAcceptValidate.innerHTML = "⏳ Validating...";
+    btnAcceptValidate.disabled = true;
+
+    const currentUserId = sessionStorage.getItem("userId");
+
+    fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
+      body: JSON.stringify({
+        status: "Validated",
+        userId: currentUserId
+      })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to validate report");
+        return res.text();
+      })
+      .then(() => {
+        if (typeof showToast === 'function') {
+          showToast("Report validated and queued for dispatch!", "success");
+        }
+        closeReviewModal();
+        if (typeof loadAdminReports === 'function') loadAdminReports();
+        if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
+      })
+      .catch(err => {
+        console.error(err);
+        if (typeof showToast === 'function') showToast("Error validating report.", "error");
+      })
+      .finally(() => {
+        btnAcceptValidate.innerHTML = originalText;
+        btnAcceptValidate.disabled = false;
+      });
+  };
 }
 
 // ==========================================
@@ -4279,9 +4413,48 @@ function escapeHtml(str) {
 }
 
 // ==========================================
+// 📜 VIEW MODAL TIMELINE ACCORDION TOGGLE
+// ==========================================
+window.toggleViewTimeline = function() {
+  const container = document.getElementById('view-modal-timeline-container');
+  const arrow = document.getElementById('view-timeline-arrow');
+
+  if (!container) return;
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) {
+    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+};
+
+// ==========================================
 // 🔍 OPEN VIEW MODAL CONTROLLER
 // ==========================================
 function openViewModal(reportId) {
+  const viewModal = document.getElementById('bd-view-modal');
+
+  // 1. ⏱️ RESET ACCORDION TO COLLAPSED STATE & RESET TIMELINE SCROLL
+  const timelineContainer = document.getElementById('view-modal-timeline-container');
+  if (timelineContainer) {
+    timelineContainer.classList.add('hidden');
+    timelineContainer.scrollTop = 0;
+  }
+  const arrow = document.getElementById('view-timeline-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
+
+  // 2. REVEAL MODAL & RESET MODAL BODY SCROLL
+  if (viewModal) {
+    viewModal.classList.add('active');
+    const viewModalBody = viewModal.querySelector('.bd-modal-body');
+    if (viewModalBody) viewModalBody.scrollTop = 0;
+    viewModal.scrollTop = 0;
+
+    setTimeout(() => {
+      if (viewModalBody) viewModalBody.scrollTop = 0;
+      viewModal.scrollTop = 0;
+    }, 10);
+  }
+
+  // 3. FETCH AND POPULATE DETAILS
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       document.getElementById('view-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
@@ -4338,13 +4511,10 @@ function openViewModal(reportId) {
       // Render satellite map pin with the barangay boundary overlay
       renderViewModalMap(report.latitude, report.longitude, reportBarangayName);
 
-      // Render audit trail timeline
-      loadReportTimeline(report.id, 'view-modal-timeline');
-
-      const viewModal = document.getElementById('bd-view-modal');
-      viewModal.classList.add('active');
-      const viewModalBody = viewModal.querySelector('.bd-modal-body');
-      if (viewModalBody) viewModalBody.scrollTop = 0;
+      // 🕒 Load audit trail timeline into the accordion
+      if (typeof loadReportTimeline === 'function') {
+        loadReportTimeline(report.id, 'view-modal-timeline');
+      }
     })
     .catch(err => {
       console.error(err);
@@ -4370,6 +4540,30 @@ window.toggleEditTimeline = function() {
 // ✏️ OPEN EDIT MODAL CONTROLLER
 // ==========================================
 function openEditModal(reportId) {
+  const editModal = document.getElementById('bd-edit-modal');
+
+  // 1. ⏱️ RESET ACCORDION TO COLLAPSED STATE (AT TOP)
+  const timelineContainer = document.getElementById('edit-modal-timeline-container');
+  if (timelineContainer) timelineContainer.classList.add('hidden');
+  const arrow = document.getElementById('edit-timeline-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
+
+  // 2. Reveal modal immediately
+  if (editModal) {
+    editModal.classList.add('active');
+
+    // 🚀 BULLETPROOF SCROLL RESET TO TOP
+    const editModalBody = editModal.querySelector('.bd-modal-body');
+    if (editModalBody) editModalBody.scrollTop = 0;
+    editModal.scrollTop = 0;
+
+    setTimeout(() => {
+      if (editModalBody) editModalBody.scrollTop = 0;
+      editModal.scrollTop = 0;
+    }, 10);
+  }
+
+  // 3. Fetch report details
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       document.getElementById('edit-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
@@ -4391,7 +4585,9 @@ function openEditModal(reportId) {
         editSeverityInput.value = "🤖 Pending AI Assessment";
       }
 
-      document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}, ${report.longitude}` : "Not Selected";
+      document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude)
+        ? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`
+        : "Not Selected";
       document.getElementById('edit-latitude').value = report.latitude || "";
       document.getElementById('edit-longitude').value = report.longitude || "";
 
@@ -4421,27 +4617,20 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-img').value = "";
       document.getElementById('edit-modal-filename').innerText = "";
 
-      // 🕒 Load timeline audit trail into the Edit Modal
+      // 🕒 Load timeline audit trail into the Accordion
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'edit-modal-timeline');
       }
-
-      // Reset accordion state to collapsed when opening
-      const timelineContainer = document.getElementById('edit-modal-timeline-container');
-      if (timelineContainer) timelineContainer.classList.add('hidden');
-      const arrow = document.getElementById('edit-timeline-arrow');
-      if (arrow) arrow.style.transform = 'rotate(0deg)';
-
-      const editModal = document.getElementById('bd-edit-modal');
-      editModal.classList.add('active');
-      const editModalBody = editModal.querySelector('.bd-modal-body');
-      if (editModalBody) editModalBody.scrollTop = 0;
     })
     .catch(err => {
+      console.error(err);
       if (typeof showToast === 'function') showToast("Error loading report.", "error");
     });
 }
 
+// ==========================================
+// 🚀 SUBMIT EDITED / RESUBMITTED REPORT
+// ==========================================
 function submitEditedReport() {
   const reportId = document.getElementById('edit-report-id').value;
   const fileInput = document.getElementById('edit-modal-img');
@@ -4452,6 +4641,13 @@ function submitEditedReport() {
   }
 
   const formData = new FormData();
+
+  // 👤 Pass userId for audit trail logging
+  const currentUserId = sessionStorage.getItem("userId");
+  if (currentUserId) {
+    formData.append("userId", currentUserId);
+  }
+
   formData.append("damageDescription", document.getElementById('edit-modal-desc').value);
   formData.append("length", document.getElementById('edit-modal-length').value);
   formData.append("width", document.getElementById('edit-modal-width').value);
@@ -4459,9 +4655,11 @@ function submitEditedReport() {
   formData.append("numberOfBridges", document.getElementById('edit-modal-bridges').value);
   formData.append("latitude", document.getElementById('edit-latitude').value);
   formData.append("longitude", document.getElementById('edit-longitude').value);
+
   if (fileInput.files.length > 0) {
     formData.append("imageFile", fileInput.files[0]);
   }
+
   let editedDamageType = document.getElementById('edit-modal-damage-type').value;
   if (editedDamageType === "Other") {
     editedDamageType = document.getElementById('edit-modal-damage-other').value || "Other";
@@ -4504,7 +4702,9 @@ function submitEditedReport() {
     });
 }
 
-// 7. Utilities & Observers
+// ==========================================
+// 7. UTILITIES & OBSERVERS
+// ==========================================
 function escapeHtml(text) {
   if (!text) return "";
   return String(text)
@@ -5916,17 +6116,20 @@ window.toggleTrackTimeline = function() {
   }
 };
 
-// Open Tracking Modal and Populate Data
+// ==========================================
+// 🚀 OPEN TRACKING MODAL & POPULATE DATA
+// ==========================================
 window.openTrackingModal = function(reportId) {
   currentTrackingReportId = reportId;
 
   const trackingModal = document.getElementById('tracking-modal');
   if (!trackingModal) return;
 
-  // 🗺️ 2. HIDE MAP WHEN SWITCHING TO A NEW PROJECT
+  // 1. Force map container closed on open
   const mapContainer = document.getElementById('track-modal-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
+  // 2. Reset rework form & actions state
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
   const reworkInput = document.getElementById('rework-remarks-input');
@@ -5935,14 +6138,16 @@ window.openTrackingModal = function(reportId) {
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
 
-  // 🕒 Reset timeline accordion to collapsed state
+  // 3. ⏱️ Reset accordion to collapsed state at the top
   const timelineContainer = document.getElementById('track-modal-timeline-container');
   if (timelineContainer) timelineContainer.classList.add('hidden');
   const arrow = document.getElementById('track-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
+  // 4. Reveal modal
   trackingModal.classList.remove('hidden');
 
+  // 5. 🚀 Bulletproof Scroll Reset to Top
   setTimeout(() => {
     const modalBody = trackingModal.querySelector('.modal-body');
     const modalContent = trackingModal.querySelector('.modal-content');
@@ -5951,9 +6156,9 @@ window.openTrackingModal = function(reportId) {
     trackingModal.scrollTop = 0;
   }, 10);
 
+  // 6. Fetch Project Details
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
-      // 🗺️ 3. CAPTURE GPS COORDINATES FOR THE MAP
       currentTrackLat = parseFloat(report.latitude) || 0;
       currentTrackLng = parseFloat(report.longitude) || 0;
 
@@ -5962,7 +6167,7 @@ window.openTrackingModal = function(reportId) {
         if (el) el.textContent = text;
       };
 
-      // 1. Road Details
+      // Road Details
       setText('track-modal-id', `#PRJ-${String(report.id).padStart(4, '0')}`);
       setText('track-modal-brgy', report.barangay?.barangayName || 'Unknown');
       setText('track-modal-road', report.cityRoadName || 'Unknown Road');
@@ -5975,7 +6180,7 @@ window.openTrackingModal = function(reportId) {
       setText('track-modal-culverts', report.lengthOfCulverts ? `${report.lengthOfCulverts} m` : '0 m');
       setText('track-modal-gps', (report.latitude && report.longitude) ? `${report.latitude.toFixed(5)}° N, ${report.longitude.toFixed(5)}° E` : 'No GPS data');
 
-      // 2. Submitter Info
+      // Submitter Info
       let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
       if (report.user && report.user.firstName && report.user.lastName) {
         submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
@@ -5984,9 +6189,7 @@ window.openTrackingModal = function(reportId) {
       }
       setText('track-modal-submitter', submitterText);
 
-      // ========================================================
-      // 🧠 3. SOLID AI SEVERITY & CONFIDENCE BADGE
-      // ========================================================
+      // AI Severity Badge
       const sevBox = document.getElementById('track-modal-severity');
       if (sevBox) {
         const rawSev = String(report.severity || '').trim().toLowerCase();
@@ -6004,7 +6207,7 @@ window.openTrackingModal = function(reportId) {
         }
       }
 
-      // 4. Damage Information & Calculations
+      // Damage Specifications & Area
       const dmgType = report.damageType || 'Not specified';
       const dmgLen = parseFloat(report.damageLength) || 0;
       const dmgWid = parseFloat(report.damageWidth) || 0;
@@ -6019,7 +6222,7 @@ window.openTrackingModal = function(reportId) {
         window.loadSecureImage('track-modal-image', report.damageImage);
       }
 
-      // 5. Resolution & Status Controls
+      // Resolution Controls & Completion Verification
       const statusBox = document.getElementById('track-modal-status');
       const statusText = document.getElementById('track-modal-status-text');
       const approveBtn = document.getElementById('btn-approve-project');
@@ -6095,7 +6298,6 @@ window.openTrackingModal = function(reportId) {
         if (resolutionData) resolutionData.style.display = 'none';
 
       } else {
-        // Dispatched to CEO / Awaiting Response
         if (statusBox) {
           statusBox.textContent = report.status || 'Dispatched to CEO';
           statusBox.style.backgroundColor = '#e2e3e5';
@@ -6115,7 +6317,7 @@ window.openTrackingModal = function(reportId) {
         if (resolutionData) resolutionData.style.display = 'none';
       }
 
-      // 🕒 6. LOAD TIMELINE INTO TOP ACCORDION
+      // 🕒 Load Timeline into the Accordion
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'track-modal-timeline');
       }
@@ -6126,7 +6328,9 @@ window.openTrackingModal = function(reportId) {
     });
 };
 
-// 🗺️ 4. TOGGLE MAP FUNCTION
+// ==========================================
+// 🗺️ TOGGLE MAP FUNCTION
+// ==========================================
 window.toggleTrackMap = function() {
   const mapContainer = document.getElementById('track-modal-map-container');
   if (!mapContainer) return;
@@ -6179,17 +6383,25 @@ window.toggleTrackMap = function() {
   }
 };
 
-// Close the modal
+// ==========================================
+// 🚪 CLOSE TRACKING MODAL
+// ==========================================
 window.closeTrackingModal = function() {
   const trackingModal = document.getElementById('tracking-modal');
   if (trackingModal) trackingModal.classList.add('hidden');
 
-  // Hide map container on close
   const mapContainer = document.getElementById('track-modal-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
+
+  const reworkForm = document.getElementById('tracking-rework-form');
+  const primaryActions = document.getElementById('tracking-primary-actions');
+  if (reworkForm) reworkForm.classList.add('hidden');
+  if (primaryActions) primaryActions.classList.remove('hidden');
 };
 
-// Open the rework textarea form
+// ==========================================
+// 🔄 REWORK CONTROLLERS
+// ==========================================
 window.openReworkForm = function() {
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
@@ -6199,7 +6411,6 @@ window.openReworkForm = function() {
   if (reworkInput) reworkInput.focus();
 };
 
-// Cancel rework and return to primary buttons
 window.cancelReworkForm = function() {
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
@@ -6209,7 +6420,9 @@ window.cancelReworkForm = function() {
   if (reworkInput) reworkInput.value = '';
 };
 
-// Approve & Close Project or Acknowledge & Archive
+// ==========================================
+// 🏁 APPROVE / CLOSE OR ARCHIVE HANDLER
+// ==========================================
 window.handleApproveProject = function() {
   if (!currentTrackingReportId) return;
   const btnApprove = document.getElementById('btn-approve-project');
@@ -6257,7 +6470,9 @@ window.handleApproveProject = function() {
     });
 };
 
-// Submit Rework Feedback to CEO
+// ==========================================
+// ↩️ SUBMIT REWORK FEEDBACK TO CEO
+// ==========================================
 window.submitReworkFeedback = function() {
   if (!currentTrackingReportId) return;
   const reworkInput = document.getElementById('rework-remarks-input');

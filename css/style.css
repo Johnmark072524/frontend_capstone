@@ -3067,3 +3067,10 @@ body.ceo-theme .profile-nav li.active {
 .timeline-attachment-link:hover {
   text-decoration: underline;
 }
+
+.modal-body,
+.bd-modal-body,
+.modal-content,
+.bd-modal-box {
+  overflow-anchor: none !important;
+}

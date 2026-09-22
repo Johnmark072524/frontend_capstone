@@ -3479,6 +3479,43 @@ function loadAdminReports() {
 }
 
 // ==========================================
+// 🚀 BULLETPROOF MODAL SCROLL RESET HELPER
+// ==========================================
+function resetModalScroll(modalElementOrId) {
+  const modal = typeof modalElementOrId === 'string'
+    ? document.getElementById(modalElementOrId)
+    : modalElementOrId;
+
+  if (!modal) return;
+
+  const performReset = () => {
+    // 1. Reset Modal Overlay / Wrapper
+    modal.scrollTop = 0;
+    if (typeof modal.scrollTo === 'function') {
+      modal.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+
+    // 2. Reset All Inner Scroll Containers & Timelines
+    const scrollableTargets = modal.querySelectorAll(
+      '.modal-body, .bd-modal-body, .modal-content, .bd-modal-box, .report-timeline, [id$="-timeline-container"]'
+    );
+
+    scrollableTargets.forEach(el => {
+      el.scrollTop = 0;
+      if (typeof el.scrollTo === 'function') {
+        el.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+    });
+  };
+
+  // Immediate execution + animation frame + async render delays
+  performReset();
+  requestAnimationFrame(performReset);
+  setTimeout(performReset, 50);
+  setTimeout(performReset, 200);
+}
+
+// ==========================================
 // ADMIN MODAL MAP VARIABLES
 // ==========================================
 let currentReviewLat = null;
@@ -3518,14 +3555,8 @@ function reviewReport(reportId) {
 
   modal.classList.remove('hidden');
 
-  // 2. 🚀 RESET MODAL SCROLL TO TOP
-  setTimeout(() => {
-    const modalBody = modal.querySelector('.modal-body');
-    const modalContent = modal.querySelector('.modal-content');
-    if (modalBody) modalBody.scrollTop = 0;
-    if (modalContent) modalContent.scrollTop = 0;
-    modal.scrollTop = 0;
-  }, 10);
+  // 2. 🚀 Initial Scroll Reset to Top
+  resetModalScroll(modal);
 
   // 3. Force map container closed on open
   const mapContainer = document.getElementById('admin-review-map-container');
@@ -3540,9 +3571,12 @@ function reviewReport(reportId) {
   if (rejectFeedbackForm) rejectFeedbackForm.classList.add('hidden');
   if (adminRemarksInput) adminRemarksInput.value = '';
 
-  // 5. ⏱️ RESET ACCORDION TO COLLAPSED STATE (AT TOP)
+  // 5. ⏱️ Reset accordion to collapsed state (at top)
   const timelineContainer = document.getElementById('admin-review-timeline-container');
-  if (timelineContainer) timelineContainer.classList.add('hidden');
+  if (timelineContainer) {
+    timelineContainer.classList.add('hidden');
+    timelineContainer.scrollTop = 0;
+  }
   const arrow = document.getElementById('admin-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
@@ -3626,6 +3660,9 @@ function reviewReport(reportId) {
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'admin-review-timeline');
       }
+
+      // 🚀 Final Scroll Reset after data & timeline injection completes
+      resetModalScroll(modal);
     })
     .catch(error => {
       console.error("Error:", error);
@@ -4427,34 +4464,75 @@ window.toggleViewTimeline = function() {
 };
 
 // ==========================================
+// 🚀 BULLETPROOF MODAL SCROLL RESET HELPER
+// ==========================================
+function resetModalScroll(modalElementOrId) {
+  const modal = typeof modalElementOrId === 'string'
+    ? document.getElementById(modalElementOrId)
+    : modalElementOrId;
+
+  if (!modal) return;
+
+  const performReset = () => {
+    // 1. Reset Modal Overlay / Wrapper
+    modal.scrollTop = 0;
+    if (typeof modal.scrollTo === 'function') {
+      modal.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+
+    // 2. Reset All Possible Inner Scroll Containers & Timelines
+    const scrollableTargets = modal.querySelectorAll(
+      '.modal-body, .bd-modal-body, .modal-content, .bd-modal-box, .report-timeline, [id$="-timeline-container"]'
+    );
+
+    scrollableTargets.forEach(el => {
+      el.scrollTop = 0;
+      if (typeof el.scrollTo === 'function') {
+        el.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+    });
+  };
+
+  // Immediate reset, next animation frame, and delayed resets for async image/timeline insertion
+  performReset();
+  requestAnimationFrame(performReset);
+  setTimeout(performReset, 50);
+  setTimeout(performReset, 200);
+}
+
+// ==========================================
+// 📜 VIEW MODAL TIMELINE ACCORDION TOGGLE
+// ==========================================
+window.toggleViewTimeline = function() {
+  const container = document.getElementById('view-modal-timeline-container');
+  const arrow = document.getElementById('view-timeline-arrow');
+
+  if (!container) return;
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) {
+    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+};
+
+// ==========================================
 // 🔍 OPEN VIEW MODAL CONTROLLER
 // ==========================================
 function openViewModal(reportId) {
   const viewModal = document.getElementById('bd-view-modal');
 
-  // 1. ⏱️ RESET ACCORDION TO COLLAPSED STATE & RESET TIMELINE SCROLL
+  // 1. ⏱️ Reset accordion state to collapsed
   const timelineContainer = document.getElementById('view-modal-timeline-container');
-  if (timelineContainer) {
-    timelineContainer.classList.add('hidden');
-    timelineContainer.scrollTop = 0;
-  }
+  if (timelineContainer) timelineContainer.classList.add('hidden');
   const arrow = document.getElementById('view-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
-  // 2. REVEAL MODAL & RESET MODAL BODY SCROLL
+  // 2. Reveal modal & run initial scroll reset
   if (viewModal) {
     viewModal.classList.add('active');
-    const viewModalBody = viewModal.querySelector('.bd-modal-body');
-    if (viewModalBody) viewModalBody.scrollTop = 0;
-    viewModal.scrollTop = 0;
-
-    setTimeout(() => {
-      if (viewModalBody) viewModalBody.scrollTop = 0;
-      viewModal.scrollTop = 0;
-    }, 10);
+    resetModalScroll(viewModal);
   }
 
-  // 3. FETCH AND POPULATE DETAILS
+  // 3. Fetch and populate details
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       document.getElementById('view-modal-id-header').innerText = `#RPT-${report.id.toString().padStart(4, '0')}`;
@@ -4515,6 +4593,9 @@ function openViewModal(reportId) {
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'view-modal-timeline');
       }
+
+      // 🚀 Bulletproof Scroll Reset after all DOM insertions complete
+      resetModalScroll(viewModal);
     })
     .catch(err => {
       console.error(err);
@@ -4542,25 +4623,16 @@ window.toggleEditTimeline = function() {
 function openEditModal(reportId) {
   const editModal = document.getElementById('bd-edit-modal');
 
-  // 1. ⏱️ RESET ACCORDION TO COLLAPSED STATE (AT TOP)
+  // 1. ⏱️ Reset accordion state to collapsed
   const timelineContainer = document.getElementById('edit-modal-timeline-container');
   if (timelineContainer) timelineContainer.classList.add('hidden');
   const arrow = document.getElementById('edit-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
-  // 2. Reveal modal immediately
+  // 2. Reveal modal & run initial scroll reset
   if (editModal) {
     editModal.classList.add('active');
-
-    // 🚀 BULLETPROOF SCROLL RESET TO TOP
-    const editModalBody = editModal.querySelector('.bd-modal-body');
-    if (editModalBody) editModalBody.scrollTop = 0;
-    editModal.scrollTop = 0;
-
-    setTimeout(() => {
-      if (editModalBody) editModalBody.scrollTop = 0;
-      editModal.scrollTop = 0;
-    }, 10);
+    resetModalScroll(editModal);
   }
 
   // 3. Fetch report details
@@ -4621,6 +4693,9 @@ function openEditModal(reportId) {
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'edit-modal-timeline');
       }
+
+      // 🚀 Bulletproof Scroll Reset after all DOM insertions complete
+      resetModalScroll(editModal);
     })
     .catch(err => {
       console.error(err);
@@ -6092,6 +6167,43 @@ window.executeBatchArchive = function() {
     });
 };
 // ==========================================
+// 🚀 BULLETPROOF MODAL SCROLL RESET HELPER
+// ==========================================
+function resetModalScroll(modalElementOrId) {
+  const modal = typeof modalElementOrId === 'string'
+    ? document.getElementById(modalElementOrId)
+    : modalElementOrId;
+
+  if (!modal) return;
+
+  const performReset = () => {
+    // 1. Reset Modal Overlay / Wrapper
+    modal.scrollTop = 0;
+    if (typeof modal.scrollTo === 'function') {
+      modal.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+
+    // 2. Reset All Inner Scroll Containers & Timelines
+    const scrollableTargets = modal.querySelectorAll(
+      '.modal-body, .bd-modal-body, .modal-content, .bd-modal-box, .report-timeline, [id$="-timeline-container"]'
+    );
+
+    scrollableTargets.forEach(el => {
+      el.scrollTop = 0;
+      if (typeof el.scrollTo === 'function') {
+        el.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      }
+    });
+  };
+
+  // Immediate execution + animation frame + async render delays
+  performReset();
+  requestAnimationFrame(performReset);
+  setTimeout(performReset, 50);
+  setTimeout(performReset, 200);
+}
+
+// ==========================================
 // 7 & 8. TRACKING MODAL ENGINE (RELIABLE GLOBAL HANDLERS)
 // ==========================================
 let currentTrackingReportId = null;
@@ -6138,23 +6250,20 @@ window.openTrackingModal = function(reportId) {
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
 
-  // 3. ⏱️ Reset accordion to collapsed state at the top
+  // 3. ⏱️ Reset accordion to collapsed state and zero out timeline scroll
   const timelineContainer = document.getElementById('track-modal-timeline-container');
-  if (timelineContainer) timelineContainer.classList.add('hidden');
+  if (timelineContainer) {
+    timelineContainer.classList.add('hidden');
+    timelineContainer.scrollTop = 0;
+  }
   const arrow = document.getElementById('track-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
   // 4. Reveal modal
   trackingModal.classList.remove('hidden');
 
-  // 5. 🚀 Bulletproof Scroll Reset to Top
-  setTimeout(() => {
-    const modalBody = trackingModal.querySelector('.modal-body');
-    const modalContent = trackingModal.querySelector('.modal-content');
-    if (modalBody) modalBody.scrollTop = 0;
-    if (modalContent) modalContent.scrollTop = 0;
-    trackingModal.scrollTop = 0;
-  }, 10);
+  // 5. 🚀 Initial Scroll Reset to Top
+  resetModalScroll(trackingModal);
 
   // 6. Fetch Project Details
   apiFetch(`/api/reports/${reportId}`)
@@ -6321,6 +6430,9 @@ window.openTrackingModal = function(reportId) {
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'track-modal-timeline');
       }
+
+      // 🚀 Final Scroll Reset after data & timeline injection completes
+      resetModalScroll(trackingModal);
     })
     .catch(err => {
       console.error("Error loading tracking details:", err);

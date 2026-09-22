@@ -1982,6 +1982,26 @@
         </div>
 
         <div class="modal-body">
+
+          <!-- ⏱️ TOP ACCORDION: REVISION & LIFECYCLE HISTORY -->
+          <div class="edit-timeline-accordion" style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+            <button
+              type="button"
+              id="toggle-admin-timeline-btn"
+              onclick="toggleAdminReviewTimeline()"
+              style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
+            >
+              <span>⏱️ View Past Revisions & Lifecycle History</span>
+              <span id="admin-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
+            </button>
+
+            <div id="admin-review-timeline-container" class="hidden" style="padding: 14px; background: #ffffff; border-top: 1px solid #e2e8f0; max-height: 250px; overflow-y: auto;">
+              <div id="admin-review-timeline" class="report-timeline">
+                <!-- Populated dynamically by loadReportTimeline -->
+              </div>
+            </div>
+          </div>
+
           <!-- SECTION 1: ASSESSMENT OVERVIEW & LOCATE MAP -->
           <div class="report-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -2029,7 +2049,7 @@
           </div>
 
           <!-- SECTION 3: DAMAGE EVIDENCE -->
-          <div class="report-section" style="border-bottom: 1px solid #eee; padding-bottom: 20px;">
+          <div class="report-section" style="border-bottom: none;">
             <h3 class="section-title">Damage Evidence</h3>
 
             <div class="modal-image-container">
@@ -2042,22 +2062,7 @@
             </div>
           </div>
 
-          <!-- 🕒 SECTION 4: REVISION & LIFECYCLE HISTORY -->
-          <div class="report-section" style="border-bottom: none; margin-top: 15px; padding-top: 5px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-              <h3 class="section-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 8px;">
-                <span>⏱️</span> Revision & Lifecycle History
-              </h3>
-              <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600;">Full Transparency</span>
-            </div>
-
-            <!-- Dynamic Timeline Container -->
-            <div id="admin-review-timeline" class="report-timeline">
-              <!-- Populated dynamically by loadReportTimeline -->
-            </div>
-          </div>
-
-          <!-- ACTION BUTTONS -->
+          <!-- MODAL ACTIONS -->
           <div class="modal-actions" id="primary-actions" style="margin-top: 20px;">
             <button type="button" class="btn-reject" id="btn-show-reject"><span class="icon">❌</span> Reject</button>
             <button type="button" class="btn-submit" id="btn-accept-validate"><span class="icon">✅</span> Accept & Validate</button>
@@ -2107,6 +2112,26 @@
       </div>
 
       <div class="modal-body">
+
+        <!-- ⏱️ TOP ACCORDION: FULL PROJECT LIFECYCLE & AUDIT TRAIL -->
+        <div class="edit-timeline-accordion" style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+          <button
+            type="button"
+            id="toggle-track-timeline-btn"
+            onclick="toggleTrackTimeline()"
+            style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
+          >
+            <span>⏱️ View Full Lifecycle & Audit History</span>
+            <span id="track-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
+          </button>
+
+          <div id="track-modal-timeline-container" class="hidden" style="padding: 14px; background: #ffffff; border-top: 1px solid #e2e8f0; max-height: 250px; overflow-y: auto;">
+            <div id="track-modal-timeline" class="report-timeline">
+              <!-- Populated dynamically by loadReportTimeline -->
+            </div>
+          </div>
+        </div>
+
         <!-- SECTION 1: ROAD SPECIFICATIONS -->
         <div class="report-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -2185,19 +2210,6 @@
 
             <strong style="color: #166534; font-size: 13px;">CEO Remarks:</strong>
             <p id="track-modal-proof-remarks" style="background: white; padding: 12px; border-radius: 4px; border: 1px solid #dcfce3; color: #374151; font-size: 13px; margin-top: 5px;">No remarks provided.</p>
-          </div>
-        </div>
-
-        <!-- 🕒 SECTION 4: FULL PROJECT LIFECYCLE & AUDIT TRAIL -->
-        <div class="report-section" style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase; display: flex; align-items: center; gap: 8px;">
-              <span>⏱️</span> Full Lifecycle & Audit History
-            </h3>
-            <span style="font-size: 11px; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-weight: 600;">Full Transparency</span>
-          </div>
-          <div id="track-modal-timeline" class="report-timeline">
-            <!-- Populated dynamically by loadReportTimeline -->
           </div>
         </div>
 

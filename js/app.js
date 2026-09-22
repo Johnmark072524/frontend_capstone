@@ -3493,19 +3493,46 @@ if (typeof loadAdminReports === 'function') {
 }
 
 // ==========================================
+// ADMIN MODAL MAP VARIABLES
+// ==========================================
+let currentReviewLat = null;
+let currentReviewLng = null;
+let adminReviewMap = null;
+let adminReviewMarker = null;
+let currentReviewReportId = null;
+
+// Ensure it runs when the script loads
+if (typeof loadAdminReports === 'function') {
+  loadAdminReports();
+}
+
+// ==========================================
+// 📜 ADMIN REVIEW TIMELINE ACCORDION TOGGLE
+// ==========================================
+window.toggleAdminReviewTimeline = function() {
+  const container = document.getElementById('admin-review-timeline-container');
+  const arrow = document.getElementById('admin-timeline-arrow');
+
+  if (!container) return;
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) {
+    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+};
+
+// ==========================================
 // ADMIN DASHBOARD: OPEN REVIEW MODAL
 // ==========================================
 function reviewReport(reportId) {
   currentReviewReportId = reportId;
 
-  // 1. FIRST: Define and grab the modal
+  // 1. Grab and unhide modal
   const modal = document.getElementById('review-modal');
   if (!modal) return;
 
-  // 2. Unhide the modal
   modal.classList.remove('hidden');
 
-  // 3. 🚀 THE BULLETPROOF SCROLL RESET
+  // 2. Reset modal scroll
   setTimeout(() => {
     const modalBody = modal.querySelector('.modal-body');
     const modalContent = modal.querySelector('.modal-content');
@@ -3514,11 +3541,11 @@ function reviewReport(reportId) {
     modal.scrollTop = 0;
   }, 10);
 
-  // ⬇️ FORCE THE MAP CONTAINER CLOSED WHEN OPENING A NEW REPORT ⬇️
+  // 3. Force map container closed on open
   const mapContainer = document.getElementById('admin-review-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
-  // ⬇️ RESET REJECTION FORM & ACTIONS STATE ⬇️
+  // 4. Reset Rejection Form & Actions
   const primaryActions = document.getElementById('primary-actions');
   const rejectFeedbackForm = document.getElementById('reject-feedback-form');
   const adminRemarksInput = document.getElementById('admin-remarks-input');
@@ -3527,25 +3554,27 @@ function reviewReport(reportId) {
   if (rejectFeedbackForm) rejectFeedbackForm.classList.add('hidden');
   if (adminRemarksInput) adminRemarksInput.value = '';
 
+  // 5. Reset Accordion to collapsed state
+  const timelineContainer = document.getElementById('admin-review-timeline-container');
+  if (timelineContainer) timelineContainer.classList.add('hidden');
+  const arrow = document.getElementById('admin-timeline-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
+
   // Temporary loading text
   document.getElementById('modal-header-id').textContent = `#RPT-${String(reportId).padStart(4, '0')} (Loading...)`;
 
-  // 🚀 API Fetch Call
+  // 6. Fetch report data
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       const formattedId = `#RPT-${String(report.id).padStart(4, '0')}`;
 
-      // ⬇️ SAVE NUMERIC COORDINATES (parseFloat prevents blank map tile failure) ⬇️
       currentReviewLat = parseFloat(report.latitude) || 0;
       currentReviewLng = parseFloat(report.longitude) || 0;
 
-      // Inject text into the HTML IDs
       document.getElementById('modal-header-id').textContent = formattedId;
       document.getElementById('modal-report-id').textContent = formattedId;
 
-      // ========================================================
-      // 🚀 SOLID SEVERITY BADGE (WITH OPTIONAL AI CONFIDENCE)
-      // ========================================================
+      // Severity Badge with Confidence
       const rawSev = String(report.severity || '').trim().toLowerCase();
       const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
       const severityBadge = document.getElementById('modal-severity');
@@ -3572,7 +3601,7 @@ function reviewReport(reportId) {
         : '0° N, 0° E';
       document.getElementById('modal-barangay').textContent = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
 
-      // Inject Submitter Name
+      // Submitter Info
       let submitterText = `Barangay Official (${report.barangay?.barangayName || 'Unknown'})`;
       if (report.user && report.user.firstName && report.user.lastName) {
         submitterText = `${report.user.firstName} ${report.user.lastName} (${report.barangay?.barangayName || 'Unknown'})`;
@@ -3582,7 +3611,7 @@ function reviewReport(reportId) {
       const reportByEl = document.getElementById('modal-report-by');
       if (reportByEl) reportByEl.textContent = submitterText;
 
-      // Road Details (Passing parsed numbers only so HTML units don't duplicate)
+      // Road Details
       document.getElementById('modal-road-name').textContent = report.cityRoadName || 'N/A';
       document.getElementById('modal-road-id').textContent = report.cityRoadId || 'N/A';
       document.getElementById('modal-importance').textContent = report.roadImportance || 'N/A';
@@ -3600,14 +3629,14 @@ function reviewReport(reportId) {
 
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
-      // Handle Image Display
+      // Image Preview
       const placeholderEl = document.getElementById('modal-damage-image');
       if (placeholderEl) placeholderEl.style.display = 'none';
       if (typeof loadSecureImage === 'function') {
         loadSecureImage('modal-damage-image', report.damageImage);
       }
 
-      // 🕒 Load Lifecycle & Revision History Timeline
+      // 🕒 Load Timeline into the Accordion
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'admin-review-timeline');
       }
@@ -3623,9 +3652,8 @@ function reviewReport(reportId) {
 // ==========================================
 window.closeReviewModal = function() {
   const modal = document.getElementById('review-modal');
-  if (modal) {
-    modal.classList.add('hidden');
-  }
+  if (modal) modal.classList.add('hidden');
+
   const mapContainer = document.getElementById('admin-review-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 };
@@ -3637,7 +3665,6 @@ function toggleAdminReviewMap() {
   const mapContainer = document.getElementById('admin-review-map-container');
   if (!mapContainer) return;
 
-  // 🛡️ Safety Check with showToast
   if (!currentReviewLat || !currentReviewLng || (currentReviewLat === 0 && currentReviewLng === 0)) {
     if (typeof showToast === 'function') {
       showToast("No GPS coordinates were provided for this report.", "warning");
@@ -3647,7 +3674,6 @@ function toggleAdminReviewMap() {
     return;
   }
 
-  // Toggle the map open/closed
   if (mapContainer.style.display === 'none' || mapContainer.style.display === '') {
     mapContainer.style.display = 'block';
 
@@ -3656,7 +3682,6 @@ function toggleAdminReviewMap() {
       return;
     }
 
-    // Custom Red Pin
     const redIcon = new L.Icon({
       iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -3680,7 +3705,6 @@ function toggleAdminReviewMap() {
       adminReviewMarker.setIcon(redIcon);
     }
 
-    // Forces Leaflet to recalculate container bounds and render tiles immediately
     setTimeout(() => {
       adminReviewMap.invalidateSize();
     }, 150);
@@ -3690,7 +3714,6 @@ function toggleAdminReviewMap() {
   }
 }
 
-// Bind both global function and event listener
 window.toggleAdminReviewMap = toggleAdminReviewMap;
 
 const btnLocateMap = document.getElementById('btn-admin-locate-map');
@@ -5893,6 +5916,20 @@ let currentTrackLng = 0;
 let trackModalMap = null;
 let trackModalMarker = null;
 
+// ==========================================
+// 📜 TRACKING TIMELINE ACCORDION TOGGLE
+// ==========================================
+window.toggleTrackTimeline = function() {
+  const container = document.getElementById('track-modal-timeline-container');
+  const arrow = document.getElementById('track-timeline-arrow');
+
+  if (!container) return;
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) {
+    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+};
+
 // Open Tracking Modal and Populate Data
 window.openTrackingModal = function(reportId) {
   currentTrackingReportId = reportId;
@@ -5911,6 +5948,12 @@ window.openTrackingModal = function(reportId) {
   if (primaryActions) primaryActions.classList.remove('hidden');
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
+
+  // 🕒 Reset timeline accordion to collapsed state
+  const timelineContainer = document.getElementById('track-modal-timeline-container');
+  if (timelineContainer) timelineContainer.classList.add('hidden');
+  const arrow = document.getElementById('track-timeline-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
 
   trackingModal.classList.remove('hidden');
 
@@ -6086,7 +6129,7 @@ window.openTrackingModal = function(reportId) {
         if (resolutionData) resolutionData.style.display = 'none';
       }
 
-      // 🕒 6. LOAD FULL PROJECT AUDIT TIMELINE
+      // 🕒 6. LOAD TIMELINE INTO TOP ACCORDION
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'track-modal-timeline');
       }

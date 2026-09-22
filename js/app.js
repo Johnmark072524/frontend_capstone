@@ -10509,6 +10509,24 @@ window.filterArchiveDatabaseTable = function() {
 };
 
 // =======================================================
+// 🕒 DATE FORMATTER HELPER (CONCLUDED / ARCHIVED TARGET)
+// =======================================================
+function formatArchiveDate(report) {
+  // Priority: date it was concluded/archived, fallback to last update, fallback to submission
+  const rawDate = report.archivedAt || report.completedAt || report.dateCompleted || report.updatedAt || report.dateSubmitted || report.createdAt;
+  if (!rawDate) return 'N/A';
+
+  const dateObj = new Date(rawDate);
+  if (isNaN(dateObj.getTime())) return 'N/A';
+
+  return dateObj.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+// =======================================================
 // 🎨 4. RENDER ARCHIVE TABLE ROWS (WITH 9TH ACTION COLUMN)
 // =======================================================
 function renderArchiveTableRows(records) {
@@ -10532,7 +10550,9 @@ function renderArchiveTableRows(records) {
     const formatDamage = r.damageType || 'General Repair';
     const year = getReportYear(r) || 'N/A';
     const rawStatus = (r.status || 'Archived').toUpperCase();
-    const dateLogged = typeof formatInventoryDate === 'function' ? formatInventoryDate(r) : 'N/A';
+
+    // 🎯 Pull actual conclusion/archived date
+    const dateArchived = formatArchiveDate(r);
 
     let badgeBg = '#f8fafc';
     let badgeColor = '#475569';
@@ -10540,7 +10560,10 @@ function renderArchiveTableRows(records) {
     let displayLabel = 'ARCHIVED';
 
     if (rawStatus === 'COMPLETED' || rawStatus === 'CLOSED' || rawStatus === 'RESOLVED') {
-      badgeBg = '#f0fdf4'; badgeColor = '#16a34a'; badgeBorder = '#bbf7d0'; displayLabel = 'COMPLETED';
+      badgeBg = '#f0fdf4';
+      badgeColor = '#16a34a';
+      badgeBorder = '#bbf7d0';
+      displayLabel = 'COMPLETED';
     }
 
     const severityColor = r.severity === 'High' ? '#dc2626' : (r.severity === 'Medium' ? '#d97706' : '#16a34a');
@@ -10558,8 +10581,8 @@ function renderArchiveTableRows(records) {
             ${displayLabel}
           </span>
         </td>
-        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #64748b;">${dateLogged}</td>
-       <td style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #64748b;">${dateArchived}</td>
+        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">
           <button onclick="event.stopPropagation(); openArchiveDetailModal(${r.id})" style="padding: 6px 12px; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
             View
           </button>
@@ -10568,10 +10591,30 @@ function renderArchiveTableRows(records) {
     `;
   }).join('');
 }
+
+// =======================================================
+// 📜 ARCHIVE TIMELINE ACCORDION TOGGLE
+// =======================================================
+window.toggleArchiveTimeline = function() {
+  const container = document.getElementById('archive-modal-timeline-container');
+  const arrow = document.getElementById('archive-timeline-arrow');
+
+  if (!container) return;
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) {
+    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  }
+
+  // 🚀 Force timeline internal scroll to top when opened
+  if (!isHidden) {
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
+  }
+};
+
 // =======================================================
 // 📋 OPEN INDIVIDUAL PROJECT ARCHIVE DETAIL MODAL
 // =======================================================
-
 window.openArchiveDetailModal = function(reportId) {
   if (!reportId) return;
 
@@ -10600,14 +10643,20 @@ window.openArchiveDetailModal = function(reportId) {
   const proofContainer = document.getElementById('archive-modal-proof-container');
   if (proofContainer) proofContainer.style.display = 'none';
 
+  // ⏱️ Reset accordion to collapsed state & reset timeline scroll
+  const timelineContainer = document.getElementById('archive-modal-timeline-container');
+  if (timelineContainer) {
+    timelineContainer.classList.add('hidden');
+    timelineContainer.scrollTop = 0;
+  }
+  const arrow = document.getElementById('archive-timeline-arrow');
+  if (arrow) arrow.style.transform = 'rotate(0deg)';
+
   // Dynamic Admin Signer (Middle Initial Only)
   const adminFirst = (sessionStorage.getItem("firstName") || "").trim();
   const rawMiddle = (sessionStorage.getItem("middleInitial") || sessionStorage.getItem("middleName") || "").trim();
   const adminLast = (sessionStorage.getItem("lastName") || "").trim();
-
-  // Extracts only the first letter and appends a period (e.g., "Perez" -> "P.", "p" -> "P.", "P." -> "P.")
   const middleInitial = rawMiddle ? `${rawMiddle.charAt(0).toUpperCase()}.` : "";
-
   const adminFullName = [adminFirst, middleInitial, adminLast].filter(Boolean).join(" ");
 
   const signerEl = document.getElementById("archive-modal-signer-name");
@@ -10617,8 +10666,11 @@ window.openArchiveDetailModal = function(reportId) {
 
   modal.classList.remove('hidden');
   modal.style.display = 'flex';
+
+  // 🚀 Initial Scroll Reset to Top
   const scrollableBody = document.getElementById('archive-printable-audit-sheet');
   if (scrollableBody) scrollableBody.scrollTop = 0;
+  if (typeof resetModalScroll === 'function') resetModalScroll(modal);
 
   document.getElementById('archive-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
@@ -10635,10 +10687,11 @@ window.openArchiveDetailModal = function(reportId) {
       const year = typeof getReportYear === 'function' ? getReportYear(report) : (report.inventoryYear || 'N/A');
       document.getElementById('archive-modal-year').innerText = year || 'N/A';
 
-      const dateLogged = typeof formatInventoryDate === 'function'
-        ? formatInventoryDate(report)
-        : (report.createdAt ? new Date(report.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A');
-      document.getElementById('archive-modal-date').innerText = dateLogged;
+      // 🎯 Pull actual conclusion/archived date
+      const dateConcluded = typeof formatArchiveDate === 'function'
+        ? formatArchiveDate(report)
+        : (report.archivedAt || report.completedAt || report.updatedAt || report.dateSubmitted || 'N/A');
+      document.getElementById('archive-modal-date').innerText = dateConcluded;
 
       // Status Badge
       const rawStat = String(report.status || 'Archived').toUpperCase();
@@ -10681,9 +10734,7 @@ window.openArchiveDetailModal = function(reportId) {
       document.getElementById('archive-modal-damage-dims').innerText = (dLen > 0 || dWid > 0) ? `${dLen}m (L) × ${dWid}m (W)` : 'Not specified';
       document.getElementById('archive-modal-damage-area').innerText = `${dArea > 0 ? dArea.toFixed(1) : '0.0'} sq.m`;
 
-      // ========================================================
-      // 🧠 3. SOLID AI SEVERITY & CONFIDENCE BADGE
-      // ========================================================
+      // 🧠 3. AI Severity Badge
       const rawSev = String(report.severity || '').trim().toLowerCase();
       const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
       const confText = confScore ? ` (${confScore}%)` : '';
@@ -10746,6 +10797,15 @@ window.openArchiveDetailModal = function(reportId) {
       // 5. Remarks
       document.getElementById('archive-modal-admin-remarks').innerText = report.adminRemarks || 'None logged';
       document.getElementById('archive-modal-repair-remarks').innerText = report.repairRemarks || 'None logged';
+
+      // 🕒 Load Timeline into the Archive Accordion
+      if (typeof loadReportTimeline === 'function') {
+        loadReportTimeline(report.id, 'archive-modal-timeline');
+      }
+
+      // 🚀 Final Scroll Reset after rendering all details
+      if (scrollableBody) scrollableBody.scrollTop = 0;
+      if (typeof resetModalScroll === 'function') resetModalScroll(modal);
     })
     .catch(err => {
       console.error('Error fetching archive report detail:', err);
@@ -10809,7 +10869,10 @@ window.toggleArchiveMap = function() {
 // Close modal handler
 window.closeArchiveDetailModal = function() {
   const modal = document.getElementById('archive-detail-modal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
   const mapContainer = document.getElementById('archive-detail-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 };

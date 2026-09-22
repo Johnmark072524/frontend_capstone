@@ -3477,20 +3477,6 @@ function loadAdminReports() {
       }
     });
 }
-// ==========================================
-// ADMIN MODAL MAP VARIABLES
-// ==========================================
-let currentReviewLat = null;
-let currentReviewLng = null;
-let adminReviewMap = null;
-let adminReviewMarker = null;
-// Variable to store the ID of the report currently open in the Review Modal
-let currentReviewReportId = null;
-
-// Ensure it runs when the script loads
-if (typeof loadAdminReports === 'function') {
-  loadAdminReports();
-}
 
 // ==========================================
 // ADMIN MODAL MAP VARIABLES

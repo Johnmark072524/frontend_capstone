@@ -10673,6 +10673,7 @@ window.openArchiveDetailModal = function(reportId) {
   if (typeof resetModalScroll === 'function') resetModalScroll(modal);
 
   document.getElementById('archive-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
+  document.getElementById('archive-modal-date').innerText = 'Loading...';
 
   apiFetch(`/api/reports/${reportId}`, { cache: 'no-store' })
     .then(report => {
@@ -10687,11 +10688,35 @@ window.openArchiveDetailModal = function(reportId) {
       const year = typeof getReportYear === 'function' ? getReportYear(report) : (report.inventoryYear || 'N/A');
       document.getElementById('archive-modal-year').innerText = year || 'N/A';
 
-      // 🎯 Pull actual conclusion/archived date
-      const dateConcluded = typeof formatArchiveDate === 'function'
-        ? formatArchiveDate(report)
-        : (report.archivedAt || report.completedAt || report.updatedAt || report.dateSubmitted || 'N/A');
-      document.getElementById('archive-modal-date').innerText = dateConcluded;
+      // 🎯 1. PULL ACTUAL "CLOSED" / "ARCHIVED" DATE DIRECTLY FROM TIMELINE
+      apiFetch(`/api/reports/${report.id}/timeline`)
+        .then(timeline => {
+          if (Array.isArray(timeline) && timeline.length > 0) {
+            // Find the concluding action (CLOSED, ARCHIVED, or COMPLETED)
+            const closedEvent = [...timeline].reverse().find(ev => {
+              const act = String(ev.action || '').toUpperCase();
+              return act === 'CLOSED' || act === 'ARCHIVED' || act === 'COMPLETED' || act === 'RESOLVED';
+            }) || timeline[timeline.length - 1];
+
+            if (closedEvent && closedEvent.createdAt) {
+              const d = new Date(closedEvent.createdAt);
+              if (!isNaN(d.getTime())) {
+                document.getElementById('archive-modal-date').innerText = d.toLocaleDateString('en-US', {
+                  year: 'numeric', month: 'short', day: 'numeric'
+                });
+                return;
+              }
+            }
+          }
+          // Fallback if no timeline event exists
+          const fallbackDate = report.archivedAt || report.completedAt || report.dateSubmitted || report.createdAt;
+          document.getElementById('archive-modal-date').innerText = fallbackDate
+            ? new Date(fallbackDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+            : 'N/A';
+        })
+        .catch(() => {
+          document.getElementById('archive-modal-date').innerText = report.dateSubmitted || 'N/A';
+        });
 
       // Status Badge
       const rawStat = String(report.status || 'Archived').toUpperCase();

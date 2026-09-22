@@ -3529,17 +3529,19 @@ if (typeof loadAdminReports === 'function') {
   loadAdminReports();
 }
 
-// ==========================================
 // 📜 ADMIN REVIEW TIMELINE ACCORDION TOGGLE
-// ==========================================
 window.toggleAdminReviewTimeline = function() {
   const container = document.getElementById('admin-review-timeline-container');
   const arrow = document.getElementById('admin-timeline-arrow');
-
   if (!container) return;
+
   const isHidden = container.classList.toggle('hidden');
-  if (arrow) {
-    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+
+  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
+  if (!isHidden) {
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
   }
 };
 
@@ -4349,6 +4351,13 @@ function loadReportTimeline(reportId, targetContainerId) {
   const container = document.getElementById(targetContainerId);
   if (!container) return;
 
+  // 1. Identify the outer scroll box (the one with max-height & overflow-y: auto)
+  const scrollBox = container.closest('[id$="-timeline-container"]') || container.parentElement || container;
+
+  // Reset scroll on start
+  container.scrollTop = 0;
+  if (scrollBox) scrollBox.scrollTop = 0;
+
   container.innerHTML = `
     <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 13px;">
       <span>⏳ Loading project history...</span>
@@ -4363,6 +4372,8 @@ function loadReportTimeline(reportId, targetContainerId) {
             No lifecycle events recorded for this report.
           </div>
         `;
+        // Reset scroll for empty view
+        if (scrollBox) scrollBox.scrollTop = 0;
         return;
       }
 
@@ -4427,6 +4438,16 @@ function loadReportTimeline(reportId, targetContainerId) {
 
         container.appendChild(item);
       });
+
+      // 🚀 RESET TIMELINE SCROLL POSITION TO TOP ONCE CONTENT IS INJECTED
+      container.scrollTop = 0;
+      if (scrollBox) {
+        scrollBox.scrollTop = 0;
+      }
+      requestAnimationFrame(() => {
+        container.scrollTop = 0;
+        if (scrollBox) scrollBox.scrollTop = 0;
+      });
     })
     .catch(err => {
       console.error("Failed to load timeline:", err);
@@ -4435,6 +4456,7 @@ function loadReportTimeline(reportId, targetContainerId) {
           Failed to load lifecycle audit trail.
         </div>
       `;
+      if (scrollBox) scrollBox.scrollTop = 0;
     });
 }
 
@@ -4500,17 +4522,19 @@ function resetModalScroll(modalElementOrId) {
   setTimeout(performReset, 200);
 }
 
-// ==========================================
-// 📜 VIEW MODAL TIMELINE ACCORDION TOGGLE
-// ==========================================
+// 📜 VIEW MODAL ACCORDION TOGGLE
 window.toggleViewTimeline = function() {
   const container = document.getElementById('view-modal-timeline-container');
   const arrow = document.getElementById('view-timeline-arrow');
-
   if (!container) return;
+
   const isHidden = container.classList.toggle('hidden');
-  if (arrow) {
-    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+
+  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
+  if (!isHidden) {
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
   }
 };
 
@@ -4603,17 +4627,19 @@ function openViewModal(reportId) {
     });
 }
 
-// ==========================================
 // 📜 EDIT MODAL ACCORDION TOGGLE
-// ==========================================
 window.toggleEditTimeline = function() {
   const container = document.getElementById('edit-modal-timeline-container');
   const arrow = document.getElementById('edit-timeline-arrow');
-
   if (!container) return;
+
   const isHidden = container.classList.toggle('hidden');
-  if (arrow) {
-    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+
+  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
+  if (!isHidden) {
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
   }
 };
 
@@ -6214,17 +6240,19 @@ let currentTrackLng = 0;
 let trackModalMap = null;
 let trackModalMarker = null;
 
-// ==========================================
 // 📜 TRACKING TIMELINE ACCORDION TOGGLE
-// ==========================================
 window.toggleTrackTimeline = function() {
   const container = document.getElementById('track-modal-timeline-container');
   const arrow = document.getElementById('track-timeline-arrow');
-
   if (!container) return;
+
   const isHidden = container.classList.toggle('hidden');
-  if (arrow) {
-    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+
+  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
+  if (!isHidden) {
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
   }
 };
 

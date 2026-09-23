@@ -2319,6 +2319,19 @@ window.filterCEODashTable = function() {
 };
 
 // ==========================================
+// 🕒 CEO TIMELINE TOGGLE CONTROLLER
+// ==========================================
+window.toggleCEOTimeline = function() {
+  const container = document.getElementById('ceo-manage-timeline-container');
+  const btn = document.getElementById('ceo-timeline-toggle-btn');
+  if (!container) return;
+
+  const isHidden = container.style.display === 'none' || container.style.display === '';
+  container.style.display = isHidden ? 'block' : 'none';
+  if (btn) btn.innerText = isHidden ? '▲ Collapse' : '▼ Expand';
+};
+
+// ==========================================
 // 6. MODAL & MAP CONTROLLERS (CEO MANAGE MODAL)
 // ==========================================
 window.openCEOManageModal = function(reportId) {
@@ -2341,6 +2354,16 @@ window.openCEOManageModal = function(reportId) {
   modal.classList.remove('hidden');
   const modalBody = modal.querySelector('.modal-body');
   if (modalBody) modalBody.scrollTop = 0;
+
+  // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE
+  const tlContainer = document.getElementById('ceo-manage-timeline-container');
+  const tlBtn = document.getElementById('ceo-timeline-toggle-btn');
+  if (tlContainer) tlContainer.style.display = 'none';
+  if (tlBtn) tlBtn.innerText = '▼ Expand';
+
+  if (typeof loadReportTimeline === 'function') {
+    loadReportTimeline(reportId, 'ceo-timeline-items');
+  }
 
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
@@ -2492,7 +2515,7 @@ window.openCEOManageModal = function(reportId) {
 
         } else if (currentStatus.includes('progress')) {
           // State 2: Already In Progress (Strictly Locked and Disabled)
-          btnStartRepair.innerHTML = `<span class="icon"></span> Repairs Underway`;
+          btnStartRepair.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
           btnStartRepair.style.backgroundColor = "#64748b";
           btnStartRepair.style.cursor = "not-allowed";
           btnStartRepair.style.pointerEvents = "none";

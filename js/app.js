@@ -1,5 +1,42 @@
 
 // ==========================================
+// 🇵🇭 PHILIPPINE STANDARD TIME (PST / UTC+8) HELPER
+// ==========================================
+function formatPST(dateInput, includeTime = true) {
+  if (!dateInput) return 'N/A';
+
+  let dateStr = String(dateInput).trim();
+
+  // 1. Standardize "YYYY-MM-DD HH:mm:ss" to ISO format "YYYY-MM-DDTHH:mm:ss"
+  if (dateStr.includes(' ') && !dateStr.includes('T')) {
+    dateStr = dateStr.replace(' ', 'T');
+  }
+
+  // 2. Explicitly tag with +08:00 so the browser treats it as Philippine Time (no double +8 hrs)
+  if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.slice(10).includes('-')) {
+    dateStr += '+08:00';
+  }
+
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'N/A';
+
+  const options = {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  };
+
+  if (includeTime) {
+    options.hour = '2-digit';
+    options.minute = '2-digit';
+    options.hour12 = true;
+  }
+
+  return d.toLocaleString('en-US', options);
+}
+
+// ==========================================
 // 🚀 GLOBAL SECURITY BOUNCER (RUNS IMMEDIATELY)
 // ==========================================
 (function enforceSecurity() {
@@ -4342,40 +4379,6 @@ function renderViewModalMap(lat, lng, targetBarangay) {
   setTimeout(() => {
     if (viewModalMap) viewModalMap.invalidateSize();
   }, 250);
-}
-
-// ==========================================
-// 🇵🇭 PHILIPPINE STANDARD TIME (PST / UTC+8) HELPER
-// ==========================================
-function formatPST(dateInput, includeTime = true) {
-  if (!dateInput) return 'N/A';
-
-  let dateStr = String(dateInput).trim();
-
-  // If backend sends ISO without 'Z' and without offset (+00:00), append 'Z' so JS parses as UTC
-  if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
-    dateStr += 'Z';
-  } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)) {
-    dateStr = dateStr.replace(' ', 'T') + 'Z';
-  }
-
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return 'N/A';
-
-  const options = {
-    timeZone: 'Asia/Manila',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  };
-
-  if (includeTime) {
-    options.hour = '2-digit';
-    options.minute = '2-digit';
-    options.hour12 = true;
-  }
-
-  return d.toLocaleString('en-US', options);
 }
 
 // ==========================================

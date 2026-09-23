@@ -4345,6 +4345,40 @@ function renderViewModalMap(lat, lng, targetBarangay) {
 }
 
 // ==========================================
+// 🇵🇭 PHILIPPINE STANDARD TIME (PST / UTC+8) HELPER
+// ==========================================
+function formatPST(dateInput, includeTime = true) {
+  if (!dateInput) return 'N/A';
+
+  let dateStr = String(dateInput).trim();
+
+  // If backend sends ISO without 'Z' and without offset (+00:00), append 'Z' so JS parses as UTC
+  if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
+    dateStr += 'Z';
+  } else if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)) {
+    dateStr = dateStr.replace(' ', 'T') + 'Z';
+  }
+
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'N/A';
+
+  const options = {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  };
+
+  if (includeTime) {
+    options.hour = '2-digit';
+    options.minute = '2-digit';
+    options.hour12 = true;
+  }
+
+  return d.toLocaleString('en-US', options);
+}
+
+// ==========================================
 // 🕒 TIMELINE AUDIT TRAIL RENDERER
 // ==========================================
 function loadReportTimeline(reportId, targetContainerId) {
@@ -4372,7 +4406,6 @@ function loadReportTimeline(reportId, targetContainerId) {
             No lifecycle events recorded for this report.
           </div>
         `;
-        // Reset scroll for empty view
         if (scrollBox) scrollBox.scrollTop = 0;
         return;
       }
@@ -4396,9 +4429,9 @@ function loadReportTimeline(reportId, targetContainerId) {
 
         // Format label
         const displayAction = (event.action || '').replace(/_/g, ' ');
-        const dateStr = event.createdAt ? new Date(event.createdAt).toLocaleString([], {
-          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        }) : 'Recent';
+
+        // 🇵🇭 EXACT LINE CHANGED: Guaranteed Philippine Standard Time (Asia/Manila)
+        const dateStr = event.createdAt ? formatPST(event.createdAt, true) : 'Recent';
 
         // Build remarks block
         let remarksHtml = '';
@@ -10509,17 +10542,19 @@ window.filterArchiveDatabaseTable = function() {
 };
 
 // =======================================================
-// 🕒 DATE FORMATTER HELPER (CONCLUDED / ARCHIVED TARGET)
+// 🕒 DATE FORMATTER HELPER (DATE ARCHIVED TARGET)
 // =======================================================
 function formatArchiveDate(report) {
-  // Priority: date it was concluded/archived, fallback to last update, fallback to submission
-  const rawDate = report.archivedAt || report.completedAt || report.dateCompleted || report.updatedAt || report.dateSubmitted || report.createdAt;
+  // 🎯 1. Prioritize dateArchived from backend; fall back only if null
+  const rawDate = report.dateArchived || report.archivedAt || report.completedAt || report.dateSubmitted;
   if (!rawDate) return 'N/A';
 
   const dateObj = new Date(rawDate);
   if (isNaN(dateObj.getTime())) return 'N/A';
 
+  // 🇵🇭 Enforce Philippine Standard Time (PST / UTC+8)
   return dateObj.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Manila',
     month: 'short',
     day: 'numeric',
     year: 'numeric'
@@ -10527,7 +10562,7 @@ function formatArchiveDate(report) {
 }
 
 // =======================================================
-// 🎨 4. RENDER ARCHIVE TABLE ROWS (WITH 9TH ACTION COLUMN)
+// 🎨 4. RENDER ARCHIVE TABLE ROWS
 // =======================================================
 function renderArchiveTableRows(records) {
   const tbody = document.getElementById("archive-database-tbody");
@@ -10551,7 +10586,7 @@ function renderArchiveTableRows(records) {
     const year = getReportYear(r) || 'N/A';
     const rawStatus = (r.status || 'Archived').toUpperCase();
 
-    // 🎯 Pull actual conclusion/archived date
+    // 🎯 Resolves the actual archived/closed date from backend
     const dateArchived = formatArchiveDate(r);
 
     let badgeBg = '#f8fafc';
@@ -10581,7 +10616,7 @@ function renderArchiveTableRows(records) {
             ${displayLabel}
           </span>
         </td>
-        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #64748b;">${dateArchived}</td>
+        <td style="padding: 10px 12px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px; color: #0f172a; font-weight: 600;">${dateArchived}</td>
         <td style="padding: 8px 10px; border: 1px solid #cbd5e1; text-align: center;">
           <button onclick="event.stopPropagation(); openArchiveDetailModal(${r.id})" style="padding: 6px 12px; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 4px;">
             View

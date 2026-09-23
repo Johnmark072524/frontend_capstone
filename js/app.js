@@ -2323,12 +2323,19 @@ window.filterCEODashTable = function() {
 // ==========================================
 window.toggleCEOTimeline = function() {
   const container = document.getElementById('ceo-manage-timeline-container');
-  const btn = document.getElementById('ceo-timeline-toggle-btn');
+  const arrow = document.getElementById('ceo-timeline-arrow');
   if (!container) return;
 
-  const isHidden = container.style.display === 'none' || container.style.display === '';
-  container.style.display = isHidden ? 'block' : 'none';
-  if (btn) btn.innerText = isHidden ? '▲ Collapse' : '▼ Expand';
+  const isHidden = container.classList.contains('hidden') || container.style.display === 'none';
+  if (isHidden) {
+    container.classList.remove('hidden');
+    container.style.display = 'block';
+    if (arrow) arrow.innerText = '▲';
+  } else {
+    container.classList.add('hidden');
+    container.style.display = 'none';
+    if (arrow) arrow.innerText = '▼';
+  }
 };
 
 // ==========================================

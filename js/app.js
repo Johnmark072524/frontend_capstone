@@ -3624,6 +3624,7 @@ window.toggleAdminReviewTimeline = function() {
 // ==========================================
 function reviewReport(reportId) {
   currentReviewReportId = reportId;
+  isReviewSubmitting = false;K
 
   // 1. Grab and unhide modal
   const modal = document.getElementById('review-modal');
@@ -3824,10 +3825,14 @@ if (btnLocateMap) {
 // 🎯 REVIEW MODAL ACTION CONTROLLERS (ACCEPT / REJECT)
 // ==========================================
 
+// 🛡️ Global mutex lock to prevent concurrent submissions
+let isReviewSubmitting = false;
+
 // 1. Show Rejection Form
 const btnShowReject = document.getElementById('btn-show-reject');
 if (btnShowReject) {
-  btnShowReject.onclick = function() {
+  btnShowReject.onclick = function(e) {
+    if (e) e.preventDefault();
     const primaryActions = document.getElementById('primary-actions');
     const rejectForm = document.getElementById('reject-feedback-form');
     const remarksInput = document.getElementById('admin-remarks-input');
@@ -3840,7 +3845,8 @@ if (btnShowReject) {
 // 2. Cancel Rejection
 const btnCancelReject = document.getElementById('btn-cancel-reject');
 if (btnCancelReject) {
-  btnCancelReject.onclick = function() {
+  btnCancelReject.onclick = function(e) {
+    if (e) e.preventDefault();
     const primaryActions = document.getElementById('primary-actions');
     const rejectForm = document.getElementById('reject-feedback-form');
     const remarksInput = document.getElementById('admin-remarks-input');
@@ -3853,8 +3859,16 @@ if (btnCancelReject) {
 // 3. Confirm Rejection (Attaches userId for audit trail)
 const btnConfirmReject = document.getElementById('btn-confirm-reject');
 if (btnConfirmReject) {
-  btnConfirmReject.onclick = function() {
-    if (!currentReviewReportId) return;
+  btnConfirmReject.onclick = function(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+
+    // 🛡️ BLOCK DUPLICATE INVOCATION
+    if (!currentReviewReportId || isReviewSubmitting) return;
+
     const remarksInput = document.getElementById('admin-remarks-input');
     const remarks = remarksInput ? remarksInput.value.trim() : '';
 
@@ -3867,13 +3881,17 @@ if (btnConfirmReject) {
       return;
     }
 
+    isReviewSubmitting = true;
+    const targetReportId = currentReviewReportId;
     const originalText = btnConfirmReject.innerHTML;
+
     btnConfirmReject.innerHTML = "⏳ Submitting...";
     btnConfirmReject.disabled = true;
+    btnConfirmReject.style.pointerEvents = "none";
 
     const currentUserId = sessionStorage.getItem("userId");
 
-    fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
+    fetch(`${API_BASE_URL}/api/reports/${targetReportId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -3893,6 +3911,7 @@ if (btnConfirmReject) {
         if (typeof showToast === 'function') {
           showToast("Report rejected and returned to Barangay official.", "success");
         }
+        currentReviewReportId = null;
         closeReviewModal();
         if (typeof loadAdminReports === 'function') loadAdminReports();
         if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
@@ -3902,8 +3921,10 @@ if (btnConfirmReject) {
         if (typeof showToast === 'function') showToast("Error rejecting report.", "error");
       })
       .finally(() => {
+        isReviewSubmitting = false;
         btnConfirmReject.innerHTML = originalText;
         btnConfirmReject.disabled = false;
+        btnConfirmReject.style.pointerEvents = "auto";
       });
   };
 }
@@ -3911,16 +3932,27 @@ if (btnConfirmReject) {
 // 4. Accept & Validate (Attaches userId for audit trail)
 const btnAcceptValidate = document.getElementById('btn-accept-validate');
 if (btnAcceptValidate) {
-  btnAcceptValidate.onclick = function() {
-    if (!currentReviewReportId) return;
+  btnAcceptValidate.onclick = function(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
 
+    // 🛡️ BLOCK DUPLICATE INVOCATION
+    if (!currentReviewReportId || isReviewSubmitting) return;
+
+    isReviewSubmitting = true;
+    const targetReportId = currentReviewReportId;
     const originalText = btnAcceptValidate.innerHTML;
+
     btnAcceptValidate.innerHTML = "⏳ Validating...";
     btnAcceptValidate.disabled = true;
+    btnAcceptValidate.style.pointerEvents = "none";
 
     const currentUserId = sessionStorage.getItem("userId");
 
-    fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
+    fetch(`${API_BASE_URL}/api/reports/${targetReportId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -3939,6 +3971,7 @@ if (btnAcceptValidate) {
         if (typeof showToast === 'function') {
           showToast("Report validated and queued for dispatch!", "success");
         }
+        currentReviewReportId = null;
         closeReviewModal();
         if (typeof loadAdminReports === 'function') loadAdminReports();
         if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
@@ -3948,8 +3981,10 @@ if (btnAcceptValidate) {
         if (typeof showToast === 'function') showToast("Error validating report.", "error");
       })
       .finally(() => {
+        isReviewSubmitting = false;
         btnAcceptValidate.innerHTML = originalText;
         btnAcceptValidate.disabled = false;
+        btnAcceptValidate.style.pointerEvents = "auto";
       });
   };
 }

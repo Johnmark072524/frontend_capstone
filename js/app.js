@@ -3120,6 +3120,8 @@ function handleVerifyMfa() {
   }
 
   const verifyBtn = document.getElementById("verify-btn");
+  const originalBtnText = verifyBtn ? verifyBtn.innerHTML : "Verify Code ➔";
+
   if (verifyBtn) {
     verifyBtn.innerHTML = "Verifying... ⏳";
     verifyBtn.disabled = true;
@@ -3134,7 +3136,7 @@ function handleVerifyMfa() {
     .then(async response => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Invalid verification code');
+        throw new Error(errorData.error || errorData.message || 'Invalid verification code');
       }
       return response.json();
     })
@@ -3206,9 +3208,13 @@ function handleVerifyMfa() {
       }, 1000);
     })
     .catch(error => {
-      // 🚀 NEW: Clear password field on failed attempt
-      if (passwordInput) passwordInput.value = "";
+      // 1. Clear the invalid OTP input and refocus
+      if (otpField) {
+        otpField.value = "";
+        otpField.focus();
+      }
 
+      // 2. Display proper error toast
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         if (typeof showToast === "function") {
           showToast("System is currently offline or unreachable. Please try again later.", "error");
@@ -3219,10 +3225,11 @@ function handleVerifyMfa() {
         }
       }
 
-      if (loginBtn) {
-        loginBtn.innerHTML = "Log in ➔";
-        loginBtn.disabled = false;
-        loginBtn.style.opacity = "1";
+      // 3. Reset the VERIFY button (not loginBtn)
+      if (verifyBtn) {
+        verifyBtn.innerHTML = originalBtnText;
+        verifyBtn.disabled = false;
+        verifyBtn.style.opacity = "1";
       }
     });
 }

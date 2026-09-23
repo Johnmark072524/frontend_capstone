@@ -3624,7 +3624,7 @@ window.toggleAdminReviewTimeline = function() {
 // ==========================================
 function reviewReport(reportId) {
   currentReviewReportId = reportId;
-  isReviewSubmitting = false;K
+  isReviewSubmitting = false;
 
   // 1. Grab and unhide modal
   const modal = document.getElementById('review-modal');

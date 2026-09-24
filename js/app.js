@@ -1542,13 +1542,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Role Formatter
+      // 🏷️ Role & Header Subtitle Formatter
       let displayRole = "Barangay Official";
+      let headerRole = "Barangay Official";
       const userRoleLower = String(role).toLowerCase();
+
       if (userRoleLower.includes('admin') || userRoleLower.includes('cpdo')) {
         displayRole = "CPDO Admin";
+        headerRole = "CPDO Admin";
       } else if (userRoleLower.includes('ceo') || userRoleLower.includes('engineer')) {
         displayRole = "City Engineer";
+        headerRole = "City Engineer";
+      } else {
+        displayRole = "Barangay Official";
+        // 🏛️ Dynamic display: "Barangay Kaypian"
+        if (barangayName && barangayName !== 'Not Assigned') {
+          const cleanBrgy = barangayName.trim();
+          headerRole = cleanBrgy.toLowerCase().startsWith('barangay')
+            ? cleanBrgy
+            : `Barangay ${cleanBrgy}`;
+        } else {
+          headerRole = "Barangay Official";
+        }
       }
 
       const setElText = (id, text) => {
@@ -1556,13 +1571,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.textContent = text;
       };
 
-      // 🚀 2. TEXT INJECTIONS (Uses displayName with Middle Initial for Header & Sidebar)
+      // 🚀 2. TEXT INJECTIONS (Uses displayName & formatted headerRole)
       setElText('header-display-name', displayName);
-      setElText('header-display-role', displayRole);
+      setElText('header-display-role', headerRole);
       setElText('sidebar-display-name', displayName);
-      setElText('sidebar-display-role', displayRole);
+      setElText('sidebar-display-role', headerRole);
       setElText('side-profile-name', displayName);
-      setElText('side-profile-role', displayRole);
+      setElText('side-profile-role', headerRole);
       setElText('side-profile-brgy', barangayName);
 
       // Profile Tab Details (Detailed View)
@@ -2844,7 +2859,6 @@ function executeFinalSubmission() {
     formData.append("barangayId", loggedInBarangayId);
   }
 
-  // Send the specific User ID so the server logs who submitted it
   const loggedInUserId = sessionStorage.getItem("userId");
   if (loggedInUserId) {
     formData.append("userId", loggedInUserId);
@@ -2852,7 +2866,6 @@ function executeFinalSubmission() {
 
   // ==============================================================
   // 🛡️ THE BULLETPROOF DATA EXTRACTOR 🛡️
-  // Guarantees data from disabled or auto-filled fields
   // ==============================================================
   function getVal(id) {
     const el = document.getElementById(id);
@@ -2900,11 +2913,12 @@ function executeFinalSubmission() {
 
   // 5. Image Processing
   const imageInput = document.getElementById("damageImageFile");
-  if (imageInput && imageInput.files.length > 0) {
+  const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
+  if (hasImage) {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-// 6. Send to Spring Boot API
+  // 6. Send to Spring Boot API
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
@@ -2914,17 +2928,21 @@ function executeFinalSubmission() {
       throw new Error('Network response was not ok.');
     })
     .then(data => {
-      // 🚀 EXTRACT THE AI DATA RETURNED FROM SPRING BOOT
-      const aiSeverity = data.severity || "Unassessed";
+      // 🚀 NORMALIZE AI SEVERITY & CONFIDENCE SCORE
+      const rawSev = String(data.severity || '').trim().toLowerCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
-      // 🚀 SHOW A DYNAMIC TOAST WITH THE AI VERDICT
-      if (aiSeverity === "High") {
+      // 🚀 SHOW ACCURATE DYNAMIC TOAST
+      if (!hasImage || rawSev === "unassessed" || rawSev === "") {
+        showToast("📋 Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
+      } else if (rawSev === "high") {
         showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
-      } else if (aiSeverity === "Medium") {
+      } else if (rawSev === "medium") {
         showToast(`⚠️ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
-      } else {
+      } else if (rawSev === "low") {
         showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
+      } else {
+        showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
       }
 
       if (typeof resetAddReportForm === 'function') resetAddReportForm();
@@ -2932,7 +2950,6 @@ function executeFinalSubmission() {
       if (typeof loadBarangayReports === 'function') {
         const brgyId = sessionStorage.getItem("barangayId");
 
-        // Destroy old chart to prevent invisible canvas crashes
         const canvasId = 'severityChart';
         if (typeof Chart !== 'undefined') {
           let existingChart = Chart.getChart(canvasId);
@@ -5487,7 +5504,7 @@ function jumpToAllReports() {
   if (reportsTabBtn) {
     reportsTabBtn.click();
   } else if (typeof switchView === 'function') {
-    switchView('view-reports');
+    switchView(' ');
   }
 }
 
@@ -7393,7 +7410,7 @@ function closeAndClearEditModal() {
     editProfileModal.classList.add('hidden');
   }
   if (formEditProfile) {
-    formEditProfile.reset(); // 🚀 THE FIX: Wipes all fields completely clean!
+    formEditProfile.reset(); // Wipes all fields completely clean
   }
 }
 
@@ -7402,18 +7419,35 @@ if (btnEditProfile && editProfileModal) {
   btnEditProfile.removeAttribute('onclick');
 
   btnEditProfile.addEventListener('click', () => {
-    // Clear any old garbage first
+    // Clear any old values first
     if (formEditProfile) formEditProfile.reset();
 
     editProfileModal.classList.remove('hidden');
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // 🚀 THE FIX: Ensures modal is at the top of the screen
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Pre-fill Locked Records
     document.getElementById('edit-prof-first').value = sessionStorage.getItem('firstName') || '';
     document.getElementById('edit-prof-middle').value = sessionStorage.getItem('middleName') || '';
     document.getElementById('edit-prof-last').value = sessionStorage.getItem('lastName') || '';
-    document.getElementById('edit-prof-role').value = sessionStorage.getItem('role') || '';
     document.getElementById('edit-prof-brgy').value = sessionStorage.getItem('barangayName') || '';
+
+    // 🏷️ Format and Pre-fill User Role (using 'userRole')
+    const rawRole = sessionStorage.getItem('userRole') || sessionStorage.getItem('role') || '';
+    const roleLower = rawRole.toLowerCase();
+    let displayRole = "Barangay Official";
+
+    if (roleLower.includes('admin') || roleLower.includes('cpdo')) {
+      displayRole = "CPDO Admin";
+    } else if (roleLower.includes('ceo') || roleLower.includes('engineer')) {
+      displayRole = "City Engineer";
+    } else if (roleLower.includes('barangay')) {
+      displayRole = "Barangay Official";
+    } else if (rawRole) {
+      displayRole = rawRole;
+    }
+
+    const roleField = document.getElementById('edit-prof-role');
+    if (roleField) roleField.value = displayRole;
 
     // Pre-fill Editable Details
     document.getElementById('edit-prof-phone').value = sessionStorage.getItem('phoneNumber') || '';
@@ -7474,7 +7508,7 @@ if (formEditProfile) {
         sessionStorage.setItem('birthday', updatedData.birthday);
         sessionStorage.setItem('gender', updatedData.gender);
 
-        // 🚀 THE FIX: Instantly Force Update the UI Elements (Bypasses the ReferenceError)
+        // Force update profile tab display
         const pPhone = document.getElementById('profile-phone');
         if (pPhone) pPhone.textContent = updatedData.phoneNumber;
 
@@ -7487,7 +7521,7 @@ if (formEditProfile) {
         const pBirthday = document.getElementById('profile-birthday');
         if (pBirthday) pBirthday.textContent = updatedData.birthday;
 
-        // Recalculate Age instantly
+        // Recalculate Age
         if (updatedData.birthday) {
           const birthDate = new Date(updatedData.birthday);
           const today = new Date();

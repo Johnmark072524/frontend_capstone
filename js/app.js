@@ -2379,9 +2379,13 @@ window.openCEOManageModal = function(reportId) {
 
   // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE
   const tlContainer = document.getElementById('ceo-manage-timeline-container');
-  const tlBtn = document.getElementById('ceo-timeline-toggle-btn');
-  if (tlContainer) tlContainer.style.display = 'none';
-  if (tlBtn) tlBtn.innerText = '▼ Expand';
+  const tlArrow = document.getElementById('ceo-timeline-arrow');
+  if (tlContainer) {
+    tlContainer.classList.add('hidden');
+    tlContainer.style.display = 'none';
+    tlContainer.scrollTop = 0;
+  }
+  if (tlArrow) tlArrow.innerText = '▼';
 
   if (typeof loadReportTimeline === 'function') {
     loadReportTimeline(reportId, 'ceo-timeline-items');
@@ -2398,6 +2402,11 @@ window.openCEOManageModal = function(reportId) {
     btnStartRepair.style.cursor = "wait";
     btnStartRepair.style.backgroundColor = "#64748b";
     btnStartRepair.innerHTML = `<span class="icon">⏳</span> Loading...`;
+  }
+
+  const btnPendingBudget = document.getElementById('btn-pending-budget');
+  if (btnPendingBudget) {
+    btnPendingBudget.style.display = 'none';
   }
 
   // Reset inputs & previews
@@ -2527,6 +2536,9 @@ window.openCEOManageModal = function(reportId) {
           btnStartRepair.style.opacity = "0.75";
           btnStartRepair.disabled = true;
 
+          // 🛡️ Hide deferral option for already finished jobs
+          if (btnPendingBudget) btnPendingBudget.style.display = 'none';
+
           if (completionForm) completionForm.style.display = 'none';
           if (completedEvidence) completedEvidence.style.display = 'block';
 
@@ -2536,13 +2548,16 @@ window.openCEOManageModal = function(reportId) {
           if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
         } else if (currentStatus.includes('progress')) {
-          // State 2: Already In Progress (Strictly Locked and Disabled)
+          // State 2: Already In Progress (Locked and Disabled)
           btnStartRepair.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
           btnStartRepair.style.backgroundColor = "#64748b";
           btnStartRepair.style.cursor = "not-allowed";
           btnStartRepair.style.pointerEvents = "none";
           btnStartRepair.style.opacity = "0.75";
           btnStartRepair.disabled = true;
+
+          // 🛡️ Hide deferral option once work is underway
+          if (btnPendingBudget) btnPendingBudget.style.display = 'none';
 
           if (completionForm) completionForm.style.display = 'block';
           if (completedEvidence) completedEvidence.style.display = 'none';
@@ -2555,6 +2570,12 @@ window.openCEOManageModal = function(reportId) {
           btnStartRepair.style.pointerEvents = "auto";
           btnStartRepair.style.opacity = "1";
           btnStartRepair.disabled = false;
+
+          // 🛡️ Reveal deferral option for queued projects
+          if (btnPendingBudget) {
+            btnPendingBudget.style.display = 'inline-block';
+            btnPendingBudget.disabled = false;
+          }
 
           if (completionForm) completionForm.style.display = 'none';
           if (completedEvidence) completedEvidence.style.display = 'none';
@@ -2667,7 +2688,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 2. Leaflet Map Locator (With showToast replacement)
+  // 2. Leaflet Map Locator
   const btnLocateMap = document.getElementById('ceo-btn-locate-map');
   if (btnLocateMap) {
     btnLocateMap.addEventListener('click', function(e) {
@@ -2719,7 +2740,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
     btnStartRepair.addEventListener('click', function() {
-      // 🛡️ GUARD: Disallow clicks if disabled, locked, or missing report ID
       if (!currentCEOProjectID || this.disabled || this.style.pointerEvents === 'none') return;
 
       const originalText = this.innerHTML;
@@ -2751,13 +2771,15 @@ document.addEventListener('DOMContentLoaded', () => {
             statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
           }
 
-          // Lock in-progress state visually and behaviorally
           this.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
           this.style.backgroundColor = "#64748b";
           this.style.cursor = "not-allowed";
           this.style.pointerEvents = "none";
           this.style.opacity = "0.75";
           this.disabled = true;
+
+          const btnPending = document.getElementById('btn-pending-budget');
+          if (btnPending) btnPending.style.display = 'none';
 
           const completionForm = document.getElementById('ceo-completion-form');
           if (completionForm) completionForm.style.display = 'block';
@@ -2770,7 +2792,6 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("Status Update Error:", err);
           if (typeof showToast === 'function') showToast("Failed to update. Check database connection.", "error");
 
-          // Re-enable on failure
           this.innerHTML = originalText;
           this.disabled = false;
           this.style.pointerEvents = "auto";
@@ -2778,7 +2799,203 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
   }
+
+  // 4. Modal Rollback & Dismissal Listeners
+  const batchDeferModal = document.getElementById('batch-defer-modal');
+  if (batchDeferModal) {
+    const cancelBtns = batchDeferModal.querySelectorAll('.close-modal-btn, .btn-secondary, button[type="button"]:not(#btn-confirm-batch-defer)');
+    cancelBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.closeBatchDeferModal();
+      });
+    });
+  }
 });
+
+// ==========================================
+// 🏗️ CEO ACTION: UNIFIED DEFER SYSTEM
+// ==========================================
+
+// Global variable to track if we are deferring a single project from the Review modal
+window.deferringSingleId = null;
+
+// 🔄 HELPER: Safely close defer modal and restore manage modal if needed
+window.closeBatchDeferModal = function() {
+  const modal = document.getElementById('batch-defer-modal');
+  if (modal) modal.classList.add('hidden');
+
+  // Rollback to Manage Modal if triggered as a single deferral
+  if (window.deferringSingleId) {
+    const manageModal = document.getElementById('manage-modal');
+    if (manageModal) manageModal.classList.remove('hidden');
+    window.deferringSingleId = null;
+  }
+};
+
+// 1. OPEN FROM INDIVIDUAL REVIEW MODAL (The Single Button)
+window.markAsPendingBudget = function() {
+  if (typeof currentCEOProjectID === 'undefined' || !currentCEOProjectID) {
+    if (typeof showToast === 'function') showToast("Error: Could not identify the report.", "error");
+    return;
+  }
+
+  window.deferringSingleId = currentCEOProjectID;
+
+  // Hide the review modal so they don't awkwardly overlap
+  document.getElementById('manage-modal').classList.add('hidden');
+
+  // Dynamically change UI for single project
+  const titleEl = document.getElementById('defer-modal-title');
+  const warningEl = document.getElementById('defer-modal-warning');
+  const confirmBtn = document.getElementById('btn-confirm-batch-defer');
+
+  if (titleEl) titleEl.innerText = `Defer Project #PRJ-${String(currentCEOProjectID).padStart(4, '0')}`;
+  if (warningEl) warningEl.innerHTML = `You are about to defer this specific repair project to <span class="badge" style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Pending Budget</span>.`;
+  if (confirmBtn) confirmBtn.innerText = "Confirm Deferral";
+
+  const reasonField = document.getElementById('batch-defer-reason');
+  if (reasonField) reasonField.value = '';
+  document.getElementById('batch-defer-modal').classList.remove('hidden');
+};
+
+// 2. OPEN FROM BATCH ACTION BAR (The Checkboxes)
+window.openBatchDeferModal = function() {
+  window.deferringSingleId = null;
+
+  const titleEl = document.getElementById('defer-modal-title');
+  const warningEl = document.getElementById('defer-modal-warning');
+  const confirmBtn = document.getElementById('btn-confirm-batch-defer');
+
+  if (titleEl) titleEl.innerText = "Batch Defer Projects";
+  if (warningEl) warningEl.innerHTML = `This action will instantly sweep up and defer <strong>ALL</strong> selected reports in your queue to <span class="badge" style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Pending Budget</span>.`;
+  if (confirmBtn) confirmBtn.innerText = "Confirm Batch Deferral";
+
+  const reasonField = document.getElementById('batch-defer-reason');
+  if (reasonField) reasonField.value = '';
+  document.getElementById('batch-defer-modal').classList.remove('hidden');
+};
+
+// 3. VALIDATE REASON & SHOW CONFIRMATION WARNING
+window.submitBatchDefer = function() {
+  const reasonInput = document.getElementById('batch-defer-reason');
+  const reason = reasonInput ? reasonInput.value.trim() : '';
+
+  if (!reason) {
+    if (typeof showToast === 'function') showToast("Please provide a reason for the deferral.", "error");
+    if (reasonInput) {
+      reasonInput.style.borderColor = "red";
+      setTimeout(() => reasonInput.style.borderColor = "#cbd5e1", 2000);
+      reasonInput.focus();
+    }
+    return;
+  }
+
+  const confirmText = document.getElementById('confirm-modal-text');
+  const confirmBtn = document.getElementById('btn-final-confirm');
+
+  let count = 0;
+
+  if (window.deferringSingleId) {
+    count = 1;
+    if (confirmText) confirmText.innerHTML = `You are about to defer <strong style="color: #dc3545; font-size: 16px;">#PRJ-${String(window.deferringSingleId).padStart(4, '0')}</strong>. <br>This will immediately notify the CPDO and the Barangay Officials.`;
+    if (confirmBtn) confirmBtn.innerText = "Yes, Defer Project";
+  } else {
+    const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+      if (typeof showToast === 'function') showToast("No reports selected.", "error");
+      return;
+    }
+    count = checkedBoxes.length;
+    if (confirmText) confirmText.innerHTML = `You are about to defer <strong style="color: #dc3545; font-size: 16px;">${count}</strong> selected reports. <br>This will immediately notify the CPDO and the Barangay Officials.`;
+    if (confirmBtn) confirmBtn.innerText = "Yes, Defer Projects";
+  }
+
+  document.getElementById('confirm-action-modal').classList.remove('hidden');
+};
+
+// 4. EXECUTE THE API CALL
+window.executeBatchDeferral = function() {
+  const reasonInput = document.getElementById('batch-defer-reason');
+  const reason = reasonInput ? reasonInput.value.trim() : '';
+  let selectedIds = [];
+
+  if (window.deferringSingleId) {
+    selectedIds.push(window.deferringSingleId);
+  } else {
+    const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+    selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+  }
+
+  const btn = document.getElementById('btn-final-confirm');
+  const originalText = btn ? btn.innerText : 'Yes, Confirm';
+  if (btn) {
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+  }
+
+  fetch(`${API_BASE_URL}/api/reports/batch/defer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      repairRemarks: reason,
+      reportIds: selectedIds
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        if (typeof showToast === 'function') showToast(data.error, "error");
+      } else {
+        if (typeof showToast === 'function') showToast(data.message, "success");
+
+        document.getElementById('confirm-action-modal').classList.add('hidden');
+        document.getElementById('batch-defer-modal').classList.add('hidden');
+
+        const actionBar = document.getElementById('batch-action-bar');
+        if (actionBar) actionBar.style.display = 'none';
+
+        const selectAllCb = document.getElementById('select-all-checkbox');
+        if (selectAllCb) selectAllCb.checked = false;
+
+        window.deferringSingleId = null;
+
+        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
+      }
+    })
+    .catch(err => {
+      console.error("Defer Error:", err);
+      if (typeof showToast === 'function') showToast("A network error occurred.", "error");
+    })
+    .finally(() => {
+      if (btn) {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    });
+};
+
+// ==========================================
+// 🏗️ UI LISTENER: TOGGLE ACTION BAR ON CHECK
+// ==========================================
+window.toggleBatchActionBar = function() {
+  const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
+  const actionBar = document.getElementById('batch-action-bar');
+  const countText = document.getElementById('selected-count');
+
+  if (checkedBoxes.length > 0) {
+    if (actionBar) actionBar.style.display = 'flex';
+    if (countText) countText.innerText = checkedBoxes.length;
+  } else {
+    if (actionBar) actionBar.style.display = 'none';
+  }
+};
+
+window.toggleAllCheckboxes = function(masterCheckbox) {
+  const checkboxes = document.querySelectorAll('.defer-checkbox');
+  checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+  toggleBatchActionBar();
+};
 
 // ==========================================
 // BACKEND API CONNECTION & FORM LOGIC (RoadWise)
@@ -9063,177 +9280,6 @@ window.viewAllActivity = function() {
   }
 };
 
-// ==========================================
-// 🏗️ CEO ACTION: UNIFIED DEFER SYSTEM
-// ==========================================
-
-// Global variable to track if we are deferring a single project from the Review modal
-window.deferringSingleId = null;
-
-// 1. OPEN FROM INDIVIDUAL REVIEW MODAL (The Single Button)
-window.markAsPendingBudget = function() {
-  // 🚀 FIXED: Reads the variable exactly as you declared it
-  if (typeof currentCEOProjectID === 'undefined' || !currentCEOProjectID) {
-    if (typeof showToast === 'function') showToast("Error: Could not identify the report.", "error");
-    return;
-  }
-
-  // Tell the system we are deferring THIS specific ID, not the checkboxes
-  window.deferringSingleId = currentCEOProjectID;
-
-  // Hide the review modal so they don't awkwardly overlap
-  document.getElementById('manage-modal').classList.add('hidden');
-
-  // 🚀 DYNAMICALLY CHANGE UI FOR A SINGLE PROJECT
-  const titleEl = document.getElementById('defer-modal-title');
-  const warningEl = document.getElementById('defer-modal-warning');
-  const confirmBtn = document.getElementById('btn-confirm-batch-defer');
-
-  if (titleEl) titleEl.innerText = `Defer Project #PRJ-${currentCEOProjectID}`;
-  if (warningEl) warningEl.innerHTML = `You are about to defer this specific repair project to <span class="badge" style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Pending Budget</span>.`;
-  if (confirmBtn) confirmBtn.innerText = "Confirm Deferral";
-
-  // Show the beautiful reason modal
-  document.getElementById('batch-defer-reason').value = '';
-  document.getElementById('batch-defer-modal').classList.remove('hidden');
-};
-
-// 2. OPEN FROM BATCH ACTION BAR (The Checkboxes)
-window.openBatchDeferModal = function() {
-  // Clear out the single ID tracker so the system knows to look at checkboxes instead
-  window.deferringSingleId = null;
-
-  // 🚀 DYNAMICALLY CHANGE UI FOR BATCH PROJECTS
-  const titleEl = document.getElementById('defer-modal-title');
-  const warningEl = document.getElementById('defer-modal-warning');
-  const confirmBtn = document.getElementById('btn-confirm-batch-defer');
-
-  if (titleEl) titleEl.innerText = "Batch Defer Projects";
-  if (warningEl) warningEl.innerHTML = `This action will instantly sweep up and defer <strong>ALL</strong> selected reports in your queue to <span class="badge" style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px;">Pending Budget</span>.`;
-  if (confirmBtn) confirmBtn.innerText = "Confirm Batch Deferral";
-
-  document.getElementById('batch-defer-reason').value = '';
-  document.getElementById('batch-defer-modal').classList.remove('hidden');
-};
-
-// 3. VALIDATE REASON & SHOW CONFIRMATION WARNING
-window.submitBatchDefer = function() {
-  const reasonInput = document.getElementById('batch-defer-reason');
-  const reason = reasonInput.value;
-
-  if (!reason || reason.trim() === '') {
-    if (typeof showToast === 'function') showToast("Please provide a reason for the deferral.", "error");
-    reasonInput.style.borderColor = "red";
-    setTimeout(() => reasonInput.style.borderColor = "#cbd5e1", 2000);
-    return;
-  }
-
-  const confirmText = document.getElementById('confirm-modal-text');
-  const confirmBtn = document.getElementById('btn-final-confirm');
-
-  let count = 0;
-
-  if (window.deferringSingleId) {
-    count = 1; // We are deferring just 1 from the Manage modal
-    // 🚀 DYNAMIC TEXT FOR SINGLE DEFERRAL
-    if (confirmText) confirmText.innerHTML = `You are about to defer <strong style="color: #dc3545; font-size: 16px;">this specific project</strong>. <br>This will immediately notify the CPDO and the Barangay Officials.`;
-    if (confirmBtn) confirmBtn.innerText = "Yes, Defer Project";
-  } else {
-    const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-      if (typeof showToast === 'function') showToast("No reports selected.", "error");
-      return;
-    }
-    count = checkedBoxes.length;
-    // 🚀 DYNAMIC TEXT FOR BATCH DEFERRAL
-    if (confirmText) confirmText.innerHTML = `You are about to defer <strong style="color: #dc3545; font-size: 16px;">${count}</strong> selected reports. <br>This will immediately notify the CPDO and the Barangay Officials.`;
-    if (confirmBtn) confirmBtn.innerText = "Yes, Defer Projects";
-  }
-
-  document.getElementById('confirm-action-modal').classList.remove('hidden');
-};
-
-// 4. EXECUTE THE API CALL
-window.executeBatchDeferral = function() {
-  const reason = document.getElementById('batch-defer-reason').value;
-  let selectedIds = [];
-
-  // Grab the ID(s) depending on which way the CEO started the process
-  if (window.deferringSingleId) {
-    selectedIds.push(window.deferringSingleId);
-  } else {
-    const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
-    selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
-  }
-
-  const btn = document.getElementById('btn-final-confirm');
-  const originalText = btn.innerText;
-  btn.innerText = "Processing...";
-  btn.disabled = true;
-
-  // Send the array of IDs (whether it has 1 ID or 50 IDs) to the batch endpoint
-  fetch(`${API_BASE_URL}/api/reports/batch/defer`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      repairRemarks: reason,
-      reportIds: selectedIds
-    })
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        if (typeof showToast === 'function') showToast(data.error, "error");
-      } else {
-        if (typeof showToast === 'function') showToast(data.message, "success");
-
-        // Hide all modals
-        document.getElementById('confirm-action-modal').classList.add('hidden');
-        document.getElementById('batch-defer-modal').classList.add('hidden');
-
-        // Hide the action bar and uncheck the "Select All" box
-        document.getElementById('batch-action-bar').style.display = 'none';
-        const selectAllCb = document.getElementById('select-all-checkbox');
-        if(selectAllCb) selectAllCb.checked = false;
-
-        // Reset the single ID tracker
-        window.deferringSingleId = null;
-
-        // Refresh table
-        if (typeof loadCEODashboardData === "function") loadCEODashboardData();
-      }
-    })
-    .catch(err => {
-      console.error("Defer Error:", err);
-      if (typeof showToast === 'function') showToast("A network error occurred.", "error");
-    })
-    .finally(() => {
-      btn.innerText = originalText;
-      btn.disabled = false;
-    });
-};
-
-// ==========================================
-// 🏗️ UI LISTENER: TOGGLE ACTION BAR ON CHECK
-// ==========================================
-window.toggleBatchActionBar = function() {
-  const checkedBoxes = document.querySelectorAll('.defer-checkbox:checked');
-  const actionBar = document.getElementById('batch-action-bar');
-  const countText = document.getElementById('selected-count');
-
-  if (checkedBoxes.length > 0) {
-    actionBar.style.display = 'flex';
-    if (countText) countText.innerText = checkedBoxes.length;
-  } else {
-    actionBar.style.display = 'none';
-  }
-};
-
-window.toggleAllCheckboxes = function(masterCheckbox) {
-  const checkboxes = document.querySelectorAll('.defer-checkbox');
-  checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
-  toggleBatchActionBar();
-};
 // ==========================================
 // 🧹 AUTO-RESET SEARCH BARS ON NAVIGATION
 // ==========================================

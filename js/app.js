@@ -6744,6 +6744,7 @@ function resetModalScroll(modalElementOrId) {
 // 7 & 8. TRACKING MODAL ENGINE (RELIABLE GLOBAL HANDLERS)
 // ==========================================
 let currentTrackingReportId = null;
+let currentTrackingReportStatus = null; // 🚀 Tracks status for dynamic rework vs deferral rejection
 
 // 🗺️ 1. MAP STATE VARIABLES
 let currentTrackLat = 0;
@@ -6789,7 +6790,7 @@ window.openTrackingModal = function(reportId) {
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
 
-  // 3. ⏱️ Reset accordion to collapsed state and zero out timeline scroll
+  // 3. Reset accordion to collapsed state and zero out timeline scroll
   const timelineContainer = document.getElementById('track-modal-timeline-container');
   if (timelineContainer) {
     timelineContainer.classList.add('hidden');
@@ -6798,15 +6799,14 @@ window.openTrackingModal = function(reportId) {
   const arrow = document.getElementById('track-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
-  // 4. Reveal modal
+  // 4. Reveal modal & reset scroll
   trackingModal.classList.remove('hidden');
-
-  // 5. 🚀 Initial Scroll Reset to Top
   resetModalScroll(trackingModal);
 
-  // 6. Fetch Project Details
+  // 5. Fetch Project Details
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
+      currentTrackingReportStatus = report.status ? report.status.toLowerCase() : '';
       currentTrackLat = parseFloat(report.latitude) || 0;
       currentTrackLng = parseFloat(report.longitude) || 0;
 
@@ -6870,99 +6870,285 @@ window.openTrackingModal = function(reportId) {
         window.loadSecureImage('track-modal-image', report.damageImage);
       }
 
-      // Resolution Controls & Completion Verification
+      // ========================================================
+      // 🎯 RESOLUTION, SCHEDULING & ACTION BUTTON CONTROLS
+      // ========================================================
       const statusBox = document.getElementById('track-modal-status');
       const statusText = document.getElementById('track-modal-status-text');
-      const approveBtn = document.getElementById('btn-approve-project');
-      const reworkBtn = document.getElementById('btn-rework-project');
+
+      const targetBadge = document.getElementById('track-modal-target-badge');
+      const reworkAlert = document.getElementById('track-modal-rework-alert');
+      const reworkInstructions = document.getElementById('track-modal-rework-instructions');
+      const deferredAlert = document.getElementById('track-modal-deferred-alert');
+      const deferredRemarks = document.getElementById('track-modal-deferred-remarks');
+
+      const scheduleInfo = document.getElementById('track-modal-schedule-info');
+      const targetDateEl = document.getElementById('track-modal-target-date');
+      const targetDaysEl = document.getElementById('track-modal-target-days');
+
+      const turnaroundInfo = document.getElementById('track-modal-turnaround-info');
+      const completedDateEl = document.getElementById('track-modal-completed-date');
+      const turnaroundBadge = document.getElementById('track-modal-turnaround-badge');
 
       const proofPlaceholder = document.getElementById('track-modal-proof-placeholder');
+      const placeholderText = document.getElementById('track-modal-placeholder-text');
       const resolutionData = document.getElementById('track-modal-resolution-data');
       const proofRemarks = document.getElementById('track-modal-proof-remarks');
 
-      const status = String(report.status || '').toLowerCase();
+      const approveBtn = document.getElementById('btn-approve-project');
+      const approveText = document.getElementById('btn-approve-text');
+      const reworkBtn = document.getElementById('btn-rework-project');
+      const reworkText = document.getElementById('btn-rework-text');
 
-      if (status === 'completed') {
+      const status = currentTrackingReportStatus;
+      const isRework = status === 'in progress' && report.adminRemarks && report.adminRemarks.trim() !== '';
+
+      // ⚠️ ACTIVE REWORK CHECK
+      if (isRework) {
+        if (reworkAlert) reworkAlert.style.display = 'block';
+        if (reworkInstructions) reworkInstructions.textContent = report.adminRemarks;
+      } else {
+        if (reworkAlert) reworkAlert.style.display = 'none';
+      }
+
+      // ⏳ LIVE COUNTDOWN CALCULATOR
+      const calculateCountdown = () => {
+        if (!report.targetCompletionDate) {
+          if (targetBadge) targetBadge.style.display = 'none';
+          if (scheduleInfo) scheduleInfo.style.display = 'none';
+          return;
+        }
+
+        if (scheduleInfo) scheduleInfo.style.display = 'block';
+        if (targetDateEl) targetDateEl.textContent = report.targetCompletionDate;
+
+        const target = new Date(report.targetCompletionDate + 'T23:59:59');
+        const now = new Date();
+        const diffMs = target - now;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        if (targetBadge) {
+          targetBadge.style.display = 'inline-block';
+          if (diffDays > 1) {
+            targetBadge.textContent = `⏳ Target: ${report.targetCompletionDate} (${diffDays} days left)`;
+            targetBadge.style.cssText = 'background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;';
+            if (targetDaysEl) targetDaysEl.textContent = `${diffDays} days remaining`;
+          } else if (diffDays === 1) {
+            targetBadge.textContent = `⏳ Target: Due Tomorrow (${report.targetCompletionDate})`;
+            targetBadge.style.cssText = 'background: #fef3c7; color: #b45309; border: 1px solid #fde047; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;';
+            if (targetDaysEl) targetDaysEl.textContent = `1 day remaining (Due Tomorrow)`;
+          } else if (diffDays === 0) {
+            targetBadge.textContent = `⚠️ Target: Due Today (${report.targetCompletionDate})`;
+            targetBadge.style.cssText = 'background: #fef3c7; color: #b45309; border: 1px solid #fde047; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;';
+            if (targetDaysEl) targetDaysEl.textContent = `Due Today`;
+          } else {
+            const overdue = Math.abs(diffDays);
+            targetBadge.textContent = `🚨 Overdue by ${overdue} day${overdue > 1 ? 's' : ''} (${report.targetCompletionDate})`;
+            targetBadge.style.cssText = 'background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;';
+            if (targetDaysEl) targetDaysEl.textContent = `Overdue by ${overdue} day${overdue > 1 ? 's' : ''}`;
+          }
+        }
+      };
+
+      // 🏁 ACTUAL TURNAROUND CALCULATOR
+      const calculateTurnaround = () => {
+        const completedTimeStr = report.actualCompletionDate || report.dateArchived;
+        if (!completedTimeStr) {
+          if (turnaroundInfo) turnaroundInfo.style.display = 'none';
+          return;
+        }
+
+        if (turnaroundInfo) turnaroundInfo.style.display = 'block';
+        const compDateObj = new Date(completedTimeStr);
+        const compFormatted = compDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        if (completedDateEl) completedDateEl.textContent = compFormatted;
+
+        if (turnaroundBadge) {
+          if (report.targetCompletionDate) {
+            const targetObj = new Date(report.targetCompletionDate + 'T23:59:59');
+            const diffTime = targetObj - compDateObj;
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 0) {
+              turnaroundBadge.textContent = `⚡ Finished ${diffDays} day${diffDays > 1 ? 's' : ''} ahead of schedule`;
+              turnaroundBadge.style.cssText = 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;';
+            } else if (diffDays === 0) {
+              turnaroundBadge.textContent = `🎯 Completed on schedule`;
+              turnaroundBadge.style.cssText = 'background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;';
+            } else {
+              const lateDays = Math.abs(diffDays);
+              turnaroundBadge.textContent = `⚠️ Completed ${lateDays} day${lateDays > 1 ? 's' : ''} behind schedule`;
+              turnaroundBadge.style.cssText = 'background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;';
+            }
+          } else {
+            turnaroundBadge.textContent = `✅ Completed`;
+            turnaroundBadge.style.cssText = 'background: #dcfce7; color: #15803d; border: 1px solid #86efac;';
+          }
+        }
+      };
+
+      // --- STATE 1: COMPLETED (Awaiting Admin QA) ---
+      if (status.includes('complet') || status.includes('repair')) {
         if (statusBox) {
           statusBox.textContent = 'Repaired (Pending Approval)';
           statusBox.style.backgroundColor = '#d4edda';
           statusBox.style.color = '#155724';
         }
-        if (statusText) statusText.textContent = 'CEO has finished the repair. Awaiting Admin QA.';
+        if (statusText) statusText.textContent = 'CEO has completed the repair and submitted proof. Awaiting your QA decision.';
 
-        if (approveBtn) {
-          approveBtn.disabled = false;
-          approveBtn.style.backgroundColor = '#28a745';
-          approveBtn.style.cursor = 'pointer';
-          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
-        }
-        if (reworkBtn) reworkBtn.classList.remove('hidden');
-
+        if (deferredAlert) deferredAlert.style.display = 'none';
         if (proofPlaceholder) proofPlaceholder.style.display = 'none';
         if (resolutionData) resolutionData.style.display = 'block';
+        if (scheduleInfo) scheduleInfo.style.display = 'none';
+        if (targetBadge) targetBadge.style.display = 'none';
+
+        calculateTurnaround();
 
         if (proofRemarks) proofRemarks.textContent = report.repairRemarks || "No official remarks provided.";
         if (typeof window.loadSecureImage === 'function') {
           window.loadSecureImage('track-modal-proof-image', report.proofOfRepairImage);
         }
 
-      } else if (status === 'pending budget') {
+        // Action Buttons: Require Rework vs Approve & Close
+        if (reworkBtn) {
+          reworkBtn.classList.remove('hidden');
+          if (reworkText) reworkText.textContent = 'Require Rework';
+          reworkBtn.style.backgroundColor = '#dc3545';
+        }
+        if (approveBtn) {
+          approveBtn.disabled = false;
+          approveBtn.style.backgroundColor = '#28a745';
+          approveBtn.style.cursor = 'pointer';
+          if (approveText) approveText.textContent = 'Approve & Close Project';
+        }
+
+        // --- STATE 2: PENDING BUDGET (Deferred by CEO) ---
+      } else if (status === 'pending budget' || status.includes('defer')) {
         if (statusBox) {
           statusBox.textContent = 'Deferred (Pending Budget)';
           statusBox.style.backgroundColor = '#fef08a';
           statusBox.style.color = '#854d0e';
         }
+        if (statusText) statusText.textContent = 'Project is on fiscal hold. Review deferral remarks below.';
 
-        if (statusText) statusText.textContent = `CEO Remarks: "${report.repairRemarks || "Deferred due to budget constraints."}"`;
+        // Show Deferred notice and hide completion/schedule info
+        if (deferredAlert) {
+          deferredAlert.style.display = 'block';
+          if (deferredRemarks) {
+            deferredRemarks.textContent = report.repairRemarks || report.adminRemarks || 'Deferred due to budget allocation constraints.';
+          }
+        }
+        if (proofPlaceholder) proofPlaceholder.style.display = 'none';
+        if (resolutionData) resolutionData.style.display = 'none';
+        if (scheduleInfo) scheduleInfo.style.display = 'none';
+        if (turnaroundInfo) turnaroundInfo.style.display = 'none';
+        if (targetBadge) targetBadge.style.display = 'none';
 
+        // 🚀 DUAL BUTTONS: [❌ Reject Deferral] vs [📁 Acknowledge & Archive]
+        if (reworkBtn) {
+          reworkBtn.classList.remove('hidden');
+          if (reworkText) reworkText.textContent = 'Reject Deferral';
+          reworkBtn.style.backgroundColor = '#dc3545';
+        }
         if (approveBtn) {
           approveBtn.disabled = false;
           approveBtn.style.backgroundColor = '#475569';
           approveBtn.style.cursor = 'pointer';
-          approveBtn.innerHTML = `<span class="icon">📁</span> Acknowledge & Archive`;
+          if (approveText) approveText.textContent = 'Acknowledge & Archive';
         }
-        if (reworkBtn) reworkBtn.classList.add('hidden');
 
-        if (proofPlaceholder) proofPlaceholder.style.display = 'block';
-        if (resolutionData) resolutionData.style.display = 'none';
-
-      } else if (status === 'in progress') {
+        // --- STATE 3: IN PROGRESS / REWORK ---
+      } else if (status.includes('progress')) {
         if (statusBox) {
           statusBox.textContent = 'In Progress';
           statusBox.style.backgroundColor = '#cce5ff';
           statusBox.style.color = '#004085';
         }
-        if (statusText) statusText.textContent = 'Engineering crew is actively handling this project.';
+        if (statusText) {
+          statusText.textContent = isRework
+            ? 'Engineering crew is actively working on your rework instructions.'
+            : 'Engineering crew is currently on-site executing repairs.';
+        }
 
+        if (deferredAlert) deferredAlert.style.display = 'none';
+        if (proofPlaceholder) {
+          proofPlaceholder.style.display = 'block';
+          if (placeholderText) {
+            placeholderText.textContent = isRework
+              ? 'Awaiting Corrected Proof Photo from Engineering'
+              : 'Awaiting Completion Photo from Engineering';
+          }
+        }
+        if (resolutionData) resolutionData.style.display = 'none';
+        if (turnaroundInfo) turnaroundInfo.style.display = 'none';
+
+        calculateCountdown();
+
+        // Locked buttons while work is underway
+        if (reworkBtn) reworkBtn.classList.add('hidden');
         if (approveBtn) {
           approveBtn.disabled = true;
           approveBtn.style.backgroundColor = '#ccc';
           approveBtn.style.cursor = 'not-allowed';
-          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
+          if (approveText) approveText.textContent = 'Approve & Close Project';
         }
+
+        // --- STATE 4: CLOSED / ARCHIVED ---
+      } else if (status === 'closed' || status === 'archived' || status === 'resolved') {
+        if (statusBox) {
+          statusBox.textContent = status === 'archived' ? 'Archived' : 'Closed';
+          statusBox.style.backgroundColor = '#e2e8f0';
+          statusBox.style.color = '#334155';
+        }
+        if (statusText) statusText.textContent = 'Project ticket is officially closed and finalized.';
+
+        if (deferredAlert) deferredAlert.style.display = 'none';
+        if (proofPlaceholder) proofPlaceholder.style.display = 'none';
+        if (resolutionData) resolutionData.style.display = 'block';
+        if (scheduleInfo) scheduleInfo.style.display = 'none';
+        if (targetBadge) targetBadge.style.display = 'none';
+
+        calculateTurnaround();
+
+        if (proofRemarks) proofRemarks.textContent = report.repairRemarks || "No official remarks provided.";
+        if (typeof window.loadSecureImage === 'function') {
+          window.loadSecureImage('track-modal-proof-image', report.proofOfRepairImage);
+        }
+
         if (reworkBtn) reworkBtn.classList.add('hidden');
+        if (approveBtn) {
+          approveBtn.disabled = true;
+          approveBtn.style.backgroundColor = '#ccc';
+          approveBtn.style.cursor = 'not-allowed';
+          if (approveText) approveText.textContent = 'Project Closed';
+        }
 
-        if (proofPlaceholder) proofPlaceholder.style.display = 'block';
-        if (resolutionData) resolutionData.style.display = 'none';
-
+        // --- STATE 5: DEFAULT / DISPATCHED ---
       } else {
         if (statusBox) {
           statusBox.textContent = report.status || 'Dispatched to CEO';
           statusBox.style.backgroundColor = '#e2e3e5';
           statusBox.style.color = '#383d41';
         }
-        if (statusText) statusText.textContent = 'Awaiting update from engineering crew.';
+        if (statusText) statusText.textContent = 'Awaiting crew dispatch by the City Engineer.';
 
+        if (deferredAlert) deferredAlert.style.display = 'none';
+        if (proofPlaceholder) {
+          proofPlaceholder.style.display = 'block';
+          if (placeholderText) placeholderText.textContent = 'Awaiting Completion Photo from Engineering';
+        }
+        if (resolutionData) resolutionData.style.display = 'none';
+        if (scheduleInfo) scheduleInfo.style.display = 'none';
+        if (turnaroundInfo) turnaroundInfo.style.display = 'none';
+        if (targetBadge) targetBadge.style.display = 'none';
+
+        if (reworkBtn) reworkBtn.classList.add('hidden');
         if (approveBtn) {
           approveBtn.disabled = true;
           approveBtn.style.backgroundColor = '#ccc';
           approveBtn.style.cursor = 'not-allowed';
-          approveBtn.innerHTML = `<span class="icon">✅</span> Approve & Close Project`;
+          if (approveText) approveText.textContent = 'Approve & Close Project';
         }
-        if (reworkBtn) reworkBtn.classList.add('hidden');
-
-        if (proofPlaceholder) proofPlaceholder.style.display = 'block';
-        if (resolutionData) resolutionData.style.display = 'none';
       }
 
       // 🕒 Load Timeline into the Accordion
@@ -6970,7 +7156,7 @@ window.openTrackingModal = function(reportId) {
         loadReportTimeline(report.id, 'track-modal-timeline');
       }
 
-      // 🚀 Final Scroll Reset after data & timeline injection completes
+      // Final Scroll Reset
       resetModalScroll(trackingModal);
     })
     .catch(err => {
@@ -7051,12 +7237,30 @@ window.closeTrackingModal = function() {
 };
 
 // ==========================================
-// 🔄 REWORK CONTROLLERS
+// 🔄 REWORK / DEFERRAL REJECTION CONTROLLERS
 // ==========================================
 window.openReworkForm = function() {
   const primaryActions = document.getElementById('tracking-primary-actions');
   const reworkForm = document.getElementById('tracking-rework-form');
   const reworkInput = document.getElementById('rework-remarks-input');
+  const formTitle = document.getElementById('rework-form-title');
+  const btnConfirm = document.getElementById('btn-confirm-rework');
+
+  // Adapt form dynamically based on whether rejecting deferral or demanding rework
+  if (currentTrackingReportStatus === 'pending budget' || currentTrackingReportStatus.includes('defer')) {
+    if (formTitle) formTitle.textContent = "Reason for Rejecting Deferral";
+    if (reworkInput) {
+      reworkInput.placeholder = "Explain why this project must be repaired immediately (e.g., Emergency contingency budget authorized, high public hazard)...";
+    }
+    if (btnConfirm) btnConfirm.textContent = "Reject & Return to CEO";
+  } else {
+    if (formTitle) formTitle.textContent = "Reason for Rework";
+    if (reworkInput) {
+      reworkInput.placeholder = "Explain what the engineering crew missed or needs to fix...";
+    }
+    if (btnConfirm) btnConfirm.textContent = "Submit to CEO";
+  }
+
   if (primaryActions) primaryActions.classList.add('hidden');
   if (reworkForm) reworkForm.classList.remove('hidden');
   if (reworkInput) reworkInput.focus();
@@ -7082,7 +7286,7 @@ window.handleApproveProject = function() {
   const isArchiving = btnApprove.innerText.includes('Archive');
   const targetStatus = isArchiving ? "Archived" : "Closed";
   const loadingText = isArchiving ? "⏳ Archiving..." : "⏳ Approving...";
-  const successMsg = isArchiving ? "Project safely archived!" : "Project officially approved and closed!";
+  const successMsg = isArchiving ? "Project safely acknowledged and archived!" : "Project officially approved and closed!";
 
   const originalText = btnApprove.innerHTML;
   btnApprove.innerHTML = loadingText;
@@ -7122,7 +7326,7 @@ window.handleApproveProject = function() {
 };
 
 // ==========================================
-// ↩️ SUBMIT REWORK FEEDBACK TO CEO
+// ↩️ SUBMIT REWORK FEEDBACK OR REJECT DEFERRAL
 // ==========================================
 window.submitReworkFeedback = function() {
   if (!currentTrackingReportId) return;
@@ -7131,11 +7335,17 @@ window.submitReworkFeedback = function() {
 
   const remarks = reworkInput ? reworkInput.value.trim() : '';
   if (!remarks) {
-    if (typeof showToast === 'function') showToast("Please provide a reason so the crew knows what to fix.", "error");
+    if (typeof showToast === 'function') showToast("Please provide a reason before submitting.", "error");
     return;
   }
 
-  const originalText = btnConfirmRework ? btnConfirmRework.innerHTML : "Submit to CEO";
+  const isRejectingDeferral = currentTrackingReportStatus === 'pending budget' || currentTrackingReportStatus.includes('defer');
+  const targetStatus = isRejectingDeferral ? "Dispatched to CEO" : "In Progress";
+  const successToast = isRejectingDeferral
+    ? "Deferral rejected! Project returned to the CEO active queue."
+    : "Project bounced back to CEO with your rework instructions!";
+
+  const originalText = btnConfirmRework ? btnConfirmRework.innerHTML : "Submit";
   if (btnConfirmRework) {
     btnConfirmRework.innerHTML = "⏳ Sending...";
     btnConfirmRework.disabled = true;
@@ -7150,24 +7360,24 @@ window.submitReworkFeedback = function() {
       'ngrok-skip-browser-warning': 'true'
     },
     body: JSON.stringify({
-      status: "In Progress",
+      status: targetStatus,
       adminRemarks: remarks,
       userId: currentUserId
     })
   })
     .then(res => {
-      if (!res.ok) throw new Error("Failed to rework project");
+      if (!res.ok) throw new Error("Failed to process feedback");
       return res.text();
     })
     .then(() => {
-      if (typeof showToast === 'function') showToast("Project bounced back to CEO with your feedback!", "success");
+      if (typeof showToast === 'function') showToast(successToast, "success");
       closeTrackingModal();
       if (typeof loadTrackingData === 'function') loadTrackingData();
       if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
     })
     .catch(err => {
       console.error(err);
-      if (typeof showToast === 'function') showToast("Error requesting rework.", "error");
+      if (typeof showToast === 'function') showToast("Error submitting feedback.", "error");
     })
     .finally(() => {
       if (btnConfirmRework) {

@@ -2205,20 +2205,64 @@
           </div>
         </div>
 
-        <!-- SECTION 3: RESOLUTION EVIDENCE -->
-        <div class="report-section" style="background-color: #f8fcf8; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb;">
-          <h3 class="section-title" style="color: #28a745; margin-bottom: 10px; text-transform: uppercase;">Project Resolution Evidence</h3>
+        <!-- SECTION 3: RESOLUTION & TIMELINE TRACKING -->
+        <div id="track-section-resolution" class="report-section" style="background-color: #f8fcf8; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+            <h3 id="track-resolution-title" class="section-title" style="color: #28a745; margin-bottom: 0; text-transform: uppercase;">Project Resolution & Scheduling</h3>
+            <span id="track-modal-target-badge" style="display: none; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px;"></span>
+          </div>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <!-- ⚠️ ACTIVE REWORK BANNER (Shown if In Progress & has admin rework remarks) -->
+          <div id="track-modal-rework-alert" style="display: none; background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 12px 16px; border-radius: 6px; margin-bottom: 15px;">
+            <h5 style="color: #856404; margin: 0 0 6px 0; font-size: 13px; font-weight: 700;">
+              <span class="icon">⚠️</span> Active Rework Cycle Underway
+            </h5>
+            <p style="margin: 0; font-size: 12px; color: #533f03;">
+              <strong>Your QA Instructions to CEO:</strong> <span id="track-modal-rework-instructions">Loading...</span>
+            </p>
+          </div>
+
+          <!-- ⏳ DEFERRED / PENDING BUDGET NOTICE (Shown ONLY if status is Pending Budget) -->
+          <div id="track-modal-deferred-alert" style="display: none; background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 5px solid #f59e0b; padding: 14px 16px; border-radius: 6px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <h5 style="color: #92400e; margin: 0; font-size: 13.5px; font-weight: 700;">
+                <span>⏳</span> Project On Hold: Deferred by CEO (Pending Budget)
+              </h5>
+              <span class="badge" style="background-color: #f59e0b; color: white; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;">DEFERRED</span>
+            </div>
+            <p style="margin: 0; font-size: 12.5px; color: #78350f;">
+              <strong>CEO Justification / Remarks:</strong> <span id="track-modal-deferred-remarks">Loading remarks...</span>
+            </p>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
             <p style="font-size: 13px; margin: 0;"><strong>Current CEO Status:</strong> <span id="track-modal-status" class="status-badge" style="background-color: #e2e3e5; color: #383d41;">Loading...</span></p>
             <p id="track-modal-status-text" style="font-size: 13px; color: var(--text-muted); margin: 0;">Awaiting update from engineering crew.</p>
           </div>
 
-          <div id="track-modal-proof-placeholder" class="report-image-placeholder" style="height: 150px; background-color: white; border: 2px dashed #28a745; color: #28a745;">
-            <span class="icon">🚧</span>
-            <p>Awaiting Completion Photo from Engineering</p>
+          <!-- Target Date Detail (When In Progress) -->
+          <div id="track-modal-schedule-info" style="display: none; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12.5px;">
+              <div>📅 <strong>Target Completion:</strong> <span id="track-modal-target-date" style="font-weight: 700; color: #0f172a;">N/A</span></div>
+              <div>⏱️ <strong>Estimated Timeline:</strong> <span id="track-modal-target-days" style="color: #0284c7; font-weight: 600;">Calculating...</span></div>
+            </div>
           </div>
 
+          <!-- Turnaround Performance Info (When Completed / Closed) -->
+          <div id="track-modal-turnaround-info" style="display: none; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 10px 14px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12.5px;">
+              <div>🏁 <strong>Completed On:</strong> <span id="track-modal-completed-date" style="font-weight: 700; color: #166534;">N/A</span></div>
+              <span id="track-modal-turnaround-badge" style="font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px;"></span>
+            </div>
+          </div>
+
+          <!-- Awaiting Repair Placeholder (Hidden if Deferred or Completed) -->
+          <div id="track-modal-proof-placeholder" class="report-image-placeholder" style="height: 150px; background-color: white; border: 2px dashed #28a745; color: #28a745;">
+            <span class="icon">🚧</span>
+            <p id="track-modal-placeholder-text">Awaiting Completion Photo from Engineering</p>
+          </div>
+
+          <!-- Completed Proof & Remarks -->
           <div id="track-modal-resolution-data" style="display: none; margin-top: 15px;">
             <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
             <div style="margin-top: 5px; margin-bottom: 15px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">
@@ -2234,17 +2278,20 @@
 
         <!-- MODAL ACTIONS -->
         <div id="tracking-primary-actions" class="modal-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
+          <!-- Left Action: "Require Rework" (if Completed) OR "Reject Deferral" (if Pending Budget) -->
           <button type="button" id="btn-rework-project" class="btn-submit hidden" onclick="openReworkForm()" style="background-color: #dc3545; border-color: #dc3545; transition: 0.3s;">
-            <span class="icon">❌</span> Require Rework
+            <span class="icon">❌</span> <span id="btn-rework-text">Require Rework</span>
           </button>
+
+          <!-- Right Action: "Approve & Close" (if Completed) OR "Acknowledge & Archive" (if Pending Budget) -->
           <button type="button" id="btn-approve-project" class="btn-submit" onclick="handleApproveProject()" disabled style="background-color: #ccc; cursor: not-allowed; transition: 0.3s;">
-            <span class="icon">✅</span> Approve & Close Project
+            <span class="icon">✅</span> <span id="btn-approve-text">Approve & Close Project</span>
           </button>
         </div>
 
-        <!-- REWORK REASON FORM -->
+        <!-- REWORK / DEFERRAL REJECTION REASON FORM -->
         <div id="tracking-rework-form" class="hidden" style="margin-top: 20px; background-color: #fffafb; padding: 15px; border: 1px solid #f5c6cb; border-radius: 8px;">
-          <h4 style="color: #dc3545; margin-bottom: 10px;">Reason for Rework</h4>
+          <h4 id="rework-form-title" style="color: #dc3545; margin-bottom: 10px;">Reason for Rework</h4>
           <textarea id="rework-remarks-input" placeholder="Explain what the engineering crew missed or needs to fix..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; min-height: 80px; font-family: inherit; resize: vertical;"></textarea>
 
           <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">

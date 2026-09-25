@@ -2346,6 +2346,10 @@ window.toggleCEOTimeline = function() {
     container.classList.remove('hidden');
     container.style.display = 'block';
     if (arrow) arrow.innerText = '▲';
+
+    // 🚀 ALWAYS SCROLL TO TOP UPON EXPANDING
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
   } else {
     container.classList.add('hidden');
     container.style.display = 'none';
@@ -2377,7 +2381,7 @@ window.openCEOManageModal = function(reportId) {
   const modalBody = modal.querySelector('.modal-body');
   if (modalBody) modalBody.scrollTop = 0;
 
-  // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE
+  // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE (SCROLLED TO TOP)
   const tlContainer = document.getElementById('ceo-manage-timeline-container');
   const tlArrow = document.getElementById('ceo-timeline-arrow');
   if (tlContainer) {
@@ -2396,6 +2400,7 @@ window.openCEOManageModal = function(reportId) {
   // 🔄 INSTANT BUTTON RESET: Clears any prior state before fetching new data
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
+    btnStartRepair.style.display = 'inline-block';
     btnStartRepair.disabled = true;
     btnStartRepair.style.pointerEvents = "none";
     btnStartRepair.style.opacity = "0.6";
@@ -2491,23 +2496,34 @@ window.openCEOManageModal = function(reportId) {
         }
       }
 
+      // ========================================================
+      // 🏷️ STATUS BADGE STYLING
+      // ========================================================
       const status = String(report.status || '');
       const currentStatus = status.toLowerCase();
       const statusBadge = document.getElementById('ceo-modal-current-status');
 
       if (statusBadge) {
         statusBadge.innerText = status;
-        if (currentStatus === 'in progress') {
+        if (currentStatus === 'pending budget' || currentStatus.includes('defer')) {
+          statusBadge.style.cssText = "background-color: #fef3c7; color: #92400e; border: 1px solid #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+        } else if (currentStatus === 'in progress') {
           statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
-        } else {
+        } else if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
           statusBadge.style.cssText = "background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+        } else {
+          statusBadge.style.cssText = "background-color: #e2e8f0; color: #334155; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
         }
       }
 
-      // Rework Alert
+      // ========================================================
+      // ⚠️ REWORK ALERT CHECK
+      // ========================================================
       const reworkAlert = document.getElementById('ceo-rework-alert');
       const reworkText = document.getElementById('ceo-modal-admin-remarks');
-      if (report.adminRemarks && report.adminRemarks.trim() !== '' && currentStatus === 'in progress') {
+      const isRework = currentStatus === 'in progress' && report.adminRemarks && report.adminRemarks.trim() !== '';
+
+      if (isRework) {
         if (reworkText) reworkText.innerText = report.adminRemarks;
         if (reworkAlert) reworkAlert.style.display = 'block';
       } else {
@@ -2521,65 +2537,116 @@ window.openCEOManageModal = function(reportId) {
         loadSecureImage('ceo-modal-image', report.damageImage);
       }
 
-      // Buttons & Completion State
+      // ========================================================
+      // 🎯 BUTTONS, DEFER & RESOLUTION LOGIC
+      // ========================================================
       const completionForm = document.getElementById('ceo-completion-form');
       const completedEvidence = document.getElementById('ceo-completed-evidence-section');
       const proofRemarks = document.getElementById('ceo-modal-proof-remarks');
+      const evidenceTitle = completedEvidence ? completedEvidence.querySelector('.section-title') : null;
 
-      if (btnStartRepair) {
-        if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
-          // State 1: Completed
+      if (currentStatus === 'pending budget' || currentStatus.includes('defer')) {
+        // STATE 1: PENDING BUDGET / DEFERRED (BOTH BUTTONS DISAPPEAR)
+        if (btnStartRepair) btnStartRepair.style.display = 'none';
+        if (btnPendingBudget) btnPendingBudget.style.display = 'none';
+
+        if (completionForm) completionForm.style.display = 'none';
+        if (completedEvidence) completedEvidence.style.display = 'none';
+
+      } else if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
+        // STATE 2: COMPLETED (LOCKED & DISPLAYS FINAL PROOF)
+        if (btnStartRepair) {
+          btnStartRepair.style.display = 'inline-block';
           btnStartRepair.innerHTML = `<span class="icon">✅</span> Already Completed`;
           btnStartRepair.style.backgroundColor = "#64748b";
           btnStartRepair.style.cursor = "not-allowed";
           btnStartRepair.style.pointerEvents = "none";
           btnStartRepair.style.opacity = "0.75";
           btnStartRepair.disabled = true;
+        }
+        if (btnPendingBudget) btnPendingBudget.style.display = 'none';
 
-          // 🛡️ Hide deferral option for already finished jobs
-          if (btnPendingBudget) btnPendingBudget.style.display = 'none';
+        if (completionForm) completionForm.style.display = 'none';
+        if (completedEvidence) {
+          completedEvidence.style.display = 'block';
+          completedEvidence.style.backgroundColor = '#f0fdf4';
+          completedEvidence.style.borderColor = '#bbf7d0';
+        }
+        if (evidenceTitle) {
+          evidenceTitle.innerHTML = `<span class="icon">✅</span> Repair Completed`;
+          evidenceTitle.style.color = '#16a34a';
+        }
 
-          if (completionForm) completionForm.style.display = 'none';
-          if (completedEvidence) completedEvidence.style.display = 'block';
+        if (typeof loadSecureImage === 'function') {
+          loadSecureImage('ceo-modal-proof-image', report.proofOfRepairImage);
+        }
+        if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
-          if (typeof loadSecureImage === 'function') {
-            loadSecureImage('ceo-modal-proof-image', report.proofOfRepairImage);
-          }
-          if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
+      } else if (isRework) {
+        // STATE 3: REWORK REQUIRED (DISPLAYS PREVIOUS SUBMISSION + NEW UPLOAD FORM)
+        if (btnStartRepair) {
+          btnStartRepair.style.display = 'inline-block';
+          btnStartRepair.innerHTML = `<span class="icon">⚠️</span> Rework Underway`;
+          btnStartRepair.style.backgroundColor = "#dc2626";
+          btnStartRepair.style.cursor = "not-allowed";
+          btnStartRepair.style.pointerEvents = "none";
+          btnStartRepair.style.opacity = "0.85";
+          btnStartRepair.disabled = true;
+        }
+        if (btnPendingBudget) btnPendingBudget.style.display = 'none';
 
-        } else if (currentStatus.includes('progress')) {
-          // State 2: Already In Progress (Locked and Disabled)
+        // 📸 Display rejected CEO submission
+        if (completedEvidence) {
+          completedEvidence.style.display = 'block';
+          completedEvidence.style.backgroundColor = '#fffbeb';
+          completedEvidence.style.borderColor = '#fef3c7';
+        }
+        if (evidenceTitle) {
+          evidenceTitle.innerHTML = `<span class="icon">🔍</span> Previously Rejected Proof & Remarks`;
+          evidenceTitle.style.color = '#b45309';
+        }
+        if (typeof loadSecureImage === 'function') {
+          loadSecureImage('ceo-modal-proof-image', report.proofOfRepairImage);
+        }
+        if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No previous remarks provided.";
+
+        // Keep form open for new evidence
+        if (completionForm) completionForm.style.display = 'block';
+
+      } else if (currentStatus.includes('progress')) {
+        // STATE 4: STANDARD IN PROGRESS
+        if (btnStartRepair) {
+          btnStartRepair.style.display = 'inline-block';
           btnStartRepair.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
           btnStartRepair.style.backgroundColor = "#64748b";
           btnStartRepair.style.cursor = "not-allowed";
           btnStartRepair.style.pointerEvents = "none";
           btnStartRepair.style.opacity = "0.75";
           btnStartRepair.disabled = true;
+        }
+        if (btnPendingBudget) btnPendingBudget.style.display = 'none';
 
-          // 🛡️ Hide deferral option once work is underway
-          if (btnPendingBudget) btnPendingBudget.style.display = 'none';
+        if (completionForm) completionForm.style.display = 'block';
+        if (completedEvidence) completedEvidence.style.display = 'none';
 
-          if (completionForm) completionForm.style.display = 'block';
-          if (completedEvidence) completedEvidence.style.display = 'none';
-
-        } else {
-          // State 3: Dispatched / Ready to Mark In Progress (Active Orange)
+      } else {
+        // STATE 5: DISPATCHED / READY (BOTH BUTTONS ACTIVE)
+        if (btnStartRepair) {
+          btnStartRepair.style.display = 'inline-block';
           btnStartRepair.innerHTML = `<span class="icon">👷</span> Mark as In Progress`;
           btnStartRepair.style.backgroundColor = "#ea580c";
           btnStartRepair.style.cursor = "pointer";
           btnStartRepair.style.pointerEvents = "auto";
           btnStartRepair.style.opacity = "1";
           btnStartRepair.disabled = false;
-
-          // 🛡️ Reveal deferral option for queued projects
-          if (btnPendingBudget) {
-            btnPendingBudget.style.display = 'inline-block';
-            btnPendingBudget.disabled = false;
-          }
-
-          if (completionForm) completionForm.style.display = 'none';
-          if (completedEvidence) completedEvidence.style.display = 'none';
         }
+        if (btnPendingBudget) {
+          btnPendingBudget.style.display = 'inline-block';
+          btnPendingBudget.disabled = false;
+        }
+
+        if (completionForm) completionForm.style.display = 'none';
+        if (completedEvidence) completedEvidence.style.display = 'none';
       }
     })
     .catch(err => {
@@ -2825,7 +2892,6 @@ window.closeBatchDeferModal = function() {
   const modal = document.getElementById('batch-defer-modal');
   if (modal) modal.classList.add('hidden');
 
-  // Rollback to Manage Modal if triggered as a single deferral
   if (window.deferringSingleId) {
     const manageModal = document.getElementById('manage-modal');
     if (manageModal) manageModal.classList.remove('hidden');
@@ -2841,11 +2907,8 @@ window.markAsPendingBudget = function() {
   }
 
   window.deferringSingleId = currentCEOProjectID;
-
-  // Hide the review modal so they don't awkwardly overlap
   document.getElementById('manage-modal').classList.add('hidden');
 
-  // Dynamically change UI for single project
   const titleEl = document.getElementById('defer-modal-title');
   const warningEl = document.getElementById('defer-modal-warning');
   const confirmBtn = document.getElementById('btn-confirm-batch-defer');

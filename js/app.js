@@ -2334,6 +2334,49 @@ window.filterCEODashTable = function() {
 };
 
 // ==========================================
+// 🧠 3-TIER SMART DATE ESTIMATOR (DPWH & LGU BASELINE)
+// ==========================================
+function calculateEstimatedDays(damageType, severity, areaSqM) {
+  const dt = String(damageType || '').toLowerCase();
+  const sev = String(severity || '').toLowerCase();
+  const area = parseFloat(areaSqM) || 0;
+
+  // Tier 1: Barangay Official Exact Options & DPWH Road Categories
+  if (dt.includes('pothole') || dt.includes('lubak')) {
+    return { days: 3, label: 'Pothole Patching (3 days)' };
+  }
+  if (dt.includes('surface') || dt.includes('cracking') || dt.includes('alligator') || dt.includes('longitudinal')) {
+    return { days: 7, label: 'Surface Crack Sealing & Resurfacing (7 days)' };
+  }
+  if (dt.includes('edge') || dt.includes('deformation') || dt.includes('rutting')) {
+    return { days: 10, label: 'Edge Rebuilding & Base Compaction (10 days)' };
+  }
+  if (dt.includes('washout') || dt.includes('sinkhole') || dt.includes('slab') || dt.includes('concrete')) {
+    return { days: 21, label: 'Major Structural Restoration & Curing (21 days)' };
+  }
+
+  // Tier 2: Fallback for "Other" using AI Computer Vision Severity
+  if (sev === 'high') {
+    return { days: 14, label: 'AI High Severity Scope (14 days)' };
+  }
+  if (sev === 'medium') {
+    return { days: 7, label: 'AI Medium Severity Scope (7 days)' };
+  }
+  if (sev === 'low') {
+    return { days: 3, label: 'AI Low Severity Scope (3 days)' };
+  }
+
+  // Tier 3: Measurement Fallback (Square Meters)
+  if (area > 20) {
+    return { days: 14, label: 'Large Damage Area > 20 sq.m (14 days)' };
+  }
+  if (area > 5) {
+    return { days: 7, label: 'Moderate Damage Area (7 days)' };
+  }
+  return { days: 5, label: 'Standard Maintenance Window (5 days)' };
+}
+
+// ==========================================
 // 🕒 CEO TIMELINE TOGGLE CONTROLLER
 // ==========================================
 window.toggleCEOTimeline = function() {
@@ -2347,7 +2390,7 @@ window.toggleCEOTimeline = function() {
     container.style.display = 'block';
     if (arrow) arrow.innerText = '▲';
 
-    // 🚀 ALWAYS SCROLL TO TOP UPON EXPANDING
+    // Always scroll to top upon expanding
     container.scrollTop = 0;
     requestAnimationFrame(() => { container.scrollTop = 0; });
   } else {
@@ -2381,7 +2424,7 @@ window.openCEOManageModal = function(reportId) {
   const modalBody = modal.querySelector('.modal-body');
   if (modalBody) modalBody.scrollTop = 0;
 
-  // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE (SCROLLED TO TOP)
+  // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE
   const tlContainer = document.getElementById('ceo-manage-timeline-container');
   const tlArrow = document.getElementById('ceo-timeline-arrow');
   if (tlContainer) {
@@ -2397,7 +2440,19 @@ window.openCEOManageModal = function(reportId) {
 
   document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(reportId).padStart(4, '0')} (Loading...)`;
 
-  // 🔄 INSTANT BUTTON RESET: Clears any prior state before fetching new data
+  // 🔄 INSTANT UI RESETS
+  const dispatchSection = document.getElementById('ceo-dispatch-section');
+  if (dispatchSection) dispatchSection.style.display = 'block';
+
+  const deferredAlert = document.getElementById('ceo-deferred-alert');
+  if (deferredAlert) deferredAlert.style.display = 'none';
+
+  const targetDateContainer = document.getElementById('ceo-target-date-container');
+  if (targetDateContainer) targetDateContainer.style.display = 'none';
+
+  const countdownBadge = document.getElementById('ceo-target-countdown-badge');
+  if (countdownBadge) countdownBadge.style.display = 'none';
+
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
     btnStartRepair.style.display = 'inline-block';
@@ -2544,27 +2599,58 @@ window.openCEOManageModal = function(reportId) {
       const completedEvidence = document.getElementById('ceo-completed-evidence-section');
       const proofRemarks = document.getElementById('ceo-modal-proof-remarks');
       const evidenceTitle = completedEvidence ? completedEvidence.querySelector('.section-title') : null;
+      const targetDateInput = document.getElementById('ceo-target-date-input');
+      const targetDateHint = document.getElementById('ceo-target-date-hint');
+
+      // Countdown Helper for In Progress projects
+      const renderCountdown = () => {
+        if (!countdownBadge) return;
+        if (!report.targetCompletionDate) {
+          countdownBadge.style.display = 'none';
+          return;
+        }
+
+        countdownBadge.style.display = 'inline-block';
+        const target = new Date(report.targetCompletionDate + 'T23:59:59');
+        const now = new Date();
+        const diffMs = target - now;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 1) {
+          countdownBadge.innerText = `⏳ Target: ${report.targetCompletionDate} (${diffDays} days left)`;
+          countdownBadge.style.cssText = "background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;";
+        } else if (diffDays === 1) {
+          countdownBadge.innerText = `⏳ Target: Due Tomorrow (${report.targetCompletionDate})`;
+          countdownBadge.style.cssText = "background: #fef3c7; color: #b45309; border: 1px solid #fde047; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;";
+        } else if (diffDays === 0) {
+          countdownBadge.innerText = `⚠️ Target: Due Today (${report.targetCompletionDate})`;
+          countdownBadge.style.cssText = "background: #fef3c7; color: #b45309; border: 1px solid #fde047; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;";
+        } else {
+          const overdueDays = Math.abs(diffDays);
+          countdownBadge.innerText = `🚨 Overdue by ${overdueDays} day${overdueDays > 1 ? 's' : ''} (${report.targetCompletionDate})`;
+          countdownBadge.style.cssText = "background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;";
+        }
+      };
 
       if (currentStatus === 'pending budget' || currentStatus.includes('defer')) {
-        // STATE 1: PENDING BUDGET / DEFERRED (BOTH BUTTONS DISAPPEAR)
-        if (btnStartRepair) btnStartRepair.style.display = 'none';
-        if (btnPendingBudget) btnPendingBudget.style.display = 'none';
+        // STATE 1: PENDING BUDGET / DEFERRED (DISPATCH CREW COMPLETELY REMOVED)
+        if (dispatchSection) dispatchSection.style.display = 'none';
+
+        if (deferredAlert) {
+          deferredAlert.style.display = 'block';
+          const remarksEl = document.getElementById('ceo-deferred-remarks');
+          if (remarksEl) {
+            remarksEl.innerText = report.adminRemarks || report.repairRemarks || 'Project deferred pending budget allocation.';
+          }
+        }
 
         if (completionForm) completionForm.style.display = 'none';
         if (completedEvidence) completedEvidence.style.display = 'none';
 
       } else if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
-        // STATE 2: COMPLETED (LOCKED & DISPLAYS FINAL PROOF)
-        if (btnStartRepair) {
-          btnStartRepair.style.display = 'inline-block';
-          btnStartRepair.innerHTML = `<span class="icon">✅</span> Already Completed`;
-          btnStartRepair.style.backgroundColor = "#64748b";
-          btnStartRepair.style.cursor = "not-allowed";
-          btnStartRepair.style.pointerEvents = "none";
-          btnStartRepair.style.opacity = "0.75";
-          btnStartRepair.disabled = true;
-        }
-        if (btnPendingBudget) btnPendingBudget.style.display = 'none';
+        // STATE 2: COMPLETED (DISPATCH CREW REMOVED & PROOF RENDERED)
+        if (dispatchSection) dispatchSection.style.display = 'none';
+        if (deferredAlert) deferredAlert.style.display = 'none';
 
         if (completionForm) completionForm.style.display = 'none';
         if (completedEvidence) {
@@ -2583,7 +2669,12 @@ window.openCEOManageModal = function(reportId) {
         if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
       } else if (isRework) {
-        // STATE 3: REWORK REQUIRED (DISPLAYS PREVIOUS SUBMISSION + NEW UPLOAD FORM)
+        // STATE 3: REWORK REQUIRED (HISTORICAL PROOF + NEW UPLOAD FORM)
+        if (dispatchSection) dispatchSection.style.display = 'block';
+        if (deferredAlert) deferredAlert.style.display = 'none';
+        if (targetDateContainer) targetDateContainer.style.display = 'none';
+        renderCountdown();
+
         if (btnStartRepair) {
           btnStartRepair.style.display = 'inline-block';
           btnStartRepair.innerHTML = `<span class="icon">⚠️</span> Rework Underway`;
@@ -2595,7 +2686,7 @@ window.openCEOManageModal = function(reportId) {
         }
         if (btnPendingBudget) btnPendingBudget.style.display = 'none';
 
-        // 📸 Display rejected CEO submission
+        // 📸 Display previous rejected CEO submission
         if (completedEvidence) {
           completedEvidence.style.display = 'block';
           completedEvidence.style.backgroundColor = '#fffbeb';
@@ -2610,11 +2701,16 @@ window.openCEOManageModal = function(reportId) {
         }
         if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No previous remarks provided.";
 
-        // Keep form open for new evidence
+        // New upload dropzone
         if (completionForm) completionForm.style.display = 'block';
 
       } else if (currentStatus.includes('progress')) {
         // STATE 4: STANDARD IN PROGRESS
+        if (dispatchSection) dispatchSection.style.display = 'block';
+        if (deferredAlert) deferredAlert.style.display = 'none';
+        if (targetDateContainer) targetDateContainer.style.display = 'none';
+        renderCountdown();
+
         if (btnStartRepair) {
           btnStartRepair.style.display = 'inline-block';
           btnStartRepair.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
@@ -2630,10 +2726,14 @@ window.openCEOManageModal = function(reportId) {
         if (completedEvidence) completedEvidence.style.display = 'none';
 
       } else {
-        // STATE 5: DISPATCHED / READY (BOTH BUTTONS ACTIVE)
+        // STATE 5: DISPATCHED / READY TO QUEUE (SMART TIMELINE CALCULATOR ACTIVE)
+        if (dispatchSection) dispatchSection.style.display = 'block';
+        if (deferredAlert) deferredAlert.style.display = 'none';
+        if (countdownBadge) countdownBadge.style.display = 'none';
+
         if (btnStartRepair) {
           btnStartRepair.style.display = 'inline-block';
-          btnStartRepair.innerHTML = `<span class="icon">👷</span> Mark as In Progress`;
+          btnStartRepair.innerHTML = `<span class="icon">👷</span> Mark as "In Progress"`;
           btnStartRepair.style.backgroundColor = "#ea580c";
           btnStartRepair.style.cursor = "pointer";
           btnStartRepair.style.pointerEvents = "auto";
@@ -2643,6 +2743,22 @@ window.openCEOManageModal = function(reportId) {
         if (btnPendingBudget) {
           btnPendingBudget.style.display = 'inline-block';
           btnPendingBudget.disabled = false;
+        }
+
+        // 🧠 Auto-Compute Estimated Target Completion Date
+        const est = calculateEstimatedDays(report.damageType, report.severity, damageArea);
+        const estDate = new Date();
+        estDate.setDate(estDate.getDate() + est.days);
+        const dateStr = estDate.toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (targetDateContainer) targetDateContainer.style.display = 'block';
+        if (targetDateInput) {
+          targetDateInput.min = todayStr;
+          targetDateInput.value = dateStr;
+        }
+        if (targetDateHint) {
+          targetDateHint.innerText = `💡 Suggested: ${est.label}`;
         }
 
         if (completionForm) completionForm.style.display = 'none';
@@ -2803,11 +2919,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. Mark as In Progress Action
+  // 3. Mark as In Progress Action (With Target Date Logging)
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
     btnStartRepair.addEventListener('click', function() {
       if (!currentCEOProjectID || this.disabled || this.style.pointerEvents === 'none') return;
+
+      const targetInput = document.getElementById('ceo-target-date-input');
+      const targetCompletionDate = targetInput && targetInput.value ? targetInput.value : null;
 
       const originalText = this.innerHTML;
       this.innerHTML = `<span class="icon">⏳</span> Updating...`;
@@ -2825,31 +2944,18 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         body: JSON.stringify({
           status: "In Progress",
+          targetCompletionDate: targetCompletionDate,
           userId: currentUserId
         })
       })
         .then(res => {
           if (!res.ok) throw new Error("Failed to update status");
-          if (typeof showToast === 'function') showToast("Crew Dispatched! Admin notified that repairs are in progress.", "success");
-
-          const statusBadge = document.getElementById('ceo-modal-current-status');
-          if (statusBadge) {
-            statusBadge.innerText = "In Progress";
-            statusBadge.style.cssText = "background-color: #cce5ff; color: #004085; padding: 4px 8px; border-radius: 4px; font-weight: bold;";
+          if (typeof showToast === 'function') {
+            showToast("Crew Dispatched! Target completion date logged.", "success");
           }
 
-          this.innerHTML = `<span class="icon">⚡</span> Repairs Underway`;
-          this.style.backgroundColor = "#64748b";
-          this.style.cursor = "not-allowed";
-          this.style.pointerEvents = "none";
-          this.style.opacity = "0.75";
-          this.disabled = true;
-
-          const btnPending = document.getElementById('btn-pending-budget');
-          if (btnPending) btnPending.style.display = 'none';
-
-          const completionForm = document.getElementById('ceo-completion-form');
-          if (completionForm) completionForm.style.display = 'block';
+          // Reload modal directly to reflect new in-progress state and countdown
+          openCEOManageModal(currentCEOProjectID);
 
           if (typeof loadCEODashboardData === "function") {
             loadCEODashboardData();

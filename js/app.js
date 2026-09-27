@@ -6773,6 +6773,7 @@ window.toggleTrackTimeline = function() {
 // ==========================================
 window.openTrackingModal = function(reportId) {
   currentTrackingReportId = reportId;
+  currentTrackingReportStatus = null;
 
   const trackingModal = document.getElementById('tracking-modal');
   if (!trackingModal) return;
@@ -6790,7 +6791,26 @@ window.openTrackingModal = function(reportId) {
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
 
-  // 3. Reset accordion to collapsed state and zero out timeline scroll
+  // 3. Reset reminder & scheduling rows before fetch
+  const reminderContainer = document.getElementById('track-modal-reminder-container');
+  if (reminderContainer) reminderContainer.style.display = 'none';
+
+  const scheduleInfo = document.getElementById('track-modal-schedule-info');
+  if (scheduleInfo) scheduleInfo.style.display = 'none';
+
+  const turnaroundInfo = document.getElementById('track-modal-turnaround-info');
+  if (turnaroundInfo) turnaroundInfo.style.display = 'none';
+
+  const targetBadge = document.getElementById('track-modal-target-badge');
+  if (targetBadge) targetBadge.style.display = 'none';
+
+  const reworkAlert = document.getElementById('track-modal-rework-alert');
+  if (reworkAlert) reworkAlert.style.display = 'none';
+
+  const deferredAlert = document.getElementById('track-modal-deferred-alert');
+  if (deferredAlert) deferredAlert.style.display = 'none';
+
+  // 4. Reset accordion to collapsed state and zero out timeline scroll
   const timelineContainer = document.getElementById('track-modal-timeline-container');
   if (timelineContainer) {
     timelineContainer.classList.add('hidden');
@@ -6799,11 +6819,13 @@ window.openTrackingModal = function(reportId) {
   const arrow = document.getElementById('track-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
-  // 4. Reveal modal & reset scroll
+  // 5. Reveal modal & reset scroll
   trackingModal.classList.remove('hidden');
-  resetModalScroll(trackingModal);
+  if (typeof resetModalScroll === 'function') {
+    resetModalScroll(trackingModal);
+  }
 
-  // 5. Fetch Project Details
+  // 6. Fetch Project Details
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       currentTrackingReportStatus = report.status ? report.status.toLowerCase() : '';
@@ -6876,17 +6898,17 @@ window.openTrackingModal = function(reportId) {
       const statusBox = document.getElementById('track-modal-status');
       const statusText = document.getElementById('track-modal-status-text');
 
-      const targetBadge = document.getElementById('track-modal-target-badge');
-      const reworkAlert = document.getElementById('track-modal-rework-alert');
-      const reworkInstructions = document.getElementById('track-modal-rework-instructions');
-      const deferredAlert = document.getElementById('track-modal-deferred-alert');
-      const deferredRemarks = document.getElementById('track-modal-deferred-remarks');
-
-      const scheduleInfo = document.getElementById('track-modal-schedule-info');
       const targetDateEl = document.getElementById('track-modal-target-date');
       const targetDaysEl = document.getElementById('track-modal-target-days');
+      const reworkInstructions = document.getElementById('track-modal-rework-instructions');
+      const deferredRemarks = document.getElementById('track-modal-deferred-remarks');
 
-      const turnaroundInfo = document.getElementById('track-modal-turnaround-info');
+      // 🔔 Reminder Elements
+      const reminderHint = document.getElementById('track-modal-reminder-hint');
+      const btnReminder = document.getElementById('btn-send-deadline-reminder');
+      const btnReminderText = document.getElementById('btn-reminder-text');
+      const btnReminderIcon = document.getElementById('btn-reminder-icon');
+
       const completedDateEl = document.getElementById('track-modal-completed-date');
       const turnaroundBadge = document.getElementById('track-modal-turnaround-badge');
 
@@ -6911,11 +6933,12 @@ window.openTrackingModal = function(reportId) {
         if (reworkAlert) reworkAlert.style.display = 'none';
       }
 
-      // ⏳ LIVE COUNTDOWN CALCULATOR
+      // ⏳ LIVE COUNTDOWN & REMINDER CONTROLLER
       const calculateCountdown = () => {
         if (!report.targetCompletionDate) {
           if (targetBadge) targetBadge.style.display = 'none';
           if (scheduleInfo) scheduleInfo.style.display = 'none';
+          if (reminderContainer) reminderContainer.style.display = 'none';
           return;
         }
 
@@ -6927,6 +6950,7 @@ window.openTrackingModal = function(reportId) {
         const diffMs = target - now;
         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
+        // Render countdown header badge
         if (targetBadge) {
           targetBadge.style.display = 'inline-block';
           if (diffDays > 1) {
@@ -6946,6 +6970,75 @@ window.openTrackingModal = function(reportId) {
             targetBadge.textContent = `🚨 Overdue by ${overdue} day${overdue > 1 ? 's' : ''} (${report.targetCompletionDate})`;
             targetBadge.style.cssText = 'background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block;';
             if (targetDaysEl) targetDaysEl.textContent = `Overdue by ${overdue} day${overdue > 1 ? 's' : ''}`;
+          }
+        }
+
+        // 🔔 REMINDER BUTTON & 12-HOUR DATABASE COOLDOWN LOGIC
+        if (reminderContainer && btnReminder) {
+          // Rule: Show reminder row ONLY if due in <= 2 days or already overdue
+          if (diffDays <= 2) {
+            reminderContainer.style.display = 'flex';
+
+            // Check 12-hour database cooldown
+            let inCooldown = false;
+            let lastSentFormatted = '';
+
+            if (report.lastReminderSent) {
+              const lastSentTime = new Date(report.lastReminderSent);
+              const cooldownHours = 12;
+              const cooldownMs = cooldownHours * 60 * 60 * 1000;
+              const timeSinceSent = now - lastSentTime;
+
+              if (timeSinceSent < cooldownMs) {
+                inCooldown = true;
+                lastSentFormatted = lastSentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+            }
+
+            if (inCooldown) {
+              // 🛡️ LOCKED STATE (COOLDOWN ACTIVE)
+              btnReminder.disabled = true;
+              btnReminder.style.backgroundColor = '#94a3b8';
+              btnReminder.style.color = '#ffffff';
+              btnReminder.style.cursor = 'not-allowed';
+              btnReminder.style.opacity = '0.85';
+              if (btnReminderIcon) btnReminderIcon.textContent = '✔️';
+              if (btnReminderText) btnReminderText.textContent = 'Reminder Issued Today';
+              if (reminderHint) {
+                reminderHint.textContent = `Notice already issued to CEO at ${lastSentFormatted}. (12h cooldown active)`;
+              }
+            } else {
+              // 🚀 ACTIVE STATE (READY TO SEND)
+              btnReminder.disabled = false;
+              btnReminder.style.cursor = 'pointer';
+              btnReminder.style.opacity = '1';
+
+              if (diffDays < 0) {
+                // Overdue Urgent Alert
+                btnReminder.style.backgroundColor = '#dc2626';
+                btnReminder.style.color = '#ffffff';
+                if (btnReminderIcon) btnReminderIcon.textContent = '🚨';
+                if (btnReminderText) btnReminderText.textContent = 'Issue Overdue Notice';
+                if (reminderHint) reminderHint.textContent = 'Project is overdue. Dispatch an urgent escalation notice to the City Engineer.';
+              } else if (diffDays === 0) {
+                // Due Today Alert
+                btnReminder.style.backgroundColor = '#ea580c';
+                btnReminder.style.color = '#ffffff';
+                if (btnReminderIcon) btnReminderIcon.textContent = '⚠️';
+                if (btnReminderText) btnReminderText.textContent = 'Alert CEO: Due Today';
+                if (reminderHint) reminderHint.textContent = 'Deadline is today. Send a priority alert to the engineering team.';
+              } else {
+                // Approaching Deadline (1 or 2 days left)
+                btnReminder.style.backgroundColor = '#f59e0b';
+                btnReminder.style.color = '#ffffff';
+                if (btnReminderIcon) btnReminderIcon.textContent = '⚠️';
+                if (btnReminderText) btnReminderText.textContent = 'Send Due Reminder';
+                if (reminderHint) reminderHint.textContent = 'Impending deadline. Notify the City Engineer to prioritize on-site completion.';
+              }
+            }
+          } else {
+            // More than 2 days remaining -> keep clean
+            reminderContainer.style.display = 'none';
           }
         }
       };
@@ -7001,6 +7094,7 @@ window.openTrackingModal = function(reportId) {
         if (resolutionData) resolutionData.style.display = 'block';
         if (scheduleInfo) scheduleInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
+        if (reminderContainer) reminderContainer.style.display = 'none';
 
         calculateTurnaround();
 
@@ -7043,6 +7137,7 @@ window.openTrackingModal = function(reportId) {
         if (scheduleInfo) scheduleInfo.style.display = 'none';
         if (turnaroundInfo) turnaroundInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
+        if (reminderContainer) reminderContainer.style.display = 'none';
 
         // 🚀 DUAL BUTTONS: [❌ Reject Deferral] vs [📁 Acknowledge & Archive]
         if (reworkBtn) {
@@ -7107,6 +7202,7 @@ window.openTrackingModal = function(reportId) {
         if (resolutionData) resolutionData.style.display = 'block';
         if (scheduleInfo) scheduleInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
+        if (reminderContainer) reminderContainer.style.display = 'none';
 
         calculateTurnaround();
 
@@ -7141,6 +7237,7 @@ window.openTrackingModal = function(reportId) {
         if (scheduleInfo) scheduleInfo.style.display = 'none';
         if (turnaroundInfo) turnaroundInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
+        if (reminderContainer) reminderContainer.style.display = 'none';
 
         if (reworkBtn) reworkBtn.classList.add('hidden');
         if (approveBtn) {
@@ -7157,11 +7254,64 @@ window.openTrackingModal = function(reportId) {
       }
 
       // Final Scroll Reset
-      resetModalScroll(trackingModal);
+      if (typeof resetModalScroll === 'function') {
+        resetModalScroll(trackingModal);
+      }
     })
     .catch(err => {
       console.error("Error loading tracking details:", err);
       if (typeof showToast === 'function') showToast("Error loading project details.", "error");
+    });
+};
+
+// ==========================================
+// 🔔 SEND DEADLINE REMINDER / OVERDUE NOTICE
+// ==========================================
+window.sendDeadlineReminder = function() {
+  if (!currentTrackingReportId) return;
+
+  const btnReminder = document.getElementById('btn-send-deadline-reminder');
+  const btnText = document.getElementById('btn-reminder-text');
+  const originalText = btnText ? btnText.textContent : "Send Due Reminder";
+
+  if (btnReminder) {
+    btnReminder.disabled = true;
+    btnReminder.style.opacity = '0.7';
+    if (btnText) btnText.textContent = "Sending Alert...";
+  }
+
+  const currentUserId = sessionStorage.getItem("userId");
+
+  fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/remind-due`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({ userId: currentUserId })
+  })
+    .then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send deadline reminder.");
+      return data;
+    })
+    .then(data => {
+      if (typeof showToast === 'function') {
+        showToast(data.message || "Reminder successfully issued to the City Engineer!", "success");
+      }
+      // Re-populate modal to instantly show locked cooldown state & update the audit history
+      openTrackingModal(currentTrackingReportId);
+    })
+    .catch(err => {
+      console.error("Reminder Error:", err);
+      if (typeof showToast === 'function') {
+        showToast(err.message || "Failed to issue reminder.", "error");
+      }
+      if (btnReminder) {
+        btnReminder.disabled = false;
+        btnReminder.style.opacity = '1';
+        if (btnText) btnText.textContent = originalText;
+      }
     });
 };
 

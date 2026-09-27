@@ -1223,11 +1223,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-// 3. SEND TO DATABASE
+// 3. SEND TO DATABASE: VALIDATE REPORT
   if (btnConfirmAccept) {
-    // ⬇️ WE CATCH THE EVENT 'e' HERE ⬇️
     btnConfirmAccept.addEventListener('click', (e) => {
-      e.preventDefault(); // THIS STOPS THE BROWSER FROM HANGING UP!
+      e.preventDefault();
 
       if (!currentReviewReportId) {
         console.error("No report ID found to update!");
@@ -1237,29 +1236,36 @@ document.addEventListener('DOMContentLoaded', () => {
       btnConfirmAccept.innerHTML = "⏳ Validating...";
       btnConfirmAccept.disabled = true;
 
+      const currentUserId = sessionStorage.getItem("userId");
+
       fetch(`${API_BASE_URL}/api/reports/${currentReviewReportId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: "Validated" })
+        body: JSON.stringify({
+          status: "Validated",
+          userId: currentUserId
+        })
       })
-        .then(response => {
+        .then(async response => {
           if (!response.ok) throw new Error("Failed to validate report");
           return response.text();
         })
         .then(text => {
-          // ✅ Trigger the Toast instead of the alert!
-          showToast("Report successfully validated!");
+          if (text === "ARCHIVED_NO_IMAGE") {
+            showToast("Report has no damage evidence. Inspected and auto-archived!", "info");
+          } else {
+            showToast("Report successfully validated and added to priority pool!", "success");
+          }
 
           acceptConfirmModal.classList.add('hidden');
           document.getElementById('review-modal').classList.add('hidden');
 
-          // Reload the table
           if (typeof loadAdminReports === 'function') loadAdminReports();
+          if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
         })
         .catch(error => {
           console.error("Error validating report:", error);
-          // ❌ Trigger the Error Toast!
-          showToast("❌ Failed to connect. Press F12 for details.", true);
+          showToast("❌ Failed to connect. Press F12 for details.", "error");
         })
         .finally(() => {
           btnConfirmAccept.innerHTML = "Yes, Validate It";
@@ -6110,10 +6116,14 @@ window.executePriorityDispatch = function(event) {
   }
 
   const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+  const currentUserId = sessionStorage.getItem("userId") || '';
 
-  // Call the Java Endpoint
-  fetch(`${baseUrl}/api/reports/dispatch-masterlist`, {
-    method: 'PUT'
+  // 🚀 Call the Java Endpoint with userId for strict audit logging
+  fetch(`${baseUrl}/api/reports/dispatch-masterlist?userId=${currentUserId}`, {
+    method: 'PUT',
+    headers: {
+      'ngrok-skip-browser-warning': 'true'
+    }
   })
     .then(async response => {
       const text = await response.text();
@@ -6136,9 +6146,9 @@ window.executePriorityDispatch = function(event) {
     .catch(err => {
       console.warn("Dispatch result:", err.message);
 
-      // Revised friendly message when there are no reports
+      // Revised friendly message when there are no valid reports
       if (err.message === "EMPTY_QUEUE") {
-        showToast("No reports in priority list to dispatch.", "warning");
+        showToast("No validated reports with photo evidence available to dispatch.", "warning");
       } else {
         showToast("Error dispatching Masterlist. Is the server running?", "error");
       }

@@ -2453,6 +2453,17 @@ window.openCEOManageModal = function(reportId) {
   const countdownBadge = document.getElementById('ceo-target-countdown-badge');
   if (countdownBadge) countdownBadge.style.display = 'none';
 
+  // Reset Extension Sections
+  const extSection = document.getElementById('ceo-extension-section');
+  if (extSection) extSection.style.display = 'none';
+  const extPendingCard = document.getElementById('ceo-extension-pending-card');
+  if (extPendingCard) extPendingCard.style.display = 'none';
+  const extRejectedCard = document.getElementById('ceo-extension-rejected-card');
+  if (extRejectedCard) extRejectedCard.style.display = 'none';
+  if (typeof toggleCeoExtensionForm === 'function') {
+    toggleCeoExtensionForm(false);
+  }
+
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
     btnStartRepair.style.display = 'inline-block';
@@ -2491,6 +2502,10 @@ window.openCEOManageModal = function(reportId) {
     .then(report => {
       currentCEOLat = report.latitude;
       currentCEOLng = report.longitude;
+
+      // Extract unified status once
+      const status = String(report.status || '');
+      const currentStatus = status.toLowerCase();
 
       document.getElementById('ceo-modal-prj-id').innerText = `#PRJ-${String(report.id).padStart(4, '0')}`;
       document.getElementById('ceo-modal-brgy').innerText = report.barangay ? report.barangay.barangayName : 'Unknown';
@@ -2552,65 +2567,53 @@ window.openCEOManageModal = function(reportId) {
       }
 
       // ==========================================
-// ⏱️ UPDATE EXTENSION STATUS IN CEO MODAL
-// ==========================================
-      const extSection = document.getElementById('ceo-extension-section');
-      const extPendingCard = document.getElementById('ceo-extension-pending-card');
-      const extRejectedCard = document.getElementById('ceo-extension-rejected-card');
-      const extBtnContainer = document.getElementById('ceo-extension-btn-container');
-      const extDisplayDate = document.getElementById('ceo-extension-display-date');
-      const extDisplayReason = document.getElementById('ceo-extension-display-reason');
-      const extDateInput = document.getElementById('ceo-extension-target-date');
+      // ⏱️ UPDATE EXTENSION STATUS IN CEO MODAL
+      // ==========================================
+      const extSectionEl = document.getElementById('ceo-extension-section');
+      const extPendingCardEl = document.getElementById('ceo-extension-pending-card');
+      const extRejectedCardEl = document.getElementById('ceo-extension-rejected-card');
+      const extBtnContainerEl = document.getElementById('ceo-extension-btn-container');
+      const extDisplayDateEl = document.getElementById('ceo-extension-display-date');
+      const extDisplayReasonEl = document.getElementById('ceo-extension-display-reason');
+      const extDateInputEl = document.getElementById('ceo-extension-target-date');
 
-      const currentStatus = String(report.status || '').toLowerCase();
-
-// Only display extension controls if project is currently In Progress
+      // Only display extension controls if project is currently In Progress
       if (currentStatus.includes('progress')) {
-        if (extSection) extSection.style.display = 'block';
+        if (extSectionEl) extSectionEl.style.display = 'block';
 
         // Set min date to tomorrow or existing target date + 1 day
-        if (extDateInput) {
+        if (extDateInputEl) {
           const baseDate = report.targetCompletionDate ? new Date(report.targetCompletionDate) : new Date();
           baseDate.setDate(baseDate.getDate() + 1);
-          extDateInput.min = baseDate.toISOString().split('T')[0];
+          extDateInputEl.min = baseDate.toISOString().split('T')[0];
         }
 
         if (report.extensionStatus === 'PENDING') {
-          // Awaiting CPDO Decision
-          if (extPendingCard) extPendingCard.style.display = 'block';
-          if (extRejectedCard) extRejectedCard.style.display = 'none';
-          if (extBtnContainer) extBtnContainer.style.display = 'none';
-          if (extDisplayDate) extDisplayDate.textContent = report.extensionTargetDate || 'Pending';
-          if (extDisplayReason) extDisplayReason.textContent = report.extensionReason || '-';
+          if (extPendingCardEl) extPendingCardEl.style.display = 'block';
+          if (extRejectedCardEl) extRejectedCardEl.style.display = 'none';
+          if (extBtnContainerEl) extBtnContainerEl.style.display = 'none';
+          if (extDisplayDateEl) extDisplayDateEl.textContent = report.extensionTargetDate || 'Pending';
+          if (extDisplayReasonEl) extDisplayReasonEl.textContent = report.extensionReason || '-';
           toggleCeoExtensionForm(false);
-
         } else if (report.extensionStatus === 'REJECTED') {
-          // Rejected by CPDO -> can re-apply if needed
-          if (extPendingCard) extPendingCard.style.display = 'none';
-          if (extRejectedCard) extRejectedCard.style.display = 'block';
-          if (extBtnContainer) extBtnContainer.style.display = 'flex';
+          if (extPendingCardEl) extPendingCardEl.style.display = 'none';
+          if (extRejectedCardEl) extRejectedCardEl.style.display = 'block';
+          if (extBtnContainerEl) extBtnContainerEl.style.display = 'flex';
           toggleCeoExtensionForm(false);
-
         } else {
-          // Normal In-Progress state -> Ready to request if needed
-          if (extPendingCard) extPendingCard.style.display = 'none';
-          if (extRejectedCard) extRejectedCard.style.display = 'none';
-          if (extBtnContainer) extBtnContainer.style.display = 'flex';
+          if (extPendingCardEl) extPendingCardEl.style.display = 'none';
+          if (extRejectedCardEl) extRejectedCardEl.style.display = 'none';
+          if (extBtnContainerEl) extBtnContainerEl.style.display = 'flex';
           toggleCeoExtensionForm(false);
         }
-
       } else {
-        // If not In Progress (Dispatched, Completed, Deferred, Closed), hide the extension section
-        if (extSection) extSection.style.display = 'none';
+        if (extSectionEl) extSectionEl.style.display = 'none';
       }
 
       // ========================================================
       // 🏷️ STATUS BADGE STYLING
       // ========================================================
-      const status = String(report.status || '');
-      const currentStatus = status.toLowerCase();
       const statusBadge = document.getElementById('ceo-modal-current-status');
-
       if (statusBadge) {
         statusBadge.innerText = status;
         if (currentStatus === 'pending budget' || currentStatus.includes('defer')) {
@@ -2821,6 +2824,99 @@ window.openCEOManageModal = function(reportId) {
     .catch(err => {
       console.error("Error populating CEO modal:", err);
       document.getElementById('ceo-modal-prj-id').innerText = "Database Error!";
+    });
+};
+
+// ==========================================
+// ⏱️ CEO: TOGGLE EXTENSION FORM
+// ==========================================
+window.toggleCeoExtensionForm = function(show) {
+  const form = document.getElementById('ceo-extension-form');
+  const btnContainer = document.getElementById('ceo-extension-btn-container');
+  const dateInput = document.getElementById('ceo-extension-target-date');
+  const reasonInput = document.getElementById('ceo-extension-reason-input');
+
+  if (show) {
+    if (form) form.classList.remove('hidden');
+    if (btnContainer) btnContainer.style.display = 'none';
+    if (dateInput) dateInput.focus();
+  } else {
+    if (form) form.classList.add('hidden');
+    if (btnContainer) btnContainer.style.display = 'flex';
+    if (dateInput) dateInput.value = '';
+    if (reasonInput) reasonInput.value = '';
+  }
+};
+
+// ==========================================
+// ⏱️ CEO: SUBMIT EXTENSION REQUEST
+// ==========================================
+window.submitCeoExtensionRequest = function() {
+  if (!currentCEOProjectID) {
+    if (typeof showToast === 'function') showToast("No active report selected.", "error");
+    return;
+  }
+
+  const dateInput = document.getElementById('ceo-extension-target-date');
+  const reasonInput = document.getElementById('ceo-extension-reason-input');
+  const btnSubmit = document.getElementById('btn-submit-extension');
+
+  const extensionTargetDate = dateInput ? dateInput.value : '';
+  const extensionReason = reasonInput ? reasonInput.value.trim() : '';
+
+  if (!extensionTargetDate) {
+    if (typeof showToast === 'function') showToast("Please select a proposed new target date.", "error");
+    return;
+  }
+
+  if (!extensionReason) {
+    if (typeof showToast === 'function') showToast("Please provide a justification for the extension request.", "error");
+    return;
+  }
+
+  const originalText = btnSubmit ? btnSubmit.innerHTML : "Submit to CPDO";
+  if (btnSubmit) {
+    btnSubmit.innerHTML = "⏳ Submitting...";
+    btnSubmit.disabled = true;
+  }
+
+  const currentUserId = sessionStorage.getItem("userId");
+
+  fetch(`${API_BASE_URL}/api/reports/${currentCEOProjectID}/request-extension`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({
+      extensionTargetDate: extensionTargetDate,
+      extensionReason: extensionReason,
+      userId: currentUserId
+    })
+  })
+    .then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit extension request.");
+      return data;
+    })
+    .then(data => {
+      if (typeof showToast === 'function') {
+        showToast(data.message || "Extension request submitted to CPDO!", "success");
+      }
+      toggleCeoExtensionForm(false);
+      openCEOManageModal(currentCEOProjectID);
+    })
+    .catch(err => {
+      console.error(err);
+      if (typeof showToast === 'function') {
+        showToast(err.message || "Error submitting extension request.", "error");
+      }
+    })
+    .finally(() => {
+      if (btnSubmit) {
+        btnSubmit.innerHTML = originalText;
+        btnSubmit.disabled = false;
+      }
     });
 };
 

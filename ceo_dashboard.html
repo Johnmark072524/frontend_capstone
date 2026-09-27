@@ -808,6 +808,99 @@
               <span id="ceo-target-date-hint" style="font-size: 11.5px; color: #0284c7; font-weight: 600;"></span>
             </div>
           </div>
+
+          <!-- ⏱️ CEO TIME EXTENSION REQUEST COMPONENT -->
+          <div id="ceo-extension-section" style="margin-top: 15px; display: none;">
+
+            <!-- 1. PENDING EXTENSION ALERT (Shown when extensionStatus === 'PENDING') -->
+            <div id="ceo-extension-pending-card" style="display: none; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong style="color: #92400e; font-size: 12.5px;">⏳ Extension Request Under CPDO Review</strong>
+                <span style="background: #f59e0b; color: white; padding: 2px 7px; border-radius: 4px; font-size: 10.5px; font-weight: 700;">AWAITING CPDO</span>
+              </div>
+              <div style="font-size: 12px; color: #78350f;">
+                <div>📅 <strong>Requested Target Date:</strong> <span id="ceo-extension-display-date" style="font-weight: 700;">-</span></div>
+                <div style="margin-top: 3px;">💬 <strong>Justification:</strong> <span id="ceo-extension-display-reason">-</span></div>
+              </div>
+            </div>
+
+            <!-- 2. REJECTED EXTENSION ALERT (Shown when extensionStatus === 'REJECTED') -->
+            <div id="ceo-extension-rejected-card" style="display: none; background: #fef2f2; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong style="color: #991b1b; font-size: 12.5px;">❌ Previous Extension Request Denied</strong>
+                <span style="background: #ef4444; color: white; padding: 2px 7px; border-radius: 4px; font-size: 10.5px; font-weight: 700;">DENIED</span>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: #7f1d1d;">
+                The CPDO Admin denied the requested extension. The active deadline remains unchanged. You may re-submit a revised justification if unforeseen site conditions persist.
+              </p>
+            </div>
+
+            <!-- 3. TOGGLE ACTION BUTTON -->
+            <div id="ceo-extension-btn-container" style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+              <button
+                type="button"
+                id="btn-open-extension-form"
+                onclick="toggleCeoExtensionForm(true)"
+                style="background: #ffffff; border: 1px solid #cbd5e1; color: #334155; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;"
+                onmouseover="this.style.background='#f1f5f9'"
+                onmouseout="this.style.background='#ffffff'"
+              >
+                <span>⏱️</span> Request Schedule Extension
+              </button>
+            </div>
+
+            <!-- 4. SLIDE-DOWN REQUEST FORM -->
+            <div id="ceo-extension-form" class="hidden" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+                <span>⏱️</span> Formal Civil Works Schedule Extension
+              </h4>
+              <p style="margin: 0 0 12px 0; font-size: 11.5px; color: #64748b;">
+                Submit formal justification for civil works delay (e.g., continuous monsoon rain, concrete curing, material shipment delay) for CPDO administrative review.
+              </p>
+
+              <div style="margin-bottom: 10px;">
+                <label for="ceo-extension-target-date" style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">
+                  Proposed New Target Completion Date <span style="color: #ef4444;">*</span>
+                </label>
+                <input
+                  type="date"
+                  id="ceo-extension-target-date"
+                  style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; font-family: inherit; background: white;"
+                >
+              </div>
+
+              <div style="margin-bottom: 12px;">
+                <label for="ceo-extension-reason-input" style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">
+                  Detailed Justification / Site Conditions <span style="color: #ef4444;">*</span>
+                </label>
+                <textarea
+                  id="ceo-extension-reason-input"
+                  placeholder="Explain site conditions causing the delay (e.g., Continuous heavy monsoon rains prevented PCCP asphalt pouring; concrete requires 4 extra curing days)..."
+                  style="width: 100%; min-height: 75px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-family: inherit; resize: vertical; background: white;"
+                ></textarea>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button
+                  type="button"
+                  onclick="toggleCeoExtensionForm(false)"
+                  style="padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  id="btn-submit-extension"
+                  onclick="submitCeoExtensionRequest()"
+                  style="background: #0284c7; border: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; cursor: pointer; color: white; font-weight: 700;"
+                >
+                  Submit to CPDO
+                </button>
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
         <!-- 🏁 SECTION 3: PROJECT RESOLUTION (UPLOAD COMPLETION) -->
@@ -850,7 +943,7 @@
 
         <!-- ✅ SECTION 4: COMPLETED EVIDENCE (PROOF DISPLAY) -->
         <div id="ceo-completed-evidence-section" class="report-section" style="display: none; background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-top: 20px;">
-          <h3 class="section-title" style="color: #16a34a; margin-bottom: 10px;"><span class="icon">✅</span> Repair Completed</h3>
+          <h3 class="section-title" style="color: #16434a; margin-bottom: 10px;"><span class="icon">✅</span> Repair Completed</h3>
           <div style="margin-bottom: 15px;">
             <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
             <div style="margin-top: 10px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">

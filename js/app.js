@@ -2551,6 +2551,59 @@ window.openCEOManageModal = function(reportId) {
         }
       }
 
+      // ==========================================
+// ⏱️ UPDATE EXTENSION STATUS IN CEO MODAL
+// ==========================================
+      const extSection = document.getElementById('ceo-extension-section');
+      const extPendingCard = document.getElementById('ceo-extension-pending-card');
+      const extRejectedCard = document.getElementById('ceo-extension-rejected-card');
+      const extBtnContainer = document.getElementById('ceo-extension-btn-container');
+      const extDisplayDate = document.getElementById('ceo-extension-display-date');
+      const extDisplayReason = document.getElementById('ceo-extension-display-reason');
+      const extDateInput = document.getElementById('ceo-extension-target-date');
+
+      const currentStatus = String(report.status || '').toLowerCase();
+
+// Only display extension controls if project is currently In Progress
+      if (currentStatus.includes('progress')) {
+        if (extSection) extSection.style.display = 'block';
+
+        // Set min date to tomorrow or existing target date + 1 day
+        if (extDateInput) {
+          const baseDate = report.targetCompletionDate ? new Date(report.targetCompletionDate) : new Date();
+          baseDate.setDate(baseDate.getDate() + 1);
+          extDateInput.min = baseDate.toISOString().split('T')[0];
+        }
+
+        if (report.extensionStatus === 'PENDING') {
+          // Awaiting CPDO Decision
+          if (extPendingCard) extPendingCard.style.display = 'block';
+          if (extRejectedCard) extRejectedCard.style.display = 'none';
+          if (extBtnContainer) extBtnContainer.style.display = 'none';
+          if (extDisplayDate) extDisplayDate.textContent = report.extensionTargetDate || 'Pending';
+          if (extDisplayReason) extDisplayReason.textContent = report.extensionReason || '-';
+          toggleCeoExtensionForm(false);
+
+        } else if (report.extensionStatus === 'REJECTED') {
+          // Rejected by CPDO -> can re-apply if needed
+          if (extPendingCard) extPendingCard.style.display = 'none';
+          if (extRejectedCard) extRejectedCard.style.display = 'block';
+          if (extBtnContainer) extBtnContainer.style.display = 'flex';
+          toggleCeoExtensionForm(false);
+
+        } else {
+          // Normal In-Progress state -> Ready to request if needed
+          if (extPendingCard) extPendingCard.style.display = 'none';
+          if (extRejectedCard) extRejectedCard.style.display = 'none';
+          if (extBtnContainer) extBtnContainer.style.display = 'flex';
+          toggleCeoExtensionForm(false);
+        }
+
+      } else {
+        // If not In Progress (Dispatched, Completed, Deferred, Closed), hide the extension section
+        if (extSection) extSection.style.display = 'none';
+      }
+
       // ========================================================
       // 🏷️ STATUS BADGE STYLING
       // ========================================================
@@ -6791,7 +6844,7 @@ window.openTrackingModal = function(reportId) {
   if (reworkForm) reworkForm.classList.add('hidden');
   if (reworkInput) reworkInput.value = '';
 
-  // 3. Reset reminder & scheduling rows before fetch
+  // 3. Reset reminder, scheduling, & extension review rows before fetch
   const reminderContainer = document.getElementById('track-modal-reminder-container');
   if (reminderContainer) reminderContainer.style.display = 'none';
 
@@ -6809,6 +6862,12 @@ window.openTrackingModal = function(reportId) {
 
   const deferredAlert = document.getElementById('track-modal-deferred-alert');
   if (deferredAlert) deferredAlert.style.display = 'none';
+
+  const extensionAlert = document.getElementById('track-modal-extension-alert');
+  if (extensionAlert) extensionAlert.style.display = 'none';
+  if (typeof toggleExtensionRemarksForm === 'function') {
+    toggleExtensionRemarksForm(false);
+  }
 
   // 4. Reset accordion to collapsed state and zero out timeline scroll
   const timelineContainer = document.getElementById('track-modal-timeline-container');
@@ -6903,6 +6962,11 @@ window.openTrackingModal = function(reportId) {
       const reworkInstructions = document.getElementById('track-modal-rework-instructions');
       const deferredRemarks = document.getElementById('track-modal-deferred-remarks');
 
+      // ⏱️ Extension Request Review Elements
+      const extAlert = document.getElementById('track-modal-extension-alert');
+      const extDate = document.getElementById('track-modal-extension-date');
+      const extReason = document.getElementById('track-modal-extension-reason');
+
       // 🔔 Reminder Elements
       const reminderHint = document.getElementById('track-modal-reminder-hint');
       const btnReminder = document.getElementById('btn-send-deadline-reminder');
@@ -6931,6 +6995,15 @@ window.openTrackingModal = function(reportId) {
         if (reworkInstructions) reworkInstructions.textContent = report.adminRemarks;
       } else {
         if (reworkAlert) reworkAlert.style.display = 'none';
+      }
+
+      // ⏱️ EXTENSION REQUEST CHECK (If CEO has submitted a pending extension)
+      if (report.extensionStatus === 'PENDING') {
+        if (extAlert) extAlert.style.display = 'block';
+        if (extDate) extDate.textContent = report.extensionTargetDate || 'N/A';
+        if (extReason) extReason.textContent = report.extensionReason || 'No justification provided.';
+      } else {
+        if (extAlert) extAlert.style.display = 'none';
       }
 
       // ⏳ LIVE COUNTDOWN & REMINDER CONTROLLER
@@ -6975,11 +7048,9 @@ window.openTrackingModal = function(reportId) {
 
         // 🔔 REMINDER BUTTON & 12-HOUR DATABASE COOLDOWN LOGIC
         if (reminderContainer && btnReminder) {
-          // Rule: Show reminder row ONLY if due in <= 2 days or already overdue
           if (diffDays <= 2) {
             reminderContainer.style.display = 'flex';
 
-            // Check 12-hour database cooldown
             let inCooldown = false;
             let lastSentFormatted = '';
 
@@ -6996,7 +7067,6 @@ window.openTrackingModal = function(reportId) {
             }
 
             if (inCooldown) {
-              // 🛡️ LOCKED STATE (COOLDOWN ACTIVE)
               btnReminder.disabled = true;
               btnReminder.style.backgroundColor = '#94a3b8';
               btnReminder.style.color = '#ffffff';
@@ -7008,27 +7078,23 @@ window.openTrackingModal = function(reportId) {
                 reminderHint.textContent = `Notice already issued to CEO at ${lastSentFormatted}. (12h cooldown active)`;
               }
             } else {
-              // 🚀 ACTIVE STATE (READY TO SEND)
               btnReminder.disabled = false;
               btnReminder.style.cursor = 'pointer';
               btnReminder.style.opacity = '1';
 
               if (diffDays < 0) {
-                // Overdue Urgent Alert
                 btnReminder.style.backgroundColor = '#dc2626';
                 btnReminder.style.color = '#ffffff';
                 if (btnReminderIcon) btnReminderIcon.textContent = '🚨';
                 if (btnReminderText) btnReminderText.textContent = 'Issue Overdue Notice';
                 if (reminderHint) reminderHint.textContent = 'Project is overdue. Dispatch an urgent escalation notice to the City Engineer.';
               } else if (diffDays === 0) {
-                // Due Today Alert
                 btnReminder.style.backgroundColor = '#ea580c';
                 btnReminder.style.color = '#ffffff';
                 if (btnReminderIcon) btnReminderIcon.textContent = '⚠️';
                 if (btnReminderText) btnReminderText.textContent = 'Alert CEO: Due Today';
                 if (reminderHint) reminderHint.textContent = 'Deadline is today. Send a priority alert to the engineering team.';
               } else {
-                // Approaching Deadline (1 or 2 days left)
                 btnReminder.style.backgroundColor = '#f59e0b';
                 btnReminder.style.color = '#ffffff';
                 if (btnReminderIcon) btnReminderIcon.textContent = '⚠️';
@@ -7037,7 +7103,6 @@ window.openTrackingModal = function(reportId) {
               }
             }
           } else {
-            // More than 2 days remaining -> keep clean
             reminderContainer.style.display = 'none';
           }
         }
@@ -7095,6 +7160,7 @@ window.openTrackingModal = function(reportId) {
         if (scheduleInfo) scheduleInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
         if (reminderContainer) reminderContainer.style.display = 'none';
+        if (extAlert) extAlert.style.display = 'none';
 
         calculateTurnaround();
 
@@ -7103,7 +7169,6 @@ window.openTrackingModal = function(reportId) {
           window.loadSecureImage('track-modal-proof-image', report.proofOfRepairImage);
         }
 
-        // Action Buttons: Require Rework vs Approve & Close
         if (reworkBtn) {
           reworkBtn.classList.remove('hidden');
           if (reworkText) reworkText.textContent = 'Require Rework';
@@ -7125,7 +7190,6 @@ window.openTrackingModal = function(reportId) {
         }
         if (statusText) statusText.textContent = 'Project is on fiscal hold. Review deferral remarks below.';
 
-        // Show Deferred notice and hide completion/schedule info
         if (deferredAlert) {
           deferredAlert.style.display = 'block';
           if (deferredRemarks) {
@@ -7138,8 +7202,8 @@ window.openTrackingModal = function(reportId) {
         if (turnaroundInfo) turnaroundInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
         if (reminderContainer) reminderContainer.style.display = 'none';
+        if (extAlert) extAlert.style.display = 'none';
 
-        // 🚀 DUAL BUTTONS: [❌ Reject Deferral] vs [📁 Acknowledge & Archive]
         if (reworkBtn) {
           reworkBtn.classList.remove('hidden');
           if (reworkText) reworkText.textContent = 'Reject Deferral';
@@ -7179,7 +7243,6 @@ window.openTrackingModal = function(reportId) {
 
         calculateCountdown();
 
-        // Locked buttons while work is underway
         if (reworkBtn) reworkBtn.classList.add('hidden');
         if (approveBtn) {
           approveBtn.disabled = true;
@@ -7203,6 +7266,7 @@ window.openTrackingModal = function(reportId) {
         if (scheduleInfo) scheduleInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
         if (reminderContainer) reminderContainer.style.display = 'none';
+        if (extAlert) extAlert.style.display = 'none';
 
         calculateTurnaround();
 
@@ -7238,6 +7302,7 @@ window.openTrackingModal = function(reportId) {
         if (turnaroundInfo) turnaroundInfo.style.display = 'none';
         if (targetBadge) targetBadge.style.display = 'none';
         if (reminderContainer) reminderContainer.style.display = 'none';
+        if (extAlert) extAlert.style.display = 'none';
 
         if (reworkBtn) reworkBtn.classList.add('hidden');
         if (approveBtn) {
@@ -7261,6 +7326,103 @@ window.openTrackingModal = function(reportId) {
     .catch(err => {
       console.error("Error loading tracking details:", err);
       if (typeof showToast === 'function') showToast("Error loading project details.", "error");
+    });
+};
+
+// ==========================================
+// ⏱️ CPDO ADMIN: TOGGLE EXTENSION REJECT REMARKS FORM
+// ==========================================
+window.toggleExtensionRemarksForm = function(show) {
+  const form = document.getElementById('track-modal-extension-reject-form');
+  const actions = document.getElementById('track-modal-extension-actions');
+  const input = document.getElementById('extension-reject-remarks-input');
+
+  if (show) {
+    if (form) form.classList.remove('hidden');
+    if (actions) actions.style.display = 'none';
+    if (input) input.focus();
+  } else {
+    if (form) form.classList.add('hidden');
+    if (actions) actions.style.display = 'flex';
+    if (input) input.value = '';
+  }
+};
+
+// ==========================================
+// ⏱️ CPDO ADMIN: REVIEW EXTENSION (APPROVE / REJECT)
+// ==========================================
+window.handleReviewExtension = function(decision) {
+  if (!currentTrackingReportId) return;
+
+  const isApproved = decision === 'APPROVED';
+  const remarksInput = document.getElementById('extension-reject-remarks-input');
+  const remarks = (!isApproved && remarksInput) ? remarksInput.value.trim() : '';
+
+  if (!isApproved && !remarks) {
+    if (typeof showToast === 'function') showToast("Please provide a reason for rejecting the extension.", "error");
+    return;
+  }
+
+  const btnApprove = document.getElementById('btn-approve-extension');
+  const btnConfirmReject = document.getElementById('btn-confirm-reject-extension');
+
+  if (isApproved && btnApprove) {
+    btnApprove.disabled = true;
+    btnApprove.textContent = "⏳ Approving...";
+  } else if (!isApproved && btnConfirmReject) {
+    btnConfirmReject.disabled = true;
+    btnConfirmReject.textContent = "⏳ Rejecting...";
+  }
+
+  const currentUserId = sessionStorage.getItem("userId");
+
+  fetch(`${API_BASE_URL}/api/reports/${currentTrackingReportId}/review-extension`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({
+      decision: decision,
+      adminRemarks: remarks,
+      userId: currentUserId
+    })
+  })
+    .then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to process extension review.");
+      return data;
+    })
+    .then(data => {
+      const toastMsg = isApproved
+        ? "Schedule extension approved! Target completion date updated."
+        : "Schedule extension rejected. The active target date remains unchanged.";
+
+      if (typeof showToast === 'function') showToast(toastMsg, isApproved ? "success" : "warning");
+
+      toggleExtensionRemarksForm(false);
+
+      // Re-populate modal to show updated countdown and audit trail
+      openTrackingModal(currentTrackingReportId);
+
+      if (typeof loadTrackingData === 'function') loadTrackingData();
+      if (typeof loadAdminDashboardData === 'function') loadAdminDashboardData();
+    })
+    .catch(err => {
+      console.error("Extension Review Error:", err);
+      if (typeof showToast === 'function') {
+        showToast(err.message || "Error processing extension decision.", "error");
+      }
+    })
+    .finally(() => {
+      if (btnApprove) {
+        btnApprove.disabled = false;
+        btnApprove.textContent = "✅ Approve Extension";
+      }
+      if (btnConfirmReject) {
+        btnConfirmReject.disabled = false;
+        btnConfirmReject.textContent = "Confirm Rejection";
+      }
     });
 };
 
@@ -7299,7 +7461,6 @@ window.sendDeadlineReminder = function() {
       if (typeof showToast === 'function') {
         showToast(data.message || "Reminder successfully issued to the City Engineer!", "success");
       }
-      // Re-populate modal to instantly show locked cooldown state & update the audit history
       openTrackingModal(currentTrackingReportId);
     })
     .catch(err => {
@@ -7396,7 +7557,6 @@ window.openReworkForm = function() {
   const formTitle = document.getElementById('rework-form-title');
   const btnConfirm = document.getElementById('btn-confirm-rework');
 
-  // Adapt form dynamically based on whether rejecting deferral or demanding rework
   if (currentTrackingReportStatus === 'pending budget' || currentTrackingReportStatus.includes('defer')) {
     if (formTitle) formTitle.textContent = "Reason for Rejecting Deferral";
     if (reworkInput) {

@@ -3620,27 +3620,38 @@ function handleLogin() {
       return response.json();
     })
     .then(data => {
-      // 🚀 MFA TRIGGER: Move to Step 2
-      if (data.mfaRequired) {
-        sessionStorage.setItem("tempUserId", data.userId);
+    // 🚀 MFA TRIGGER: Move to Step 2
+    if (data.mfaRequired) {
+      sessionStorage.setItem("tempUserId", data.userId);
 
-        const step1 = document.getElementById("login-step-1");
-        const step2 = document.getElementById("login-step-2");
+      const step1 = document.getElementById("login-step-1");
+      const step2 = document.getElementById("login-step-2");
 
-        if (step1) step1.style.display = "none";
-        if (step2) step2.style.display = "block";
+      if (step1) step1.style.display = "none";
+      if (step2) step2.style.display = "block";
 
-        if (typeof showToast === "function") {
-          showToast(data.message || "A 6-digit code has been sent to your email.", "success");
-        }
+      // 🎯 Show Demo OTP in the toast banner for 10 seconds (10000ms)
+      const toastMsg = data.demoOtp
+        ? `🔑 DEMO OTP: [ ${data.demoOtp} ] (Expires in 5 mins)`
+        : (data.message || "A 6-digit code has been sent to your email.");
 
-        if (loginBtn) {
-          loginBtn.innerHTML = "Log in ➔";
-          loginBtn.disabled = false;
-          loginBtn.style.opacity = "1";
-        }
+      if (typeof showToast === "function") {
+        showToast(toastMsg, "success", 10000);
       }
-    })
+
+      // Optional convenience: auto-fill the field so you don't even have to type it
+      const otpField = document.getElementById("mfa-code");
+      if (otpField && data.demoOtp) {
+        otpField.value = data.demoOtp;
+      }
+
+      if (loginBtn) {
+        loginBtn.innerHTML = "Log in ➔";
+        loginBtn.disabled = false;
+        loginBtn.style.opacity = "1";
+      }
+    }
+  })
     .catch(error => {
       // Clear password field on failed attempt
       if (passwordInput) passwordInput.value = "";
@@ -4527,7 +4538,7 @@ if (btnAcceptValidate) {
       })
       .then(() => {
         if (typeof showToast === 'function') {
-          showToast("Report validated and queued for dispatch!", "success");
+          showToast("Report validated!", "success");
         }
         currentReviewReportId = null;
         closeReviewModal();
@@ -5546,7 +5557,9 @@ window.goToAddReport = function() {
 // ==========================================
 // UNIFIED TOAST NOTIFICATION SYSTEM
 // ==========================================
-function showToast(message, type = 'success') {
+let toastTimeout = null;
+
+function showToast(message, type = 'success', duration = 4000) {
   const toast = document.getElementById('toast-notification');
   const toastMsg = document.getElementById('toast-message');
   const toastIcon = document.getElementById('toast-icon');
@@ -5554,6 +5567,11 @@ function showToast(message, type = 'success') {
   if (!toast || !toastMsg || !toastIcon) {
     console.warn("Warning: Could not find toast HTML elements.");
     return;
+  }
+
+  // Clear any existing hide timer so new toasts get the full duration
+  if (toastTimeout) {
+    clearTimeout(toastTimeout);
   }
 
   // 1. Set the text and icon
@@ -5570,11 +5588,16 @@ function showToast(message, type = 'success') {
     toast.style.transform = "translateY(0)";
   }, 10);
 
-  // 4. Hide it smoothly after 4 seconds
-  setTimeout(() => {
+  // 4. Hide it smoothly after the specified duration (default: 4000ms / 4s)
+  toastTimeout = setTimeout(() => {
     toast.style.opacity = "0";
     toast.style.transform = "translateY(-20px)";
-  }, 4000);
+    setTimeout(() => {
+      if (toast.style.opacity === "0") {
+        toast.style.display = "none";
+      }
+    }, 400);
+  }, duration);
 }
 // ==========================================
 // 0. FETCH ROADS FOR DROPDOWN

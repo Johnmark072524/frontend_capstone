@@ -4407,21 +4407,23 @@ window.closeReviewModal = function() {
 };
 
 // ==========================================
-// ADMIN DASHBOARD: LOCATE ON MAP BUTTON (WITH BOUNDARIES & STREETS)
+// ADMIN DASHBOARD: LOCATE ON MAP BUTTON (SAFE SCOPE)
 // ==========================================
-let adminReviewMap = null;
-let adminReviewMarker = null;
-let adminSjdmGeoJsonData = null;
-let adminBoundaryLayer = null;
-let adminCsjdmBounds = null;
+
+// Attach helpers to window to avoid duplicate 'let' declaration errors
+window.adminSjdmGeoJsonData = window.adminSjdmGeoJsonData || null;
+window.adminBoundaryLayer = window.adminBoundaryLayer || null;
+window.adminCsjdmBounds = window.adminCsjdmBounds || null;
 
 // Pre-fetch official CSJDM boundaries once
-fetch('sjdm_barangays.geojson')
-  .then(res => res.json())
-  .then(data => {
-    adminSjdmGeoJsonData = data;
-  })
-  .catch(err => console.error("Could not load sjdm_barangays.geojson for Admin:", err));
+if (!window.adminSjdmGeoJsonData) {
+  fetch('sjdm_barangays.geojson')
+    .then(res => res.json())
+    .then(data => {
+      window.adminSjdmGeoJsonData = data;
+    })
+    .catch(err => console.error("Could not load sjdm_barangays.geojson for Admin:", err));
+}
 
 function toggleAdminReviewMap() {
   const mapContainer = document.getElementById('admin-review-map-container');
@@ -4453,15 +4455,15 @@ function toggleAdminReviewMap() {
       shadowSize: [41, 41]
     });
 
-    // 1. Initialize Map with strict zoom limits and boundaries
+    // 1. Initialize Map with strict zoom limits and Google Hybrid layer
     if (!adminReviewMap) {
       adminReviewMap = L.map('admin-review-map', {
-        minZoom: 12,             // 🛑 Prevents zooming out to the whole world
-        maxZoom: 19,             // 🛑 Stops over-zooming past satellite resolution
-        maxBoundsViscosity: 0.7  // 🌊 Elastic boundary lock
+        minZoom: 12,             // Stops zooming out past CSJDM scale
+        maxZoom: 19,             // Stops over-zooming past satellite resolution
+        maxBoundsViscosity: 0.7  // Elastic boundary lock
       });
 
-      // 🛰️ GOOGLE HYBRID SATELLITE TILES (Shows detailed street names, roads & landmarks)
+      // 🛰️ GOOGLE HYBRID SATELLITE (Detailed street names, road lines & landmarks)
       L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
         maxZoom: 19,
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
@@ -4469,40 +4471,8 @@ function toggleAdminReviewMap() {
       }).addTo(adminReviewMap);
 
       // 2. Render CSJDM Barangay Boundaries
-      if (adminSjdmGeoJsonData) {
-        adminBoundaryLayer = L.geoJSON(adminSjdmGeoJsonData, {
-          style: {
-            color: '#3b82f6',       // Distinct Admin Blue border
-            weight: 2,
-            dashArray: '5, 5',
-            fillColor: '#2563eb',
-            fillOpacity: 0.05,
-            interactive: false
-          }
-        }).addTo(adminReviewMap);
-
-        // Lock camera boundaries to San Jose del Monte with breathing room
-        adminCsjdmBounds = adminBoundaryLayer.getBounds();
-        adminReviewMap.setMaxBounds(adminCsjdmBounds.pad(0.4));
-      }
-
-      // 3. Place Report Marker
-      adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon })
-        .addTo(adminReviewMap)
-        .bindPopup(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
-
-      adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
-
-    } else {
-      // If map exists, update view & marker position
-      adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
-      adminReviewMarker.setLatLng([currentReviewLat, currentReviewLng]);
-      adminReviewMarker.setIcon(redIcon);
-      adminReviewMarker.setPopupContent(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
-
-      // Ensure boundary layer is present if it finished fetching after first open
-      if (!adminBoundaryLayer && adminSjdmGeoJsonData) {
-        adminBoundaryLayer = L.geoJSON(adminSjdmGeoJsonData, {
+      if (window.adminSjdmGeoJsonData) {
+        window.adminBoundaryLayer = L.geoJSON(window.adminSjdmGeoJsonData, {
           style: {
             color: '#3b82f6',
             weight: 2,
@@ -4513,8 +4483,44 @@ function toggleAdminReviewMap() {
           }
         }).addTo(adminReviewMap);
 
-        adminCsjdmBounds = adminBoundaryLayer.getBounds();
-        adminReviewMap.setMaxBounds(adminCsjdmBounds.pad(0.4));
+        window.adminCsjdmBounds = window.adminBoundaryLayer.getBounds();
+        adminReviewMap.setMaxBounds(window.adminCsjdmBounds.pad(0.4));
+      }
+
+      // 3. Place Report Marker
+      adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon })
+        .addTo(adminReviewMap)
+        .bindPopup(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
+
+      adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
+
+    } else {
+      // Reuse existing map instance
+      adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
+
+      if (adminReviewMarker) {
+        adminReviewMarker.setLatLng([currentReviewLat, currentReviewLng]);
+        adminReviewMarker.setIcon(redIcon);
+        adminReviewMarker.setPopupContent(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
+      } else {
+        adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon }).addTo(adminReviewMap);
+      }
+
+      // Apply boundary if GeoJSON finished loading after first toggle
+      if (!window.adminBoundaryLayer && window.adminSjdmGeoJsonData) {
+        window.adminBoundaryLayer = L.geoJSON(window.adminSjdmGeoJsonData, {
+          style: {
+            color: '#3b82f6',
+            weight: 2,
+            dashArray: '5, 5',
+            fillColor: '#2563eb',
+            fillOpacity: 0.05,
+            interactive: false
+          }
+        }).addTo(adminReviewMap);
+
+        window.adminCsjdmBounds = window.adminBoundaryLayer.getBounds();
+        adminReviewMap.setMaxBounds(window.adminCsjdmBounds.pad(0.4));
       }
     }
 

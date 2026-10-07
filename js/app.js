@@ -3479,7 +3479,6 @@ window.toggleOtherDamageType = function() {
 // STEP 1: Validate and open the confirmation modal
 function submitRoadReport() {
   if (isSubmittingReport) return;
-  isSubmittingReport = true;
 
   const roadName = document.getElementById("cityRoadName")?.value;
   const widthVal = document.getElementById("width")?.value;
@@ -3487,14 +3486,12 @@ function submitRoadReport() {
 
   if (!roadName || !widthVal || !lengthVal) {
     showToast("Please fill in all required fields (Road Name, Width, and Length).", "error");
-    isSubmittingReport = false;
     return;
   }
 
   const damageType = document.getElementById("damageType")?.value;
   if (damageType === "Other" && !document.getElementById("otherDamageType")?.value.trim()) {
     showToast("Please specify the 'Other' damage type.", "error");
-    isSubmittingReport = false;
     return;
   }
 
@@ -3505,7 +3502,6 @@ function submitRoadReport() {
 
   if (width < 0 || length < 0 || bridges < 0 || culverts < 0) {
     showToast("Measurements cannot be negative numbers! Please correct them.", "error");
-    isSubmittingReport = false;
     return;
   }
 
@@ -3523,11 +3519,14 @@ function closeConfirmModal() {
     modal.classList.add('hidden');
     modal.style.display = 'none';
   }
-  isSubmittingReport = false;
 }
 
 // STEP 3: Single-flight server submission
 function executeFinalSubmission() {
+  // 🛡️ Block duplicate execution if already in flight
+  if (isSubmittingReport) return;
+  isSubmittingReport = true;
+
   closeConfirmModal();
 
   // Disable modal confirm button
@@ -3629,7 +3628,7 @@ function executeFinalSubmission() {
       } else if (rawSev === "medium") {
         showToast(`⚠️ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "low") {
-        showToast(`Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
+        showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
       } else {
         showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
       }

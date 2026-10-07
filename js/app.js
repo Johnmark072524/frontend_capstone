@@ -1331,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
           console.error("Error validating report:", error);
-          showToast("❌ Failed to connect. Press F12 for details.", "error");
+          showToast("Failed to connect. Press F12 for details.", "error");
         })
         .finally(() => {
           btnConfirmAccept.innerHTML = "Yes, Validate It";
@@ -1412,7 +1412,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => {
           console.error("Error rejecting report:", error);
           // ❌ Trigger the Error Toast!
-          showToast("❌ Failed to connect. Check F12 console.", true);
+          showToast("Failed to connect. Check F12 console.", true);
         })
         .finally(() => {
           btnConfirmReject.innerHTML = "Submit Rejection";

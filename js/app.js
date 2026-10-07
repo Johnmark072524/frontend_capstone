@@ -4407,8 +4407,22 @@ window.closeReviewModal = function() {
 };
 
 // ==========================================
-// ADMIN DASHBOARD: LOCATE ON MAP BUTTON
+// ADMIN DASHBOARD: LOCATE ON MAP BUTTON (WITH BOUNDARIES & STREETS)
 // ==========================================
+let adminReviewMap = null;
+let adminReviewMarker = null;
+let adminSjdmGeoJsonData = null;
+let adminBoundaryLayer = null;
+let adminCsjdmBounds = null;
+
+// Pre-fetch official CSJDM boundaries once
+fetch('sjdm_barangays.geojson')
+  .then(res => res.json())
+  .then(data => {
+    adminSjdmGeoJsonData = data;
+  })
+  .catch(err => console.error("Could not load sjdm_barangays.geojson for Admin:", err));
+
 function toggleAdminReviewMap() {
   const mapContainer = document.getElementById('admin-review-map-container');
   if (!mapContainer) return;
@@ -4439,18 +4453,69 @@ function toggleAdminReviewMap() {
       shadowSize: [41, 41]
     });
 
+    // 1. Initialize Map with strict zoom limits and boundaries
     if (!adminReviewMap) {
-      adminReviewMap = L.map('admin-review-map').setView([currentReviewLat, currentReviewLng], 17);
+      adminReviewMap = L.map('admin-review-map', {
+        minZoom: 12,             // 🛑 Prevents zooming out to the whole world
+        maxZoom: 19,             // 🛑 Stops over-zooming past satellite resolution
+        maxBoundsViscosity: 0.7  // 🌊 Elastic boundary lock
+      });
 
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
+      // 🛰️ GOOGLE HYBRID SATELLITE TILES (Shows detailed street names, roads & landmarks)
+      L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 19,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
       }).addTo(adminReviewMap);
 
-      adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon }).addTo(adminReviewMap);
+      // 2. Render CSJDM Barangay Boundaries
+      if (adminSjdmGeoJsonData) {
+        adminBoundaryLayer = L.geoJSON(adminSjdmGeoJsonData, {
+          style: {
+            color: '#3b82f6',       // Distinct Admin Blue border
+            weight: 2,
+            dashArray: '5, 5',
+            fillColor: '#2563eb',
+            fillOpacity: 0.05,
+            interactive: false
+          }
+        }).addTo(adminReviewMap);
+
+        // Lock camera boundaries to San Jose del Monte with breathing room
+        adminCsjdmBounds = adminBoundaryLayer.getBounds();
+        adminReviewMap.setMaxBounds(adminCsjdmBounds.pad(0.4));
+      }
+
+      // 3. Place Report Marker
+      adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon })
+        .addTo(adminReviewMap)
+        .bindPopup(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
+
+      adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
+
     } else {
+      // If map exists, update view & marker position
       adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
       adminReviewMarker.setLatLng([currentReviewLat, currentReviewLng]);
       adminReviewMarker.setIcon(redIcon);
+      adminReviewMarker.setPopupContent(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
+
+      // Ensure boundary layer is present if it finished fetching after first open
+      if (!adminBoundaryLayer && adminSjdmGeoJsonData) {
+        adminBoundaryLayer = L.geoJSON(adminSjdmGeoJsonData, {
+          style: {
+            color: '#3b82f6',
+            weight: 2,
+            dashArray: '5, 5',
+            fillColor: '#2563eb',
+            fillOpacity: 0.05,
+            interactive: false
+          }
+        }).addTo(adminReviewMap);
+
+        adminCsjdmBounds = adminBoundaryLayer.getBounds();
+        adminReviewMap.setMaxBounds(adminCsjdmBounds.pad(0.4));
+      }
     }
 
     setTimeout(() => {

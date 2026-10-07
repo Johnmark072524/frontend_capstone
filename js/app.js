@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         newSaveBtn.addEventListener('click', () => {
           if (!mapMarker) {
-            showToast("⚠️ Please click on the map to drop a pin first!", "warning");
+            showToast(" Please click on the map to drop a pin first!", "warning");
             return;
           }
           document.getElementById('latitude').value = selectedLat;
@@ -989,7 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         newEditSaveBtn.addEventListener('click', () => {
           if (!mapMarker) {
-            showToast("⚠️ Please click on the map to drop a pin first!", "warning");
+            showToast(" Please click on the map to drop a pin first!", "warning");
             return;
           }
           document.getElementById('edit-latitude').value = selectedLat;
@@ -1128,19 +1128,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-// 🛠 Safe View Switching Engine
-  window.switchView = function(targetId) {
+// 🛠 Safe View Switching Engine with Unified History Tracking
+  window.switchView = function(targetId, updateHistory = true) {
     if (!targetId) return;
 
-    // 💾 Persist active tab across refreshes
+    const targetSection = document.getElementById(targetId);
+    if (!targetSection) {
+      console.warn(`[switchView] Target section #${targetId} does not exist in DOM.`);
+      return;
+    }
+
+    // 1. Push to browser history whenever switched by user actions
+    if (updateHistory) {
+      if (window.location.hash !== "#" + targetId) {
+        history.pushState({ target: targetId }, "", "#" + targetId);
+      }
+    }
+
+    // 2. Persist active tab across refreshes
     sessionStorage.setItem('roadwise_active_tab', targetId);
 
-    // 1. Dismiss active modal backdrops
+    // 3. Dismiss active modal backdrops
     document.querySelectorAll('.modal-overlay').forEach(modal => {
       modal.classList.add('hidden');
     });
 
-    // 2. Toggle active tab indicator & section visibility
+    // 4. Toggle active tab indicator & section visibility
     navLinks.forEach(nav => nav.classList.remove('active'));
     contentSections.forEach(section => {
       section.classList.add('hidden');
@@ -1150,21 +1163,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeLink = document.querySelector(`.nav-menu li[data-target="${targetId}"]`);
     if (activeLink) activeLink.classList.add('active');
 
-    const targetSection = document.getElementById(targetId);
-    if (targetSection) {
-      targetSection.classList.remove('hidden');
-      targetSection.style.display = '';
+    targetSection.classList.remove('hidden');
+    targetSection.style.display = '';
 
-      // ⚡ Targeted View Scroll Reset: Snaps .content-area directly to top
-      const contentArea = document.querySelector('.content-area');
-      if (contentArea) {
-        contentArea.scrollTo({ top: 0, behavior: 'instant' });
-      }
-      targetSection.scrollTop = 0;
-      window.scrollTo(0, 0);
+    // 5. Targeted View Scroll Reset
+    const contentArea = document.querySelector('.content-area');
+    if (contentArea) {
+      contentArea.scrollTo({ top: 0, behavior: 'instant' });
     }
+    targetSection.scrollTop = 0;
+    window.scrollTo(0, 0);
 
-    // 3. Dispatch targeted view loader directly
+    // 6. Dispatch targeted view loader directly
     if (typeof viewDispatchers[targetId] === 'function') {
       viewDispatchers[targetId]();
     }
@@ -1175,45 +1185,52 @@ document.addEventListener('DOMContentLoaded', () => {
     link.addEventListener('click', function(event) {
       event.preventDefault();
       const targetId = this.getAttribute('data-target');
-
       if (targetId) {
-        history.pushState({ target: targetId }, "", "#" + targetId);
-        switchView(targetId);
+        switchView(targetId, true);
       }
     });
   });
 
 // ⏪ Browser Back & Forward Navigation Watcher
   window.addEventListener('popstate', function(event) {
-    if (event.state && event.state.target) {
-      switchView(event.state.target);
-    } else {
-      const role = (sessionStorage.getItem('role') || '').toUpperCase();
-      const defaultHash = (role.includes('CEO') || role.includes('ENGINEER'))
-        ? 'view-dashboard'
-        : 'view-admin-dashboard';
-      switchView(defaultHash);
+    // 1. Check state target first
+    let target = event.state && event.state.target;
+
+    // 2. Fallback to URL hash (e.g., "#view-reports" -> "view-reports")
+    if (!target) {
+      target = window.location.hash.replace('#', '').trim();
+    }
+
+    // 3. Fallback to saved tab or first visible section
+    if (!target || !document.getElementById(target)) {
+      target = sessionStorage.getItem('roadwise_active_tab');
+    }
+
+    if (target && document.getElementById(target)) {
+      // Pass false to prevent re-pushing redundant entries into history
+      switchView(target, false);
     }
   });
 
-// 🟢 Initial Page Boot Handler
+// 🟢 Initial Page Boot Handler (Universal for Admin, CEO, and Barangay)
   (function initializeView() {
-    const isAdminDash = document.getElementById('view-admin-dashboard');
-    const isGeneralDash = document.getElementById('view-dashboard');
-
-    if (!isAdminDash && !isGeneralDash) return;
-
     const hash = window.location.hash.replace('#', '').trim();
     const savedTab = sessionStorage.getItem('roadwise_active_tab');
-    let finalTarget = hash || savedTab;
 
-    if (!finalTarget || !document.getElementById(finalTarget)) {
-      finalTarget = isAdminDash ? 'view-admin-dashboard' : 'view-dashboard';
+    // Find the first available view section in the DOM as safe baseline
+    const firstSection = document.querySelector('.content-section');
+    const fallbackDefault = firstSection ? firstSection.id : 'view-dashboard';
+
+    let finalTarget = hash || savedTab || fallbackDefault;
+
+    // Verify element existence
+    if (!document.getElementById(finalTarget)) {
+      finalTarget = fallbackDefault;
     }
 
-    if (typeof switchView === 'function' && finalTarget) {
+    if (finalTarget && document.getElementById(finalTarget)) {
       history.replaceState({ target: finalTarget }, "", "#" + finalTarget);
-      switchView(finalTarget);
+      switchView(finalTarget, false);
     }
   })();
 

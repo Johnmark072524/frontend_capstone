@@ -649,10 +649,10 @@ document.addEventListener('DOMContentLoaded', () => {
       function normalizeBrgyName(str) {
         return (str || "")
           .toLowerCase()
-          .replace(/[\u2013\u2014\u2212-]/g, "-")
-          .replace(/^sto\.\s*|^santo\s*/, "santo ")
-          .replace(/^sta\.\s*|^santa\s*/, "santa ")
-          .replace(/\s+/g, " ")
+          .replace(/[\u2013\u2014\u2212-]/g, "-")        // En-dash (–) to hyphen (-)
+          .replace(/^sto\.\s*|^santo\s*/, "santo ")      // Sto. to Santo
+          .replace(/^sta\.\s*|^santa\s*/, "santa ")      // Sta. to Santa
+          .replace(/\s+/g, " ")                          // Normalize spaces
           .trim();
       }
 
@@ -702,13 +702,20 @@ document.addEventListener('DOMContentLoaded', () => {
         interactive: false
       }).addTo(map);
 
-      // 3. Smooth Camera Fit with Proper Padding
+      // 3. Smooth Camera Fit with Generous Padding to Prevent Border Clipping[cite: 4]
       const bounds = currentBoundaryLayer.getBounds();
-      map.fitBounds(bounds, { padding: [25, 25], maxZoom: 17 });
 
-      // 💡 THE FIX: Expand boundary buffer to 25% and lock minZoom to 14 (NOT map.getZoom())
-      map.setMaxBounds(bounds.pad(0.25));
-      map.setMinZoom(14); // Allows zooming out comfortably without escaping the barangay
+      // Allows zooming out to level 12 so large barangays fit entirely in the modal viewport[cite: 4]
+      map.setMinZoom(12);
+
+      // 80% boundary buffer keeps Leaflet from clipping viewport edges during zoom-out
+      map.setMaxBounds(bounds.pad(0.8));
+
+      // 40px margin ensures boundary lines never press against the frame[cite: 4]
+      map.fitBounds(bounds, {
+        padding: [40, 40],
+        maxZoom: 16
+      });
 
       return bounds;
     }
@@ -774,9 +781,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (validResults.length === 0) {
               suggestionsList.innerHTML = `
-                <li style="cursor: default; color: #94a3b8; padding: 10px 14px; font-size: 12.5px;">
-                  No matching places found within this barangay.
-                </li>`;
+              <li style="cursor: default; color: #94a3b8; padding: 10px 14px; font-size: 12.5px;">
+                No matching places found within this barangay.
+              </li>`;
               suggestionsList.classList.remove('hidden');
               return;
             }
@@ -788,14 +795,14 @@ document.addEventListener('DOMContentLoaded', () => {
               const subtitle = parts.slice(1, 4).join(',').trim();
 
               li.innerHTML = `
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" style="flex-shrink: 0;">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                </svg>
-                <div style="overflow: hidden; text-align: left;">
-                  <span class="place-title">${mainTitle}</span>
-                  <span class="place-subtitle">${subtitle}</span>
-                </div>
-              `;
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" style="flex-shrink: 0;">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              <div style="overflow: hidden; text-align: left;">
+                <span class="place-title">${mainTitle}</span>
+                <span class="place-subtitle">${subtitle}</span>
+              </div>
+            `;
 
               li.addEventListener('click', () => {
                 const lat = parseFloat(item.lat);
@@ -834,8 +841,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ------------------------------------------
-// A. "DEFINE ON MAP" FOR ADD REPORT FORM
-// ------------------------------------------
+    // A. "DEFINE ON MAP" FOR ADD REPORT FORM
+    // ------------------------------------------
     const btnDefineMap = document.getElementById('btn-define-map');
 
     if (btnDefineMap && mapModal) {
@@ -849,9 +856,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Initialize Leaflet if not already initialized
         if (!map) {
           map = L.map('roadwiseMap', {
-            minZoom: 14,             // 🛑 Stops over-zooming out (keeps view within the barangay/city)
-            maxZoom: 19,             // 🛑 Stops over-zooming in (prevents pixelated/missing satellite tiles)
-            maxBoundsViscosity: 0.7  // 🌊 Soft boundary buffer: prevents zoom-out lockup while keeping map centered
+            minZoom: 12,             // 🌐 Allows fitting large boundaries comfortably[cite: 4]
+            maxZoom: 19,             // 🛑 Stops over-zooming in past satellite resolution
+            maxBoundsViscosity: 0.5  // 🌊 Soft elastic edges prevent viewport lockups
           });
 
           // 🛰️ GOOGLE HYBRID SATELLITE TILES
@@ -901,7 +908,13 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast("Location locked successfully!", "success");
         });
 
-        setTimeout(() => { map.invalidateSize(); }, 200);
+        // Recalculates canvas layout and fits the full territory into view[cite: 4]
+        setTimeout(() => {
+          map.invalidateSize();
+          if (currentBoundaryLayer) {
+            map.fitBounds(currentBoundaryLayer.getBounds(), { padding: [40, 40] });
+          }
+        }, 200);
       });
 
       if (btnCloseMap) {
@@ -909,9 +922,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-// ------------------------------------------
-// B. "UPDATE LOCATION" FOR EDIT MODAL
-// ------------------------------------------
+    // ------------------------------------------
+    // B. "UPDATE LOCATION" FOR EDIT MODAL
+    // ------------------------------------------
     const btnEditDefineMap = document.getElementById('btn-edit-define-map');
 
     if (btnEditDefineMap && mapModal) {
@@ -927,9 +940,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Initialize Leaflet if not already initialized
         if (!map) {
           map = L.map('roadwiseMap', {
-            minZoom: 14,             // 🛑 Stops over-zooming out (keeps view within the barangay/city)
-            maxZoom: 19,             // 🛑 Stops over-zooming in (prevents pixelated/missing satellite tiles)
-            maxBoundsViscosity: 0.7  // 🌊 Soft boundary buffer: prevents zoom-out lockup while keeping map centered
+            minZoom: 12,             // 🌐 Allows fitting large boundaries comfortably[cite: 4]
+            maxZoom: 19,             // 🛑 Stops over-zooming in past satellite resolution
+            maxBoundsViscosity: 0.5  // 🌊 Soft elastic edges prevent viewport lockups
           });
 
           // 🛰️ GOOGLE HYBRID SATELLITE TILES
@@ -988,9 +1001,16 @@ document.addEventListener('DOMContentLoaded', () => {
           showToast("Location updated successfully!", "success");
         });
 
-        setTimeout(() => { map.invalidateSize(); }, 200);
+        // Recalculates canvas layout and fits the full territory into view[cite: 4]
+        setTimeout(() => {
+          map.invalidateSize();
+          if (currentBoundaryLayer) {
+            map.fitBounds(currentBoundaryLayer.getBounds(), { padding: [40, 40] });
+          }
+        }, 200);
       });
     }
+
 
   } // End of if (typeof L !== 'undefined')
 

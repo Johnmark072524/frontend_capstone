@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         newSaveBtn.addEventListener('click', () => {
           if (!mapMarker) {
-            alert("Please click on the map to drop a pin first!");
+            showToast("⚠️ Please click on the map to drop a pin first!", "warning");
             return;
           }
           document.getElementById('latitude').value = selectedLat;
@@ -983,14 +983,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        // 4. Save handler for EDIT form
-        const liveSaveBtn = document.getElementById('btn-save-coords');
-        const newSaveBtn = liveSaveBtn.cloneNode(true);
-        liveSaveBtn.parentNode.replaceChild(newSaveBtn, liveSaveBtn);
+        const liveEditSaveBtn = document.getElementById('btn-save-coords');
+        const newEditSaveBtn = liveEditSaveBtn.cloneNode(true);
+        liveEditSaveBtn.parentNode.replaceChild(newEditSaveBtn, liveEditSaveBtn);
 
-        newSaveBtn.addEventListener('click', () => {
+        newEditSaveBtn.addEventListener('click', () => {
           if (!mapMarker) {
-            alert("Please click on the map to drop a pin first!");
+            showToast("⚠️ Please click on the map to drop a pin first!", "warning");
             return;
           }
           document.getElementById('edit-latitude').value = selectedLat;

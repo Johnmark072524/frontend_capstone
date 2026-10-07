@@ -381,7 +381,16 @@
 
               <!-- MINT THEMED PHOTO UPLOAD DROPZONE -->
               <div class="form-group-vertical" style="margin-bottom: 16px; min-height: 150px; border: 2px dashed #86efac; padding: 20px; border-radius: 8px; text-align: center; background-color: #f0fdf4; transition: 0.2s;">
-                <span style="display: block; font-weight: 700; font-size: 13px; margin-bottom: 10px; color: #166534;">📸 Photographic Damage Evidence</span>
+                <span style="display: block; font-weight: 700; font-size: 13px; margin-bottom: 8px; color: #166534;">📸 Photographic Damage Evidence</span>
+
+                <!-- CPDO VERIFICATION WARNING NOTICE -->
+                <div style="margin: 0 auto 14px; max-width: 540px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; font-size: 11.5px; color: #92400e; text-align: left; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+                  <span style="font-size: 14px; flex-shrink: 0;">⚠️</span>
+                  <div>
+                    <strong>Official Notice:</strong> Please upload clear photos showing actual pavement distress (e.g., potholes, cracks, or erosion). Non-road imagery, documents, or undamaged surfaces will fail AI verification and be automatically marked as <strong>UNASSESSED</strong> or rejected by CPDO.
+                  </div>
+                </div>
+
                 <img id="imagePreview" src="" alt="Damage Preview" style="max-width: 100%; max-height: 160px; display: none; margin: 0 auto 15px; border-radius: 6px; border: 2px solid #bbf7d0; box-shadow: 0 4px 8px rgba(0,0,0,0.08);">
 
                 <input type="file" id="damageImageFile" name="imageFile" accept="image/*" style="display: none;">

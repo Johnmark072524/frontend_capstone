@@ -37,30 +37,56 @@ function formatPST(dateInput, includeTime = true) {
 }
 
 // ==========================================
-// 🚀 GLOBAL SECURITY BOUNCER (RUNS IMMEDIATELY)
+// 🚀 GLOBAL SECURITY BOUNCER (HYBRID CLIENT + SERVER)
 // ==========================================
 (function enforceSecurity() {
   const currentPath = window.location.pathname.toLowerCase();
 
-  // Check if the user has active session data
   const storedRole = sessionStorage.getItem("userRole");
   const storedUserId = sessionStorage.getItem("userId");
-
   const isLoggedIn = storedRole && storedUserId;
 
-  // RULE 1: If NOT logged in, but trying to access ANY dashboard -> Kick to Login
+  // 1. FAST CLIENT PASS: Immediate redirect if logged out
   if (!isLoggedIn && currentPath.includes("dashboard")) {
     window.location.replace("login.html");
     return;
   }
 
-  // RULE 2: If LOGGED IN, but trying to go back to the Login page -> Kick to Dashboard
+  // 2. FAST CLIENT PASS: Forward away from login if already logged in
   if (isLoggedIn && currentPath.includes("login.html")) {
-    const userRole = String(storedRole).toLowerCase();
+    redirectByRole(storedRole);
+    return;
+  }
 
-    if (userRole.includes("admin") || userRole.includes("cpdo")) {
+  // 3. SERVER-SIDE AUDIT: If on a dashboard, verify identity with Spring Boot
+  if (isLoggedIn && currentPath.includes("dashboard")) {
+    fetch(`${API_BASE_URL}/api/auth/verify-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: storedUserId, role: storedRole })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Session invalid on server");
+        return res.json();
+      })
+      .then(data => {
+        if (!data.valid) {
+          throw new Error("Invalid session state");
+        }
+      })
+      .catch(() => {
+        // 🛑 Server rejected or account suspended: wipe storage and kick to login
+        sessionStorage.clear();
+        localStorage.removeItem("user");
+        window.location.replace("login.html");
+      });
+  }
+
+  function redirectByRole(role) {
+    const r = String(role || '').toLowerCase();
+    if (r.includes("admin") || r.includes("cpdo")) {
       window.location.replace("admin_dashboard.html");
-    } else if (userRole.includes("ceo") || userRole.includes("engineer")) {
+    } else if (r.includes("ceo") || r.includes("engineer")) {
       window.location.replace("ceo_dashboard.html");
     } else {
       window.location.replace("barangay_dashboard.html");

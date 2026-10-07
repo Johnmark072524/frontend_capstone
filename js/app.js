@@ -3618,17 +3618,23 @@ function executeFinalSubmission() {
       throw new Error(errData.error || errData.message || 'Network response was not ok.');
     })
     .then(data => {
+      // 🚀 NORMALIZE AI SEVERITY & CONFIDENCE SCORE
       const rawSev = String(data.severity || '').trim().toLowerCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
-      if (!hasImage || rawSev === "unassessed" || rawSev === "") {
+      // 🚀 SHOW ACCURATE DYNAMIC TOAST
+      if (!hasImage) {
+        // Case 1: Inspector deliberately submitted without an image
         showToast("📋 Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
+      } else if (rawSev === "unassessed" || rawSev === "") {
+        // Case 2: Image was uploaded, but failed road surface checks or fell below confidence floor
+        showToast("⚠️ Report saved! AI could not detect valid pavement distress (Marked as UNASSESSED).", "warning");
       } else if (rawSev === "high") {
         showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "medium") {
         showToast(`⚠️ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "low") {
-        showToast(`Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
+        showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
       } else {
         showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
       }

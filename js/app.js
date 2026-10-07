@@ -8828,27 +8828,41 @@ if (formChangePassword) {
 }
 
 // ==========================================
-// 13. CPDO ADMIN OFFICE TURNOVER PROTOCOL
+// 13. CPDO ADMIN & CEO OFFICE TURNOVER PROTOCOL
 // ==========================================
 
-// 1. Navigation Tab Switching (Supports Identity, Security, and Turnover tabs)
+// Helper: Attach Real-Time Numeric & 11-Digit Length Mask
+function attachPhoneInputMask(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) {
+    el.addEventListener('input', function () {
+      this.value = this.value.replace(/[^0-9]/g, '');
+      if (this.value.length > 11) {
+        this.value = this.value.slice(0, 11);
+      }
+    });
+  }
+}
+
+// ------------------------------------------
+// A. CPDO ADMIN TURNOVER
+// ------------------------------------------
+
+// 1. Navigation Tab Switching
 const profileNavMenu = document.getElementById('profile-nav-menu');
 if (profileNavMenu) {
   profileNavMenu.addEventListener('click', (e) => {
     const targetLi = e.target.closest('li[data-target]');
     if (!targetLi) return;
 
-    // Toggle active state on menu items
     profileNavMenu.querySelectorAll('li').forEach(li => li.classList.remove('active'));
     targetLi.classList.add('active');
 
-    // Hide all tabs
     document.querySelectorAll('.profile-tab').forEach(tab => {
       tab.classList.add('hidden');
       tab.classList.remove('active');
     });
 
-    // Display selected tab
     const targetTabId = targetLi.getAttribute('data-target');
     const selectedTab = document.getElementById(targetTabId);
     if (selectedTab) {
@@ -8863,6 +8877,7 @@ window.openAdminHandoverModal = function () {
   const modal = document.getElementById('admin-handover-modal');
   const form = document.getElementById('form-admin-handover');
   if (form) form.reset();
+  attachPhoneInputMask('succ-phone');
   if (modal) {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
@@ -8877,7 +8892,7 @@ window.closeAdminHandoverModal = function () {
   }
 };
 
-// 3. Form Submission Handler
+// 3. Admin Form Submission Handler
 window.submitAdminHandover = function () {
   const currentAdminId = sessionStorage.getItem('userId');
   if (!currentAdminId) {
@@ -8894,8 +8909,27 @@ window.submitAdminHandover = function () {
   const username = document.getElementById('succ-username')?.value.trim();
   const memoNumber = document.getElementById('succ-memo')?.value.trim();
 
+  // Strict Validation Checks
+  if (!firstName || !lastName || !email || !username) {
+    showToast("Please complete all required successor details.", "error");
+    return;
+  }
+
+  if (!phoneNumber || phoneNumber.length !== 11) {
+    showToast("Contact number must be exactly 11 digits (e.g. 09123456789).", "error");
+    document.getElementById('succ-phone')?.focus();
+    return;
+  }
+
+  if (!memoNumber) {
+    showToast("Office Memorandum / Special Order number is required.", "error");
+    document.getElementById('succ-memo')?.focus();
+    return;
+  }
+
   if (!currentPassword) {
     showToast("Please re-enter your current password to authorize turnover.", "error");
+    document.getElementById('succ-current-pass')?.focus();
     return;
   }
 
@@ -8931,10 +8965,8 @@ window.submitAdminHandover = function () {
       return data;
     })
     .then(data => {
-      // Close input form
       closeAdminHandoverModal();
 
-      // Populate demo credentials modal
       const dispName = document.getElementById('disp-succ-name');
       const dispUser = document.getElementById('disp-succ-user');
       const dispPass = document.getElementById('disp-succ-pass');
@@ -8943,7 +8975,6 @@ window.submitAdminHandover = function () {
       if (dispUser) dispUser.innerText = data.successorUsername || username;
       if (dispPass) dispPass.innerText = data.tempPassword || 'Check registered email';
 
-      // Show turnover success modal
       const succModal = document.getElementById('handover-success-modal');
       if (succModal) {
         succModal.classList.remove('hidden');
@@ -8964,7 +8995,6 @@ window.submitAdminHandover = function () {
     });
 };
 
-// 4. Terminate Current Session and Redirect
 window.terminateHandoverSession = function () {
   sessionStorage.clear();
   localStorage.removeItem('user');
@@ -8972,28 +9002,25 @@ window.terminateHandoverSession = function () {
   window.location.replace('login.html');
 };
 
-// ==========================================
-// 🏛️ CEO OFFICE TURNOVER PROTOCOL
-// ==========================================
+// ------------------------------------------
+// B. CEO TURNOVER
+// ------------------------------------------
 
-// 1. Navigation Tab Switching (Supports Identity, Security, and Turnover tabs)
+// 1. Navigation Tab Switching (CEO)
 const ceoProfileNavMenu = document.getElementById('profile-nav-menu');
 if (ceoProfileNavMenu) {
   ceoProfileNavMenu.addEventListener('click', (e) => {
     const targetLi = e.target.closest('li[data-target]');
     if (!targetLi) return;
 
-    // Toggle active state on menu items
     ceoProfileNavMenu.querySelectorAll('li').forEach(li => li.classList.remove('active'));
     targetLi.classList.add('active');
 
-    // Hide all tabs
     document.querySelectorAll('.profile-tab').forEach(tab => {
       tab.classList.add('hidden');
       tab.classList.remove('active');
     });
 
-    // Display selected tab
     const targetTabId = targetLi.getAttribute('data-target');
     const selectedTab = document.getElementById(targetTabId);
     if (selectedTab) {
@@ -9003,11 +9030,12 @@ if (ceoProfileNavMenu) {
   });
 }
 
-// 2. Modal Open / Close Controllers
+// 2. Modal Open / Close Controllers (CEO)
 window.openCeoHandoverModal = function () {
   const modal = document.getElementById('ceo-handover-modal');
   const form = document.getElementById('form-ceo-handover');
   if (form) form.reset();
+  attachPhoneInputMask('ceo-succ-phone');
   if (modal) {
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
@@ -9022,7 +9050,7 @@ window.closeCeoHandoverModal = function () {
   }
 };
 
-// 3. Form Submission Handler
+// 3. CEO Form Submission Handler
 window.submitCeoHandover = function () {
   const currentCeoId = sessionStorage.getItem('userId');
   if (!currentCeoId) {
@@ -9039,8 +9067,27 @@ window.submitCeoHandover = function () {
   const username = document.getElementById('ceo-succ-user')?.value.trim();
   const memoNumber = document.getElementById('ceo-succ-memo')?.value.trim();
 
+  // Strict Validation Checks
+  if (!firstName || !lastName || !email || !username) {
+    showToast("Please complete all required successor details.", "error");
+    return;
+  }
+
+  if (!phoneNumber || phoneNumber.length !== 11) {
+    showToast("Contact number must be exactly 11 digits (e.g. 09123456789).", "error");
+    document.getElementById('ceo-succ-phone')?.focus();
+    return;
+  }
+
+  if (!memoNumber) {
+    showToast("Appointment Memo / Special Order number is required.", "error");
+    document.getElementById('ceo-succ-memo')?.focus();
+    return;
+  }
+
   if (!currentPassword) {
     showToast("Please re-enter your current password to authorize turnover.", "error");
+    document.getElementById('ceo-current-pass')?.focus();
     return;
   }
 
@@ -9106,13 +9153,18 @@ window.submitCeoHandover = function () {
     });
 };
 
-// 4. Terminate Session and Redirect
 window.terminateCeoHandoverSession = function () {
   sessionStorage.clear();
   localStorage.removeItem('user');
   localStorage.removeItem('currentUser');
   window.location.replace('login.html');
 };
+
+// Auto-bind input listeners once DOM finishes loading
+document.addEventListener('DOMContentLoaded', () => {
+  attachPhoneInputMask('succ-phone');
+  attachPhoneInputMask('ceo-succ-phone');
+});
 
 // ==========================================
 // 👥 USER MANAGEMENT DATA FETCHER
@@ -9725,9 +9777,6 @@ window.openManageBarangayModal = function(id) {
   // 🚀 FETCH 1: THE BARANGAY INFO FIRST
   apiFetch(`/api/barangays/${id}`)
     .then(brgy => {
-      // 🚀 THE PROBE: This will print the exact database response to your F12 Console!
-      console.log("RAW BARANGAY DATA FROM DB:", brgy);
-
       safeSetText('manage-brgy-name', brgy.barangayName || "Unknown");
       safeSetText('manage-brgy-kapitan', brgy.brgyCaptain || 'Unassigned');
       safeSetText('manage-brgy-contact', brgy.contactNumber || 'N/A');

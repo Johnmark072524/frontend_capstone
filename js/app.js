@@ -3325,25 +3325,25 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
 // BACKEND API CONNECTION & FORM LOGIC (RoadWise)
 // ==========================================
 
-// 🛡️ Global Submission Guard (Prevents duplicate requests / rapid double clicks)
+// 🛡️ Global Submission Guard (Prevents duplicate requests / rapid clicks)
 let isSubmittingReport = false;
 
 // 🚀 Toggle for "Other" damage type selection
-window.toggleOtherDamageType = function () {
-  const select = document.getElementById("damageType");
-  const otherGroup = document.getElementById("otherDamageTypeGroup");
-  const otherInput = document.getElementById("otherDamageType");
+window.toggleOtherDamageType = function() {
+  const select = document.getElementById('damageType');
+  const otherGroup = document.getElementById('otherDamageTypeGroup');
+  const otherInput = document.getElementById('otherDamageType');
 
   if (!select || !otherGroup) return;
 
-  if (select.value === "Other") {
-    otherGroup.classList.remove("hidden");
-    otherGroup.style.display = "block";
+  if (select.value === 'Other') {
+    otherGroup.classList.remove('hidden');
+    otherGroup.style.display = 'block';
     if (otherInput) otherInput.focus();
   } else {
-    otherGroup.classList.add("hidden");
-    otherGroup.style.display = "none";
-    if (otherInput) otherInput.value = "";
+    otherGroup.classList.add('hidden');
+    otherGroup.style.display = 'none';
+    if (otherInput) otherInput.value = '';
   }
 };
 
@@ -3376,36 +3376,38 @@ function submitRoadReport() {
     return;
   }
 
-  const modal = document.getElementById("confirm-modal");
+  const modal = document.getElementById('confirm-modal');
   if (modal) {
-    modal.classList.remove("hidden");
-    modal.style.display = "flex";
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
   }
 }
 
 // STEP 2: Close confirmation modal
 function closeConfirmModal() {
-  const modal = document.getElementById("confirm-modal");
+  const modal = document.getElementById('confirm-modal');
   if (modal) {
-    modal.classList.add("hidden");
-    modal.style.display = "none";
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
   }
 }
 
 // STEP 3: Single-flight server submission
 function executeFinalSubmission() {
+  // 🛡️ Block duplicate execution if already in flight
   if (isSubmittingReport) return;
   isSubmittingReport = true;
 
-  // Immediately close modal and disable buttons
   closeConfirmModal();
 
-  const modalConfirmBtn = document.querySelector("#confirm-modal .btn-submit");
+  // Disable modal confirm button
+  const modalConfirmBtn = document.querySelector("#confirm-modal .btn-submit, #confirm-modal [onclick*='executeFinalSubmission']");
   if (modalConfirmBtn) {
     modalConfirmBtn.disabled = true;
     modalConfirmBtn.innerText = "Submitting... ⏳";
   }
 
+  // Disable form submit button
   const submitBtn = document.getElementById("submit-report-btn");
   if (submitBtn) {
     submitBtn.innerHTML = "⏳ Submitting...";
@@ -3433,7 +3435,7 @@ function executeFinalSubmission() {
       if (el.selectedIndex === -1) return "";
       const opt = el.options[el.selectedIndex];
       if (opt.disabled) return "";
-      return opt.value && opt.value.trim() !== "" ? opt.value : opt.text;
+      return (opt.value && opt.value.trim() !== "") ? opt.value : opt.text;
     }
     return el.value || "";
   }
@@ -3476,22 +3478,22 @@ function executeFinalSubmission() {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  // 6. API Dispatch
+  // 6. Send to Spring Boot API
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
   })
-    .then(async (response) => {
+    .then(async response => {
       if (response.ok) return response.json();
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || errData.message || "Failed to submit report.");
+      throw new Error(errData.error || errData.message || 'Network response was not ok.');
     })
-    .then((data) => {
-      const rawSev = String(data.severity || "").trim().toLowerCase();
+    .then(data => {
+      const rawSev = String(data.severity || '').trim().toLowerCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
       if (!hasImage || rawSev === "unassessed" || rawSev === "") {
-        showToast("📋 Report saved successfully! Severity is UNASSESSED (No photo attached).", "success");
+        showToast("📋 Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
       } else if (rawSev === "high") {
         showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "medium") {
@@ -3499,27 +3501,28 @@ function executeFinalSubmission() {
       } else if (rawSev === "low") {
         showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
       } else {
-        showToast("📋 Report saved successfully!", "success");
+        showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
       }
 
-      // Complete reset of inputs, images, markers, and dropdowns
+      // Complete reset of form fields, images, coordinates, and "Define on Map" button state
       resetAddReportForm();
 
-      // Refresh list & stats
-      if (typeof loadBarangayReports === "function") {
+      if (typeof loadBarangayReports === 'function') {
         const brgyId = sessionStorage.getItem("barangayId");
-        if (typeof Chart !== "undefined") {
-          const existingChart = Chart.getChart("severityChart");
+        const canvasId = 'severityChart';
+        if (typeof Chart !== 'undefined') {
+          let existingChart = Chart.getChart(canvasId);
           if (existingChart) existingChart.destroy();
         }
         if (brgyId) loadBarangayReports(brgyId);
       }
     })
-    .catch((error) => {
+    .catch(error => {
       console.error("Error submitting report:", error);
-      showToast(error.message || "Failed to upload report. Check your network connection.", "error");
+      showToast(error.message || "Failed to upload report. Check your internet connection.", "error");
     })
     .finally(() => {
+      // Release submission lock
       isSubmittingReport = false;
 
       if (modalConfirmBtn) {
@@ -3536,35 +3539,29 @@ function executeFinalSubmission() {
 }
 
 // ==========================================
-// 🧹 BULLETPROOF FORM RESET FUNCTION
+// 🧹 COMPREHENSIVE FORM & MAP RESET FUNCTION
 // ==========================================
 function resetAddReportForm() {
-  // 1. Native HTML form reset
+  // 1. Native form reset (resets standard inputs and controls)
   const form = document.getElementById("addReportForm");
   if (form) {
     form.reset();
   }
 
-  // 2. Explicit dropdown resets
+  // 2. Explicitly reset all dropdowns to their placeholder options
   const selectIds = ["cityRoadName", "roadImportance", "roadType", "terrainType", "damageType"];
-  selectIds.forEach((id) => {
+  selectIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
   });
 
-  // 3. Clear text, numeric, and readonly values
+  // 3. Clear manual & read-only input values
   const inputIds = [
-    "cityRoadId",
-    "width",
-    "length",
-    "numberOfBridges",
-    "lengthOfCulverts",
-    "damageLength",
-    "damageWidth",
-    "damageDescription",
-    "otherDamageType"
+    "cityRoadId", "width", "length", "numberOfBridges",
+    "lengthOfCulverts", "damageLength", "damageWidth",
+    "damageDescription", "otherDamageType"
   ];
-  inputIds.forEach((id) => {
+  inputIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -3580,7 +3577,7 @@ function resetAddReportForm() {
     otherInput.value = "";
   }
 
-  // 5. Reset hidden GPS coordinates and display pill
+  // 5. Complete reset of "Define on Map" button and GPS badges
   const latEl = document.getElementById("latitude");
   const lngEl = document.getElementById("longitude");
   if (latEl) latEl.value = "";
@@ -3589,27 +3586,42 @@ function resetAddReportForm() {
   const coordsDisplay = document.getElementById("coords-display");
   if (coordsDisplay) {
     coordsDisplay.textContent = "Not Selected";
+    coordsDisplay.style.background = "#ecfdf5";
+    coordsDisplay.style.color = "#047857";
+    coordsDisplay.style.borderColor = "#34d399";
   }
 
-  // 6. Reset photo upload, filename indicator, and preview
+  const btnDefineMap = document.getElementById("btn-define-map");
+  if (btnDefineMap) {
+    btnDefineMap.innerHTML = '<span class="icon">📍</span> Define on Map';
+    btnDefineMap.style.backgroundColor = '#16a34a';
+  }
+
+  // Clear map markers if present in window/global scope
+  if (typeof reportMarker !== "undefined" && reportMarker && typeof map !== "undefined" && map) {
+    try { map.removeLayer(reportMarker); } catch (e) {}
+    reportMarker = null;
+  }
+  if (window.reportMarker && window.map) {
+    try { window.map.removeLayer(window.reportMarker); } catch (e) {}
+    window.reportMarker = null;
+  }
+
+  // 6. Wipe image upload, file label, and image preview
   const fileInput = document.getElementById("damageImageFile");
   if (fileInput) fileInput.value = "";
 
   const preview = document.getElementById("imagePreview");
   if (preview) {
+    preview.style.display = 'none';
     preview.src = "";
-    preview.style.display = "none";
   }
 
   const fileNameDisplay = document.getElementById("fileNameDisplay");
   if (fileNameDisplay) fileNameDisplay.textContent = "";
-
-  // 7. Remove any active GPS pin placed on the map
-  if (typeof reportMarker !== "undefined" && reportMarker && typeof map !== "undefined" && map) {
-    map.removeLayer(reportMarker);
-    reportMarker = null;
-  }
 }
+
+
 // ==========================================
 // ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
 // ==========================================

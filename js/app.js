@@ -3325,31 +3325,30 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
 // BACKEND API CONNECTION & FORM LOGIC (RoadWise)
 // ==========================================
 
-// 🛡️ Global Submission Guard (Prevents duplicate requests)
+// 🛡️ Global Submission Guard (Prevents duplicate requests / rapid double clicks)
 let isSubmittingReport = false;
 
 // 🚀 Toggle for "Other" damage type selection
-window.toggleOtherDamageType = function() {
-  const select = document.getElementById('damageType');
-  const otherGroup = document.getElementById('otherDamageTypeGroup');
-  const otherInput = document.getElementById('otherDamageType');
+window.toggleOtherDamageType = function () {
+  const select = document.getElementById("damageType");
+  const otherGroup = document.getElementById("otherDamageTypeGroup");
+  const otherInput = document.getElementById("otherDamageType");
 
   if (!select || !otherGroup) return;
 
-  if (select.value === 'Other') {
-    otherGroup.classList.remove('hidden');
-    otherGroup.style.display = 'block';
+  if (select.value === "Other") {
+    otherGroup.classList.remove("hidden");
+    otherGroup.style.display = "block";
     if (otherInput) otherInput.focus();
   } else {
-    otherGroup.classList.add('hidden');
-    otherGroup.style.display = 'none';
-    if (otherInput) otherInput.value = '';
+    otherGroup.classList.add("hidden");
+    otherGroup.style.display = "none";
+    if (otherInput) otherInput.value = "";
   }
 };
 
 // STEP 1: Validate and open the confirmation modal
 function submitRoadReport() {
-  // If already processing a previous request, block immediately
   if (isSubmittingReport) return;
 
   const roadName = document.getElementById("cityRoadName")?.value;
@@ -3377,45 +3376,41 @@ function submitRoadReport() {
     return;
   }
 
-  const modal = document.getElementById('confirm-modal');
+  const modal = document.getElementById("confirm-modal");
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
   }
 }
 
 // STEP 2: Close confirmation modal
 function closeConfirmModal() {
-  const modal = document.getElementById('confirm-modal');
+  const modal = document.getElementById("confirm-modal");
   if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
+    modal.classList.add("hidden");
+    modal.style.display = "none";
   }
 }
 
 // STEP 3: Single-flight server submission
 function executeFinalSubmission() {
-  // 🛡️ BLOCK DUPLICATE EXECUTION: If already submitting, exit immediately
-  if (isSubmittingReport) {
-    return;
-  }
+  if (isSubmittingReport) return;
   isSubmittingReport = true;
 
-  // Immediately close modal
+  // Immediately close modal and disable buttons
   closeConfirmModal();
 
-  // Disable background button
+  const modalConfirmBtn = document.querySelector("#confirm-modal .btn-submit");
+  if (modalConfirmBtn) {
+    modalConfirmBtn.disabled = true;
+    modalConfirmBtn.innerText = "Submitting... ⏳";
+  }
+
   const submitBtn = document.getElementById("submit-report-btn");
   if (submitBtn) {
     submitBtn.innerHTML = "⏳ Submitting...";
     submitBtn.disabled = true;
     submitBtn.style.opacity = "0.7";
-  }
-
-  // Also disable the modal confirm button if it exists
-  const modalConfirmBtn = document.querySelector("#confirm-modal button.btn-confirm, #confirm-modal [onclick*='executeFinalSubmission']");
-  if (modalConfirmBtn) {
-    modalConfirmBtn.disabled = true;
   }
 
   const formData = new FormData();
@@ -3430,7 +3425,6 @@ function executeFinalSubmission() {
     formData.append("userId", loggedInUserId);
   }
 
-  // Helper extractor
   function getVal(id) {
     const el = document.getElementById(id);
     if (!el) return "";
@@ -3439,7 +3433,7 @@ function executeFinalSubmission() {
       if (el.selectedIndex === -1) return "";
       const opt = el.options[el.selectedIndex];
       if (opt.disabled) return "";
-      return (opt.value && opt.value.trim() !== "") ? opt.value : opt.text;
+      return opt.value && opt.value.trim() !== "" ? opt.value : opt.text;
     }
     return el.value || "";
   }
@@ -3482,22 +3476,22 @@ function executeFinalSubmission() {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  // 6. Send to Spring Boot API
+  // 6. API Dispatch
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
   })
-    .then(async response => {
+    .then(async (response) => {
       if (response.ok) return response.json();
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || errData.message || 'Network response was not ok.');
+      throw new Error(errData.error || errData.message || "Failed to submit report.");
     })
-    .then(data => {
-      const rawSev = String(data.severity || '').trim().toLowerCase();
+    .then((data) => {
+      const rawSev = String(data.severity || "").trim().toLowerCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
       if (!hasImage || rawSev === "unassessed" || rawSev === "") {
-        showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
+        showToast("📋 Report saved successfully! Severity is UNASSESSED (No photo attached).", "success");
       } else if (rawSev === "high") {
         showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "medium") {
@@ -3508,35 +3502,113 @@ function executeFinalSubmission() {
         showToast("📋 Report saved successfully!", "success");
       }
 
-      if (typeof resetAddReportForm === 'function') resetAddReportForm();
+      // Complete reset of inputs, images, markers, and dropdowns
+      resetAddReportForm();
 
-      // Refresh table/chart
-      if (typeof loadBarangayReports === 'function') {
+      // Refresh list & stats
+      if (typeof loadBarangayReports === "function") {
         const brgyId = sessionStorage.getItem("barangayId");
-        if (typeof Chart !== 'undefined') {
-          let existingChart = Chart.getChart('severityChart');
+        if (typeof Chart !== "undefined") {
+          const existingChart = Chart.getChart("severityChart");
           if (existingChart) existingChart.destroy();
         }
         if (brgyId) loadBarangayReports(brgyId);
       }
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("Error submitting report:", error);
-      showToast("Failed to upload report. Check your network connection.", "error");
+      showToast(error.message || "Failed to upload report. Check your network connection.", "error");
     })
     .finally(() => {
-      // 🔓 Release the submission lock
       isSubmittingReport = false;
+
+      if (modalConfirmBtn) {
+        modalConfirmBtn.disabled = false;
+        modalConfirmBtn.innerText = "Yes, Submit";
+      }
 
       if (submitBtn) {
         submitBtn.innerHTML = "Submit Report";
         submitBtn.disabled = false;
         submitBtn.style.opacity = "1";
       }
-      if (modalConfirmBtn) {
-        modalConfirmBtn.disabled = false;
-      }
     });
+}
+
+// ==========================================
+// 🧹 BULLETPROOF FORM RESET FUNCTION
+// ==========================================
+function resetAddReportForm() {
+  // 1. Native HTML form reset
+  const form = document.getElementById("addReportForm");
+  if (form) {
+    form.reset();
+  }
+
+  // 2. Explicit dropdown resets
+  const selectIds = ["cityRoadName", "roadImportance", "roadType", "terrainType", "damageType"];
+  selectIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
+
+  // 3. Clear text, numeric, and readonly values
+  const inputIds = [
+    "cityRoadId",
+    "width",
+    "length",
+    "numberOfBridges",
+    "lengthOfCulverts",
+    "damageLength",
+    "damageWidth",
+    "damageDescription",
+    "otherDamageType"
+  ];
+  inputIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  // 4. Hide and wipe "Other" damage type field
+  const otherGroup = document.getElementById("otherDamageTypeGroup");
+  const otherInput = document.getElementById("otherDamageType");
+  if (otherGroup) {
+    otherGroup.classList.add("hidden");
+    otherGroup.style.display = "none";
+  }
+  if (otherInput) {
+    otherInput.value = "";
+  }
+
+  // 5. Reset hidden GPS coordinates and display pill
+  const latEl = document.getElementById("latitude");
+  const lngEl = document.getElementById("longitude");
+  if (latEl) latEl.value = "";
+  if (lngEl) lngEl.value = "";
+
+  const coordsDisplay = document.getElementById("coords-display");
+  if (coordsDisplay) {
+    coordsDisplay.textContent = "Not Selected";
+  }
+
+  // 6. Reset photo upload, filename indicator, and preview
+  const fileInput = document.getElementById("damageImageFile");
+  if (fileInput) fileInput.value = "";
+
+  const preview = document.getElementById("imagePreview");
+  if (preview) {
+    preview.src = "";
+    preview.style.display = "none";
+  }
+
+  const fileNameDisplay = document.getElementById("fileNameDisplay");
+  if (fileNameDisplay) fileNameDisplay.textContent = "";
+
+  // 7. Remove any active GPS pin placed on the map
+  if (typeof reportMarker !== "undefined" && reportMarker && typeof map !== "undefined" && map) {
+    map.removeLayer(reportMarker);
+    reportMarker = null;
+  }
 }
 // ==========================================
 // ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN

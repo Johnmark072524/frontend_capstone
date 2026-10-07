@@ -646,14 +646,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!sjdmGeoJsonData) return null;
 
-      // Normalizer to align database names with official GeoJSON names
       function normalizeBrgyName(str) {
         return (str || "")
           .toLowerCase()
-          .replace(/[\u2013\u2014\u2212-]/g, "-")        // En-dash (–) to hyphen (-)
-          .replace(/^sto\.\s*|^santo\s*/, "santo ")      // Sto. to Santo
-          .replace(/^sta\.\s*|^santa\s*/, "santa ")      // Sta. to Santa
-          .replace(/\s+/g, " ")                          // Normalize spaces
+          .replace(/[\u2013\u2014\u2212-]/g, "-")
+          .replace(/^sto\.\s*|^santo\s*/, "santo ")
+          .replace(/^sta\.\s*|^santa\s*/, "santa ")
+          .replace(/\s+/g, " ")
           .trim();
       }
 
@@ -703,11 +702,13 @@ document.addEventListener('DOMContentLoaded', () => {
         interactive: false
       }).addTo(map);
 
-      // 3. Lock camera strictly to this barangay
+      // 3. Smooth Camera Fit with Proper Padding
       const bounds = currentBoundaryLayer.getBounds();
-      map.fitBounds(bounds, { padding: [25, 25] });
-      map.setMaxBounds(bounds.pad(0.05));
-      map.setMinZoom(map.getZoom());
+      map.fitBounds(bounds, { padding: [25, 25], maxZoom: 17 });
+
+      // 💡 THE FIX: Expand boundary buffer to 25% and lock minZoom to 14 (NOT map.getZoom())
+      map.setMaxBounds(bounds.pad(0.25));
+      map.setMinZoom(14); // Allows zooming out comfortably without escaping the barangay
 
       return bounds;
     }
@@ -833,8 +834,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ------------------------------------------
-    // A. "DEFINE ON MAP" FOR ADD REPORT FORM
-    // ------------------------------------------
+// A. "DEFINE ON MAP" FOR ADD REPORT FORM
+// ------------------------------------------
     const btnDefineMap = document.getElementById('btn-define-map');
 
     if (btnDefineMap && mapModal) {
@@ -848,18 +849,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Initialize Leaflet if not already initialized
         if (!map) {
           map = L.map('roadwiseMap', {
-            maxZoom: 20,
-            maxBoundsViscosity: 1.0 // Rigid boundary wall
+            minZoom: 14,             // 🛑 Stops over-zooming out (keeps view within the barangay/city)
+            maxZoom: 19,             // 🛑 Stops over-zooming in (prevents pixelated/missing satellite tiles)
+            maxBoundsViscosity: 0.7  // 🌊 Soft boundary buffer: prevents zoom-out lockup while keeping map centered
           });
 
           // 🛰️ GOOGLE HYBRID SATELLITE TILES
           L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-            maxZoom: 20,
+            maxZoom: 19,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             attribution: '&copy; Google Maps'
           }).addTo(map);
 
-          // Enforce boundary check when clicking to drop a pin
+          // Strict boundary check: pin is strictly forbidden outside barangay polygon
           map.on('click', function(e) {
             if (activePolygonCoords && !isPointInsidePolygon(e.latlng.lat, e.latlng.lng, activePolygonCoords)) {
               showToast(`You cannot drop a pin outside Barangay ${loggedInBarangay}!`, "error");
@@ -907,9 +909,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // ------------------------------------------
-    // B. "UPDATE LOCATION" FOR EDIT MODAL
-    // ------------------------------------------
+// ------------------------------------------
+// B. "UPDATE LOCATION" FOR EDIT MODAL
+// ------------------------------------------
     const btnEditDefineMap = document.getElementById('btn-edit-define-map');
 
     if (btnEditDefineMap && mapModal) {
@@ -925,17 +927,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Initialize Leaflet if not already initialized
         if (!map) {
           map = L.map('roadwiseMap', {
-            maxZoom: 20,
-            maxBoundsViscosity: 1.0
+            minZoom: 14,             // 🛑 Stops over-zooming out (keeps view within the barangay/city)
+            maxZoom: 19,             // 🛑 Stops over-zooming in (prevents pixelated/missing satellite tiles)
+            maxBoundsViscosity: 0.7  // 🌊 Soft boundary buffer: prevents zoom-out lockup while keeping map centered
           });
 
           // 🛰️ GOOGLE HYBRID SATELLITE TILES
           L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-            maxZoom: 20,
+            maxZoom: 19,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             attribution: '&copy; Google Maps'
           }).addTo(map);
 
+          // Strict boundary check: pin is strictly forbidden outside barangay polygon
           map.on('click', function(e) {
             if (activePolygonCoords && !isPointInsidePolygon(e.latlng.lat, e.latlng.lng, activePolygonCoords)) {
               showToast(`You cannot drop a pin outside Barangay ${loggedInBarangay}!`, "error");

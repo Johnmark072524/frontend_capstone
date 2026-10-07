@@ -3628,7 +3628,7 @@ function executeFinalSubmission() {
       } else if (rawSev === "medium") {
         showToast(`⚠️ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "low") {
-        showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
+        showToast(`Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
       } else {
         showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
       }

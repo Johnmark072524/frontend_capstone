@@ -140,6 +140,8 @@
             <ul class="profile-nav" id="profile-nav-menu">
               <li class="active" data-target="tab-identity">Official Details</li>
               <li data-target="tab-security">Security & Password</li>
+              <!-- 🚀 NEW: CEO OFFICE TURNOVER TAB -->
+              <li data-target="tab-turnover" style="color: #c2410c; font-weight: 600;">🏛️ Office Turnover</li>
               <li class="logout-btn" style="margin-top: auto; background-color: #fef2f2; color: #dc3545; border: 1px solid #fecaca; border-radius: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.05);">
                 <span><span class="icon" style="margin-right: 8px;">🚪</span> Log Out</span>
                 <span style="font-size: 14px;">➔</span>
@@ -208,6 +210,29 @@
 
                 <button type="submit" id="btn-submit-password" class="btn-submit" style="width: 100%; padding: 10px; background: #d35400; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Update Password</button>
               </form>
+            </div>
+
+            <!-- TAB 3: CEO TURNOVER / SUCCESSION -->
+            <div id="tab-turnover" class="profile-tab hidden">
+              <div style="border-bottom: 2px solid #fed7aa; padding-bottom: 10px; margin-bottom: 20px;">
+                <h3 class="profile-tab-title" style="margin: 0; color: #c2410c; border: none; padding: 0;">🏛️ Engineering Office Turnover</h3>
+                <p style="font-size: 13px; color: #64748b; margin: 5px 0 0 0;">Transfer City Engineer administrative authority of RoadWise to your appointed successor.</p>
+              </div>
+
+              <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 16px; margin-bottom: 25px;">
+                <h4 style="margin: 0 0 8px 0; color: #9a3412; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                  ⚠️ Executive Handover Guidelines
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #7c2d12; line-height: 1.6;">
+                  <li>All your past inspection reviews, road repair dispatches, and completions will remain permanently attributed to your name in city audit records.</li>
+                  <li>All ongoing repair queues will seamlessly transfer to the incoming City Engineer.</li>
+                  <li><strong>Your current session will terminate immediately</strong> upon confirmation.</li>
+                </ul>
+              </div>
+
+              <button type="button" onclick="openCeoHandoverModal()" style="background: #d35400; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(211, 84, 0, 0.25);">
+                <span>📜</span> Initiate Office Handover
+              </button>
             </div>
 
           </div>
@@ -328,6 +353,110 @@
             <!-- Confirm Logout Button -->
             <button type="button" id="btn-confirm-logout" style="padding: 10px 20px; border-radius: 6px; border: none; background: #dc3545; color: white; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);">Yes, Log Out</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 🏛️ MODAL: CEO SUCCESSION FORM -->
+      <!-- ========================================== -->
+      <div id="ceo-handover-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 650px;">
+          <div class="modal-header" style="background: #fff7ed; border-bottom: 1px solid #fed7aa; padding: 15px 20px;">
+            <h2 style="margin: 0; font-size: 17px; color: #9a3412; display: flex; align-items: center; gap: 8px;">
+              🏛️ City Engineer Succession Form
+            </h2>
+            <button onclick="closeCeoHandoverModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b;">✕</button>
+          </div>
+
+          <form id="form-ceo-handover" onsubmit="event.preventDefault(); submitCeoHandover();" style="padding: 20px;">
+
+            <!-- SECTION 1: INCOMING SUCCESSOR -->
+            <div style="margin-bottom: 20px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #d35400;">
+                👷 Appointed City Engineer Information
+              </h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">First Name *</label>
+                  <input type="text" id="ceo-succ-first" required placeholder="Juan" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Middle Name</label>
+                  <input type="text" id="ceo-succ-middle" placeholder="Reyes" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Last Name *</label>
+                  <input type="text" id="ceo-succ-last" required placeholder="Santos" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Official Government Email *</label>
+                  <input type="email" id="ceo-succ-email" required placeholder="engineer@sjdm.gov.ph" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Contact Number</label>
+                  <input type="tel" id="ceo-succ-phone" placeholder="09123456789" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Assign System Username *</label>
+                  <input type="text" id="ceo-succ-user" required placeholder="ceo_jsantos" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Appointment Memo / Special Order #</label>
+                  <input type="text" id="ceo-succ-memo" placeholder="e.g. CEO-2026-042" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: SECURITY AUTHORIZATION -->
+            <div style="background: #fff7ed; border: 1px solid #fed7aa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+              <label style="display: block; font-size: 12px; font-weight: 700; color: #c2410c; margin-bottom: 6px;">
+                🔒 Re-enter YOUR Current Password to Authorize Transfer *
+              </label>
+              <input type="password" id="ceo-current-pass" required placeholder="Enter your current password" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box;">
+            </div>
+
+            <!-- MODAL ACTIONS -->
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button type="button" onclick="closeCeoHandoverModal()" style="padding: 8px 16px; border: 1px solid #cbd5e1; background: white; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancel</button>
+              <button type="submit" id="btn-confirm-ceo-handover" style="padding: 8px 20px; background: #d35400; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                Confirm & Execute Handover ➔
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 🎉 MODAL: SUCCESSFUL CEO HANDOVER SUMMARY -->
+      <!-- ========================================== -->
+      <div id="ceo-handover-success-modal" class="modal-overlay hidden" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 500px; text-align: center; padding: 25px;">
+          <div style="font-size: 45px; margin-bottom: 10px;">👷</div>
+          <h2 style="margin: 0 0 10px 0; color: #9a3412; font-size: 20px;">Turnover Completed!</h2>
+          <p style="font-size: 13px; color: #475569; margin-bottom: 20px;">
+            City Engineering authority has been transferred to your successor. Save these demo credentials:
+          </p>
+
+          <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 15px; text-align: left; margin-bottom: 20px; font-size: 13px;">
+            <p style="margin: 0 0 6px 0;"><strong>Successor:</strong> <span id="disp-ceo-succ-name">Loading...</span></p>
+            <p style="margin: 0 0 6px 0;"><strong>Username:</strong> <span id="disp-ceo-succ-user" style="font-family: monospace; color: #9a3412; font-weight: bold;">Loading...</span></p>
+            <p style="margin: 0;"><strong>Temporary Password:</strong> <span id="disp-ceo-succ-pass" style="font-family: monospace; color: #b91c1c; font-weight: bold;">Loading...</span></p>
+          </div>
+
+          <p style="font-size: 12px; color: #64748b; margin-bottom: 20px;">
+            Your session has terminated. You will now be redirected to the login portal.
+          </p>
+
+          <button onclick="terminateCeoHandoverSession()" style="width: 100%; padding: 10px; background: #d35400; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">
+            Proceed to Login Portal ➔
+          </button>
         </div>
       </div>
 

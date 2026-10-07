@@ -8828,6 +8828,293 @@ if (formChangePassword) {
 }
 
 // ==========================================
+// 13. CPDO ADMIN OFFICE TURNOVER PROTOCOL
+// ==========================================
+
+// 1. Navigation Tab Switching (Supports Identity, Security, and Turnover tabs)
+const profileNavMenu = document.getElementById('profile-nav-menu');
+if (profileNavMenu) {
+  profileNavMenu.addEventListener('click', (e) => {
+    const targetLi = e.target.closest('li[data-target]');
+    if (!targetLi) return;
+
+    // Toggle active state on menu items
+    profileNavMenu.querySelectorAll('li').forEach(li => li.classList.remove('active'));
+    targetLi.classList.add('active');
+
+    // Hide all tabs
+    document.querySelectorAll('.profile-tab').forEach(tab => {
+      tab.classList.add('hidden');
+      tab.classList.remove('active');
+    });
+
+    // Display selected tab
+    const targetTabId = targetLi.getAttribute('data-target');
+    const selectedTab = document.getElementById(targetTabId);
+    if (selectedTab) {
+      selectedTab.classList.remove('hidden');
+      selectedTab.classList.add('active');
+    }
+  });
+}
+
+// 2. Modal Open / Close Controllers
+window.openAdminHandoverModal = function () {
+  const modal = document.getElementById('admin-handover-modal');
+  const form = document.getElementById('form-admin-handover');
+  if (form) form.reset();
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+};
+
+window.closeAdminHandoverModal = function () {
+  const modal = document.getElementById('admin-handover-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+};
+
+// 3. Form Submission Handler
+window.submitAdminHandover = function () {
+  const currentAdminId = sessionStorage.getItem('userId');
+  if (!currentAdminId) {
+    showToast("Session expired. Please log in again.", "error");
+    return;
+  }
+
+  const currentPassword = document.getElementById('succ-current-pass')?.value;
+  const firstName = document.getElementById('succ-first-name')?.value.trim();
+  const middleName = document.getElementById('succ-middle-name')?.value.trim();
+  const lastName = document.getElementById('succ-last-name')?.value.trim();
+  const email = document.getElementById('succ-email')?.value.trim();
+  const phoneNumber = document.getElementById('succ-phone')?.value.trim();
+  const username = document.getElementById('succ-username')?.value.trim();
+  const memoNumber = document.getElementById('succ-memo')?.value.trim();
+
+  if (!currentPassword) {
+    showToast("Please re-enter your current password to authorize turnover.", "error");
+    return;
+  }
+
+  const submitBtn = document.getElementById('btn-confirm-handover');
+  const originalText = submitBtn ? submitBtn.innerText : 'Confirm & Execute Handover ➔';
+  if (submitBtn) {
+    submitBtn.innerText = "Executing Turnover... ⏳";
+    submitBtn.disabled = true;
+  }
+
+  const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+
+  fetch(`${baseUrl}/api/users/handover-admin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      currentAdminId: currentAdminId,
+      currentPassword: currentPassword,
+      firstName: firstName,
+      middleName: middleName,
+      lastName: lastName,
+      email: email,
+      phoneNumber: phoneNumber,
+      username: username,
+      memoNumber: memoNumber
+    })
+  })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Turnover processing failed.");
+      }
+      return data;
+    })
+    .then(data => {
+      // Close input form
+      closeAdminHandoverModal();
+
+      // Populate demo credentials modal
+      const dispName = document.getElementById('disp-succ-name');
+      const dispUser = document.getElementById('disp-succ-user');
+      const dispPass = document.getElementById('disp-succ-pass');
+
+      if (dispName) dispName.innerText = data.successorName || `${firstName} ${lastName}`;
+      if (dispUser) dispUser.innerText = data.successorUsername || username;
+      if (dispPass) dispPass.innerText = data.tempPassword || 'Check registered email';
+
+      // Show turnover success modal
+      const succModal = document.getElementById('handover-success-modal');
+      if (succModal) {
+        succModal.classList.remove('hidden');
+        succModal.style.display = 'flex';
+      }
+
+      showToast("Office successfully turned over! Session ended.", "success", 10000);
+    })
+    .catch(err => {
+      console.error("Turnover Error:", err);
+      showToast(err.message, "error", 6000);
+    })
+    .finally(() => {
+      if (submitBtn) {
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+};
+
+// 4. Terminate Current Session and Redirect
+window.terminateHandoverSession = function () {
+  sessionStorage.clear();
+  localStorage.removeItem('user');
+  localStorage.removeItem('currentUser');
+  window.location.replace('login.html');
+};
+
+// ==========================================
+// 🏛️ CEO OFFICE TURNOVER PROTOCOL
+// ==========================================
+
+// 1. Navigation Tab Switching (Supports Identity, Security, and Turnover tabs)
+const ceoProfileNavMenu = document.getElementById('profile-nav-menu');
+if (ceoProfileNavMenu) {
+  ceoProfileNavMenu.addEventListener('click', (e) => {
+    const targetLi = e.target.closest('li[data-target]');
+    if (!targetLi) return;
+
+    // Toggle active state on menu items
+    ceoProfileNavMenu.querySelectorAll('li').forEach(li => li.classList.remove('active'));
+    targetLi.classList.add('active');
+
+    // Hide all tabs
+    document.querySelectorAll('.profile-tab').forEach(tab => {
+      tab.classList.add('hidden');
+      tab.classList.remove('active');
+    });
+
+    // Display selected tab
+    const targetTabId = targetLi.getAttribute('data-target');
+    const selectedTab = document.getElementById(targetTabId);
+    if (selectedTab) {
+      selectedTab.classList.remove('hidden');
+      selectedTab.classList.add('active');
+    }
+  });
+}
+
+// 2. Modal Open / Close Controllers
+window.openCeoHandoverModal = function () {
+  const modal = document.getElementById('ceo-handover-modal');
+  const form = document.getElementById('form-ceo-handover');
+  if (form) form.reset();
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+};
+
+window.closeCeoHandoverModal = function () {
+  const modal = document.getElementById('ceo-handover-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+};
+
+// 3. Form Submission Handler
+window.submitCeoHandover = function () {
+  const currentCeoId = sessionStorage.getItem('userId');
+  if (!currentCeoId) {
+    showToast("Session expired. Please log in again.", "error");
+    return;
+  }
+
+  const currentPassword = document.getElementById('ceo-current-pass')?.value;
+  const firstName = document.getElementById('ceo-succ-first')?.value.trim();
+  const middleName = document.getElementById('ceo-succ-middle')?.value.trim();
+  const lastName = document.getElementById('ceo-succ-last')?.value.trim();
+  const email = document.getElementById('ceo-succ-email')?.value.trim();
+  const phoneNumber = document.getElementById('ceo-succ-phone')?.value.trim();
+  const username = document.getElementById('ceo-succ-user')?.value.trim();
+  const memoNumber = document.getElementById('ceo-succ-memo')?.value.trim();
+
+  if (!currentPassword) {
+    showToast("Please re-enter your current password to authorize turnover.", "error");
+    return;
+  }
+
+  const submitBtn = document.getElementById('btn-confirm-ceo-handover');
+  const originalText = submitBtn ? submitBtn.innerText : 'Confirm & Execute Handover ➔';
+  if (submitBtn) {
+    submitBtn.innerText = "Executing Turnover... ⏳";
+    submitBtn.disabled = true;
+  }
+
+  const baseUrl = typeof API_BASE_URL !== 'undefined' ? API_BASE_URL : '';
+
+  fetch(`${baseUrl}/api/users/handover-ceo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      currentCeoId: currentCeoId,
+      currentPassword: currentPassword,
+      firstName: firstName,
+      middleName: middleName,
+      lastName: lastName,
+      email: email,
+      phoneNumber: phoneNumber,
+      username: username,
+      memoNumber: memoNumber
+    })
+  })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Turnover processing failed.");
+      }
+      return data;
+    })
+    .then(data => {
+      closeCeoHandoverModal();
+
+      const dispName = document.getElementById('disp-ceo-succ-name');
+      const dispUser = document.getElementById('disp-ceo-succ-user');
+      const dispPass = document.getElementById('disp-ceo-succ-pass');
+
+      if (dispName) dispName.innerText = data.successorName || `${firstName} ${lastName}`;
+      if (dispUser) dispUser.innerText = data.successorUsername || username;
+      if (dispPass) dispPass.innerText = data.tempPassword || 'Check registered email';
+
+      const succModal = document.getElementById('ceo-handover-success-modal');
+      if (succModal) {
+        succModal.classList.remove('hidden');
+        succModal.style.display = 'flex';
+      }
+
+      showToast("Engineering office successfully turned over! Session ended.", "success", 10000);
+    })
+    .catch(err => {
+      console.error("Turnover Error:", err);
+      showToast(err.message, "error", 6000);
+    })
+    .finally(() => {
+      if (submitBtn) {
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+};
+
+// 4. Terminate Session and Redirect
+window.terminateCeoHandoverSession = function () {
+  sessionStorage.clear();
+  localStorage.removeItem('user');
+  localStorage.removeItem('currentUser');
+  window.location.replace('login.html');
+};
+
+// ==========================================
 // 👥 USER MANAGEMENT DATA FETCHER
 // ==========================================
 window.loadUserManagementTable = function() {

@@ -3050,12 +3050,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 2. Leaflet Map Locator
+  // ==========================================
+// 🗺️ CEO MANAGE MODAL: LOCATE ON MAP (WITH STREETS & BOUNDARIES)
+// ==========================================
+
+// Safe global scoping to prevent duplicate declaration syntax errors
+  window.ceoManageMap = window.ceoManageMap || null;
+  window.ceoManageMarker = window.ceoManageMarker || null;
+  window.ceoManageBoundaryLayer = window.ceoManageBoundaryLayer || null;
+  window.ceoManageBounds = window.ceoManageBounds || null;
+  window.ceoManageGeoJsonData = window.ceoManageGeoJsonData || null;
+
+// Re-use or pre-fetch official CSJDM boundaries
+  function ensureManageMapGeoJsonLoaded() {
+    if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData) {
+      return Promise.resolve(sjdmGeoJsonData);
+    }
+    if (window.ceoGeoJsonData) {
+      return Promise.resolve(window.ceoGeoJsonData);
+    }
+    if (window.ceoManageGeoJsonData) {
+      return Promise.resolve(window.ceoManageGeoJsonData);
+    }
+    return fetch('sjdm_barangays.geojson')
+      .then(res => res.json())
+      .then(data => {
+        window.ceoManageGeoJsonData = data;
+        return data;
+      })
+      .catch(err => console.error("Could not load sjdm_barangays.geojson for CEO modal:", err));
+  }
+
+// 2. Leaflet Map Locator Event Handler
   const btnLocateMap = document.getElementById('ceo-btn-locate-map');
   if (btnLocateMap) {
     btnLocateMap.addEventListener('click', function(e) {
       e.preventDefault();
       const mapContainer = document.getElementById('ceo-manage-map-container');
+      if (!mapContainer) return;
 
       if (!currentCEOLat || !currentCEOLng || (currentCEOLat === 0 && currentCEOLng === 0)) {
         if (typeof showToast === 'function') {
@@ -3069,6 +3101,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mapContainer.style.display === 'none' || mapContainer.style.display === '') {
         mapContainer.style.display = 'block';
 
+        if (typeof L === 'undefined') {
+          console.error("Leaflet library (L) is not loaded.");
+          return;
+        }
+
         const redIcon = new L.Icon({
           iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -3078,20 +3115,88 @@ document.addEventListener('DOMContentLoaded', () => {
           shadowSize: [41, 41]
         });
 
-        if (!ceoManageMap) {
-          ceoManageMap = L.map('ceo-manage-map').setView([currentCEOLat, currentCEOLng], 17);
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-          }).addTo(ceoManageMap);
-          ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], { icon: redIcon }).addTo(ceoManageMap);
+        // 1. Initialize Map with bounded zoom constraints
+        if (!window.ceoManageMap) {
+          window.ceoManageMap = L.map('ceo-manage-map', {
+            minZoom: 12,             // Stops zooming out past CSJDM scale
+            maxZoom: 19,             // Stops over-zooming past satellite resolution
+            maxBoundsViscosity: 0.7  // Elastic boundary buffer prevents camera locks
+          });
+
+          // 🛰️ GOOGLE HYBRID SATELLITE (Subdivisions, road lines, street names, & landmarks)
+          L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            maxZoom: 19,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Maps'
+          }).addTo(window.ceoManageMap);
+
+          // 2. Render CSJDM Barangay Outlines
+          ensureManageMapGeoJsonLoaded().then(geoJson => {
+            if (geoJson && window.ceoManageMap) {
+              window.ceoManageBoundaryLayer = L.geoJSON(geoJson, {
+                style: {
+                  color: '#0284c7',       // Engineering Sky-Blue border
+                  weight: 2,
+                  dashArray: '5, 5',
+                  fillColor: '#0369a1',
+                  fillOpacity: 0.05,
+                  interactive: false
+                }
+              }).addTo(window.ceoManageMap);
+
+              window.ceoManageBounds = window.ceoManageBoundaryLayer.getBounds();
+              window.ceoManageMap.setMaxBounds(window.ceoManageBounds.pad(0.40));
+            }
+          });
+
+          // 3. Drop & bind Project Pin
+          window.ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], { icon: redIcon })
+            .addTo(window.ceoManageMap)
+            .bindPopup(`<b>Project Location</b><br>Lat: ${currentCEOLat.toFixed(5)}<br>Lng: ${currentCEOLng.toFixed(5)}`);
+
+          window.ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
+
         } else {
-          ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
-          ceoManageMarker.setLatLng([currentCEOLat, currentCEOLng]);
+          // Reuse existing map instance
+          window.ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
+
+          if (window.ceoManageMarker) {
+            window.ceoManageMarker.setLatLng([currentCEOLat, currentCEOLng]);
+            window.ceoManageMarker.setIcon(redIcon);
+            window.ceoManageMarker.setPopupContent(`<b>Project Location</b><br>Lat: ${currentCEOLat.toFixed(5)}<br>Lng: ${currentCEOLng.toFixed(5)}`);
+          } else {
+            window.ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], { icon: redIcon })
+              .addTo(window.ceoManageMap);
+          }
+
+          // Failsafe: apply boundaries if GeoJSON finished loading after the first toggle
+          if (!window.ceoManageBoundaryLayer) {
+            ensureManageMapGeoJsonLoaded().then(geoJson => {
+              if (geoJson && window.ceoManageMap) {
+                window.ceoManageBoundaryLayer = L.geoJSON(geoJson, {
+                  style: {
+                    color: '#0284c7',
+                    weight: 2,
+                    dashArray: '5, 5',
+                    fillColor: '#0369a1',
+                    fillOpacity: 0.05,
+                    interactive: false
+                  }
+                }).addTo(window.ceoManageMap);
+
+                window.ceoManageBounds = window.ceoManageBoundaryLayer.getBounds();
+                window.ceoManageMap.setMaxBounds(window.ceoManageBounds.pad(0.40));
+              }
+            });
+          }
         }
 
         setTimeout(() => {
-          ceoManageMap.invalidateSize();
+          if (window.ceoManageMap) {
+            window.ceoManageMap.invalidateSize();
+          }
         }, 200);
+
       } else {
         mapContainer.style.display = 'none';
       }

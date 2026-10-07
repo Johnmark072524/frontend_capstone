@@ -3325,7 +3325,10 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
 // BACKEND API CONNECTION & FORM LOGIC (RoadWise)
 // ==========================================
 
-// 🚀 FIX: Global toggle function for "Other" damage type selection
+// 🛡️ Global Submission Guard (Prevents duplicate requests)
+let isSubmittingReport = false;
+
+// 🚀 Toggle for "Other" damage type selection
 window.toggleOtherDamageType = function() {
   const select = document.getElementById('damageType');
   const otherGroup = document.getElementById('otherDamageTypeGroup');
@@ -3335,7 +3338,7 @@ window.toggleOtherDamageType = function() {
 
   if (select.value === 'Other') {
     otherGroup.classList.remove('hidden');
-    otherGroup.style.display = 'block'; // Failsafe in case CSS class is overridden
+    otherGroup.style.display = 'block';
     if (otherInput) otherInput.focus();
   } else {
     otherGroup.classList.add('hidden');
@@ -3344,21 +3347,22 @@ window.toggleOtherDamageType = function() {
   }
 };
 
-// STEP 1: Validate and show the custom popup
+// STEP 1: Validate and open the confirmation modal
 function submitRoadReport() {
+  // If already processing a previous request, block immediately
+  if (isSubmittingReport) return;
+
   const roadName = document.getElementById("cityRoadName")?.value;
   const widthVal = document.getElementById("width")?.value;
   const lengthVal = document.getElementById("length")?.value;
 
-  // ⬇️ REVERTED: Only strictly require the Road Details ⬇️
   if (!roadName || !widthVal || !lengthVal) {
     showToast("Please fill in all required fields (Road Name, Width, and Length).", "error");
     return;
   }
 
-  // If they selected "Other" but left the text box blank, warn them
   const damageType = document.getElementById("damageType")?.value;
-  if (damageType === "Other" && !document.getElementById("otherDamageType")?.value) {
+  if (damageType === "Other" && !document.getElementById("otherDamageType")?.value.trim()) {
     showToast("Please specify the 'Other' damage type.", "error");
     return;
   }
@@ -3373,24 +3377,45 @@ function submitRoadReport() {
     return;
   }
 
-  // Show modern confirmation modal
-  document.getElementById('confirm-modal').classList.remove('hidden');
+  const modal = document.getElementById('confirm-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
 }
 
-// STEP 2: Close the popup if they click Cancel
+// STEP 2: Close confirmation modal
 function closeConfirmModal() {
-  document.getElementById('confirm-modal').classList.add('hidden');
+  const modal = document.getElementById('confirm-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
 }
 
-// STEP 3: The actual server submission if they click "Yes, Submit"
+// STEP 3: Single-flight server submission
 function executeFinalSubmission() {
+  // 🛡️ BLOCK DUPLICATE EXECUTION: If already submitting, exit immediately
+  if (isSubmittingReport) {
+    return;
+  }
+  isSubmittingReport = true;
+
+  // Immediately close modal
   closeConfirmModal();
 
+  // Disable background button
   const submitBtn = document.getElementById("submit-report-btn");
   if (submitBtn) {
     submitBtn.innerHTML = "⏳ Submitting...";
     submitBtn.disabled = true;
     submitBtn.style.opacity = "0.7";
+  }
+
+  // Also disable the modal confirm button if it exists
+  const modalConfirmBtn = document.querySelector("#confirm-modal button.btn-confirm, #confirm-modal [onclick*='executeFinalSubmission']");
+  if (modalConfirmBtn) {
+    modalConfirmBtn.disabled = true;
   }
 
   const formData = new FormData();
@@ -3405,9 +3430,7 @@ function executeFinalSubmission() {
     formData.append("userId", loggedInUserId);
   }
 
-  // ==============================================================
-  // 🛡️ THE BULLETPROOF DATA EXTRACTOR 🛡️
-  // ==============================================================
+  // Helper extractor
   function getVal(id) {
     const el = document.getElementById(id);
     if (!el) return "";
@@ -3464,18 +3487,17 @@ function executeFinalSubmission() {
     method: "POST",
     body: formData
   })
-    .then(response => {
+    .then(async response => {
       if (response.ok) return response.json();
-      throw new Error('Network response was not ok.');
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.error || errData.message || 'Network response was not ok.');
     })
     .then(data => {
-      // 🚀 NORMALIZE AI SEVERITY & CONFIDENCE SCORE
       const rawSev = String(data.severity || '').trim().toLowerCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
-      // 🚀 SHOW ACCURATE DYNAMIC TOAST
       if (!hasImage || rawSev === "unassessed" || rawSev === "") {
-        showToast("📋 Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
+        showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
       } else if (rawSev === "high") {
         showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "medium") {
@@ -3483,90 +3505,39 @@ function executeFinalSubmission() {
       } else if (rawSev === "low") {
         showToast(`✅ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
       } else {
-        showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
+        showToast("📋 Report saved successfully!", "success");
       }
 
       if (typeof resetAddReportForm === 'function') resetAddReportForm();
 
+      // Refresh table/chart
       if (typeof loadBarangayReports === 'function') {
         const brgyId = sessionStorage.getItem("barangayId");
-
-        const canvasId = 'severityChart';
         if (typeof Chart !== 'undefined') {
-          let existingChart = Chart.getChart(canvasId);
+          let existingChart = Chart.getChart('severityChart');
           if (existingChart) existingChart.destroy();
         }
-
         if (brgyId) loadBarangayReports(brgyId);
-      }
-
-      if (submitBtn) {
-        submitBtn.innerHTML = "Submit Report";
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = "1";
       }
     })
     .catch(error => {
       console.error("Error submitting report:", error);
-      showToast("Failed to upload report. Check your internet connection.", "error");
+      showToast("Failed to upload report. Check your network connection.", "error");
+    })
+    .finally(() => {
+      // 🔓 Release the submission lock
+      isSubmittingReport = false;
+
       if (submitBtn) {
         submitBtn.innerHTML = "Submit Report";
         submitBtn.disabled = false;
         submitBtn.style.opacity = "1";
       }
+      if (modalConfirmBtn) {
+        modalConfirmBtn.disabled = false;
+      }
     });
 }
-
-// ==========================================
-// FORM UTILITY LOGIC
-// ==========================================
-function resetAddReportForm() {
-  // 1. Clear all manual text and number inputs
-  document.getElementById("width").value = "";
-  document.getElementById("length").value = "";
-  document.getElementById("numberOfBridges").value = "";
-  document.getElementById("lengthOfCulverts").value = "";
-  document.getElementById("damageDescription").value = "";
-
-  // 2. Clear all dropdowns and auto-filled backend fields
-  document.getElementById("cityRoadName").value = "";
-  document.getElementById("cityRoadId").value = "";
-  document.getElementById("roadImportance").value = "";
-  document.getElementById("roadType").value = "";
-  document.getElementById("terrainType").value = "";
-
-  document.getElementById("damageType").value = "";
-  document.getElementById("damageLength").value = "";
-  document.getElementById("damageWidth").value = "";
-
-  // 🚀 Clear & hide the "Other" specify field
-  const otherGroup = document.getElementById("otherDamageTypeGroup");
-  const otherInput = document.getElementById("otherDamageType");
-  if (otherGroup) {
-    otherGroup.classList.add("hidden");
-    otherGroup.style.display = "none";
-  }
-  if (otherInput) {
-    otherInput.value = "";
-  }
-
-  // 3. Wipe hidden map math and reset display text
-  document.getElementById("latitude").value = "";
-  document.getElementById("longitude").value = "";
-  const coordsDisplay = document.getElementById("coords-display");
-  if (coordsDisplay) coordsDisplay.textContent = "Not Selected";
-
-  // 4. Wipe the image file and hide the preview
-  document.getElementById("damageImageFile").value = "";
-  const preview = document.getElementById("imagePreview");
-  if (preview) {
-    preview.style.display = 'none';
-    preview.src = "";
-  }
-  const fileNameDisplay = document.getElementById("fileNameDisplay");
-  if (fileNameDisplay) fileNameDisplay.textContent = "";
-}
-
 // ==========================================
 // ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
 // ==========================================

@@ -8175,25 +8175,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ==========================================
-// 🗺️ CEO GLOBAL MAP: DISPATCHED PROJECTS
+// 🗺️ CEO GLOBAL MAP: DISPATCHED PROJECTS (SAFE & FLUID ZOOM)
 // ==========================================
-let ceoGlobalMap = null;
-let ceoGlobalMarkerLayer = null;
-let ceoBoundaryLayer = null;
-let ceoCityMaskLayer = null;
-let ceoGeoJsonData = null;
+window.ceoGlobalMap = window.ceoGlobalMap || null;
+window.ceoGlobalMarkerLayer = window.ceoGlobalMarkerLayer || null;
+window.ceoBoundaryLayer = window.ceoBoundaryLayer || null;
+window.ceoCityMaskLayer = window.ceoCityMaskLayer || null;
+window.ceoGeoJsonData = window.ceoGeoJsonData || null;
 
 function ensureCEOGeoJsonLoaded() {
   if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData) {
     return Promise.resolve(sjdmGeoJsonData);
   }
-  if (ceoGeoJsonData) {
-    return Promise.resolve(ceoGeoJsonData);
+  if (window.ceoGeoJsonData) {
+    return Promise.resolve(window.ceoGeoJsonData);
   }
   return fetch('sjdm_barangays.geojson')
     .then(res => res.json())
     .then(data => {
-      ceoGeoJsonData = data;
+      window.ceoGeoJsonData = data;
       return data;
     });
 }
@@ -8202,30 +8202,31 @@ window.loadCEOGlobalMap = function() {
   const mapContainer = document.getElementById('ceo-global-map');
   if (!mapContainer) return;
 
-  // 1. Initialize Leaflet Map
-  if (!ceoGlobalMap) {
-    ceoGlobalMap = L.map('ceo-global-map', {
-      maxZoom: 20,
-      maxBoundsViscosity: 1.0
+  // 1. Initialize Leaflet Map with smooth zoom boundaries
+  if (!window.ceoGlobalMap) {
+    window.ceoGlobalMap = L.map('ceo-global-map', {
+      minZoom: 12,             // 🛑 Stops zooming out past CSJDM scale
+      maxZoom: 19,             // 🛑 Stops over-zooming past satellite resolution
+      maxBoundsViscosity: 0.6  // 🌊 Soft boundary buffer prevents camera freezes
     });
 
-    // 🛰️ Google Hybrid Satellite Tiles (Subdivisions, landmarks, and street names)
+    // 🛰️ Google Hybrid Satellite Tiles (Road lines, subdivisions, street names, & landmarks)
     L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
+      maxZoom: 19,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Maps'
-    }).addTo(ceoGlobalMap);
+    }).addTo(window.ceoGlobalMap);
 
-    ceoGlobalMarkerLayer = L.layerGroup().addTo(ceoGlobalMap);
+    window.ceoGlobalMarkerLayer = L.layerGroup().addTo(window.ceoGlobalMap);
   }
 
   // 2. Load Boundaries & City-Level Overlay
   ensureCEOGeoJsonLoaded()
     .then(geoJson => {
-      if (ceoBoundaryLayer) ceoGlobalMap.removeLayer(ceoBoundaryLayer);
-      if (ceoCityMaskLayer) ceoGlobalMap.removeLayer(ceoCityMaskLayer);
+      if (window.ceoBoundaryLayer) window.ceoGlobalMap.removeLayer(window.ceoBoundaryLayer);
+      if (window.ceoCityMaskLayer) window.ceoGlobalMap.removeLayer(window.ceoCityMaskLayer);
 
-      // Collect all polygon rings across all 62 barangays to mask the outside perimeter
+      // Collect all polygon rings across all barangays to mask outside CSJDM
       const innerRings = [];
       geoJson.features.forEach(f => {
         if (f.geometry.type === 'Polygon') {
@@ -8237,7 +8238,6 @@ window.loadCEOGlobalMap = function() {
         }
       });
 
-      // World outer boundary
       const worldOuter = [
         [90, -180],
         [90, 180],
@@ -8245,18 +8245,18 @@ window.loadCEOGlobalMap = function() {
         [-90, -180]
       ];
 
-      // A. Darken everything outside SJDM city limits
-      ceoCityMaskLayer = L.polygon([worldOuter, ...innerRings], {
+      // A. Darken areas outside SJDM city limits
+      window.ceoCityMaskLayer = L.polygon([worldOuter, ...innerRings], {
         color: 'transparent',
         fillColor: '#000000',
         fillOpacity: 0.50,
         interactive: false
-      }).addTo(ceoGlobalMap);
+      }).addTo(window.ceoGlobalMap);
 
-      // B. Render thin, interactive boundaries for each of the 62 barangays
-      ceoBoundaryLayer = L.geoJSON(geoJson, {
+      // B. Render interactive barangay borders
+      window.ceoBoundaryLayer = L.geoJSON(geoJson, {
         style: () => ({
-          color: '#38bdf8',       // Light sky-blue border lines
+          color: '#38bdf8',       // Light sky-blue border
           weight: 1.5,
           dashArray: '4, 4',
           fillColor: '#0284c7',
@@ -8265,14 +8265,12 @@ window.loadCEOGlobalMap = function() {
         onEachFeature: (feature, layer) => {
           const brgyName = feature.properties.name || feature.properties.adm4_name || 'Barangay';
 
-          // Tooltip on hover
           layer.bindTooltip(`<b>${brgyName}</b>`, {
             sticky: true,
             direction: 'top',
             className: 'ceo-brgy-tooltip'
           });
 
-          // Subtle highlight on mouse hover
           layer.on({
             mouseover: (e) => {
               const l = e.target;
@@ -8287,42 +8285,50 @@ window.loadCEOGlobalMap = function() {
               }
             },
             mouseout: (e) => {
-              ceoBoundaryLayer.resetStyle(e.target);
+              window.ceoBoundaryLayer.resetStyle(e.target);
             }
           });
         }
-      }).addTo(ceoGlobalMap);
+      }).addTo(window.ceoGlobalMap);
 
-      // Lock camera to the official SJDM city bounds
-      const cityBounds = ceoBoundaryLayer.getBounds();
-      ceoGlobalMap.fitBounds(cityBounds, { padding: [15, 15] });
-      ceoGlobalMap.setMaxBounds(cityBounds.pad(0.08));
-      ceoGlobalMap.setMinZoom(ceoGlobalMap.getZoom());
+      // 💡 CAMERA FIT & SMOOTH BOUNDS (No more zoom-out lockup)
+      const cityBounds = window.ceoBoundaryLayer.getBounds();
+
+      window.ceoGlobalMap.setMinZoom(12);
+      window.ceoGlobalMap.setMaxBounds(cityBounds.pad(0.40)); // 40% margin allows full zoom-out without clipping
+      window.ceoGlobalMap.fitBounds(cityBounds, { padding: [25, 25], maxZoom: 15 });
     })
     .catch(err => console.error("Error loading SJDM boundaries for CEO map:", err));
 
-  setTimeout(() => { ceoGlobalMap.invalidateSize(); }, 300);
+  setTimeout(() => {
+    if (window.ceoGlobalMap) {
+      window.ceoGlobalMap.invalidateSize();
+      if (window.ceoBoundaryLayer) {
+        window.ceoGlobalMap.fitBounds(window.ceoBoundaryLayer.getBounds(), { padding: [25, 25] });
+      }
+    }
+  }, 300);
 
   // 3. Fetch all active projects dispatched to CEO
   apiFetch(`/api/reports`, { cache: 'no-store' })
     .then(reports => {
-      ceoGlobalMarkerLayer.clearLayers();
+      window.ceoGlobalMarkerLayer.clearLayers();
 
       const activeCEOProjects = reports.filter(r => {
         const s = String(r.status || '').toLowerCase();
         return s === 'dispatched to ceo' || s === 'in progress';
       });
 
+      const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+      const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+      const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+      const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+
       activeCEOProjects.forEach(report => {
         const lat = parseFloat(report.latitude);
         const lng = parseFloat(report.longitude);
 
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
-
-        const pinRed = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const pinOrange = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const pinGreen = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-        const pinGrey = new L.Icon({ iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
 
         const severity = String(report.severity || 'Unassessed').toLowerCase();
         let selectedIcon = pinGrey;
@@ -8348,7 +8354,7 @@ window.loadCEOGlobalMap = function() {
 
         L.marker([lat, lng], { icon: selectedIcon })
           .bindPopup(popupHtml)
-          .addTo(ceoGlobalMarkerLayer);
+          .addTo(window.ceoGlobalMarkerLayer);
       });
     })
     .catch(err => console.error("Error loading CEO map data:", err));

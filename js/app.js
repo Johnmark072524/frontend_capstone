@@ -13585,7 +13585,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="rw-logout-icon-wrapper">🔒</div>
       <div class="rw-logout-title">${title}</div>
       <div class="rw-logout-message">${message}</div>
-      <button class="rw-logout-btn" id="rwDismissLogoutModal">Acknowledge & Sign In</button>
+      <button class="rw-logout-btn" id="rwDismissLogoutModal">Acknowledge</button>
     </div>
   `;
   document.body.appendChild(modalElement);

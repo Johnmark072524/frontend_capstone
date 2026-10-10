@@ -13474,3 +13474,139 @@ function escapeHtml(text) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+// ==========================================
+// 🛡️ SESSION EXPIRED / LOGOUT MODAL HANDLER
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const reason = params.get("reason");
+
+  // Only render if redirected due to session expiration
+  if (reason !== "timeout" && reason !== "shift_ended") return;
+
+  // 1. Inject Modal Styling
+  const modalStyle = document.createElement("style");
+  modalStyle.innerHTML = `
+    .rw-logout-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(5px);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-out;
+      font-family: inherit;
+    }
+    .rw-logout-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .rw-logout-card {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 440px;
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+      border: 1px solid #e2e8f0;
+      transform: scale(0.95);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .rw-logout-backdrop.active .rw-logout-card {
+      transform: scale(1);
+    }
+    .rw-logout-icon-wrapper {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      background: #fef2f2;
+      border: 2px solid #fee2e2;
+      color: #dc2626;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    .rw-logout-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    .rw-logout-message {
+      font-size: 0.92rem;
+      color: #64748b;
+      line-height: 1.55;
+      margin-bottom: 24px;
+    }
+    .rw-logout-btn {
+      width: 100%;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 9px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .rw-logout-btn:hover {
+      background: #1d4ed8;
+    }
+    .rw-logout-btn:active {
+      transform: scale(0.98);
+    }
+  `;
+  document.head.appendChild(modalStyle);
+
+  // 2. Configure Dynamic Copy Based on Reason
+  let title = "Session Expired";
+  let message = "For municipal data security, your session was automatically logged out due to 15 minutes of inactivity. Please sign in again to resume your work.";
+
+  if (reason === "shift_ended") {
+    title = "Work Shift Concluded";
+    message = "Your 8-hour maximum operational shift limit has been reached. Please re-authenticate your account credentials.";
+  }
+
+  // 3. Construct and Inject Modal Elements
+  const modalElement = document.createElement("div");
+  modalElement.className = "rw-logout-backdrop";
+  modalElement.id = "rwLogoutModal";
+  modalElement.innerHTML = `
+    <div class="rw-logout-card">
+      <div class="rw-logout-icon-wrapper">🔒</div>
+      <div class="rw-logout-title">${title}</div>
+      <div class="rw-logout-message">${message}</div>
+      <button class="rw-logout-btn" id="rwDismissLogoutModal">Acknowledge & Sign In</button>
+    </div>
+  `;
+  document.body.appendChild(modalElement);
+
+  // Show modal with animation
+  requestAnimationFrame(() => {
+    modalElement.classList.add("active");
+  });
+
+  // 4. Handle Modal Dismissal & URL Clean-up
+  const dismissBtn = document.getElementById("rwDismissLogoutModal");
+  dismissBtn.addEventListener("click", () => {
+    modalElement.classList.remove("active");
+    setTimeout(() => modalElement.remove(), 250);
+
+    // Focus on the username field if present
+    const usernameInput = document.querySelector("input[name='username'], input[type='text'], #username");
+    if (usernameInput) usernameInput.focus();
+  });
+
+  // Clean the URL bar so manual refreshes will not pop the modal up again
+  const cleanUrl = window.location.origin + window.location.pathname;
+  window.history.replaceState({}, document.title, cleanUrl);
+});

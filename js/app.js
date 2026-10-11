@@ -13601,7 +13601,6 @@ document.addEventListener("DOMContentLoaded", () => {
     modalElement.classList.remove("active");
     setTimeout(() => modalElement.remove(), 250);
 
-    // Focus on the username field if present
     const usernameInput = document.querySelector("input[name='username'], input[type='text'], #username");
     if (usernameInput) usernameInput.focus();
   });

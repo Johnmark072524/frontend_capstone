@@ -12171,13 +12171,33 @@ window.initArchiveTab = function() {
 };
 
 // =======================================================
+// 🕒 TIMESTAMP EXTRACTOR (FOR CHRONOLOGICAL SORTING)
+// =======================================================
+function getArchiveTimestamp(report) {
+  // Resolves the date when the record was concluded/archived
+  const rawDate = report.dateArchived || report.actualCompletionDate || report.archivedAt || report.completedAt || report.dateSubmitted;
+  if (!rawDate) return 0;
+
+  const time = new Date(rawDate).getTime();
+  return isNaN(time) ? 0 : time;
+}
+
+// =======================================================
 // 🗃️ 2. LOAD CONCLUDED RECORDS INTO DATABASE TABLE
 // =======================================================
 window.loadArchiveDatabaseTable = function(reports) {
-  // Isolate concluded/finalized records only
+  // 1. Isolate concluded/finalized records only
   allArchiveDatabaseReports = (Array.isArray(reports) ? reports : []).filter(r => {
     const stat = String(r.status || '').toLowerCase();
     return stat === 'completed' || stat === 'closed' || stat === 'resolved' || stat === 'archived';
+  });
+
+  // 2. ⚡ Sort: Newest archived date first -> Oldest (tiebreak with ID DESC)
+  allArchiveDatabaseReports.sort((a, b) => {
+    const timeA = getArchiveTimestamp(a);
+    const timeB = getArchiveTimestamp(b);
+    if (timeB !== timeA) return timeB - timeA;
+    return (Number(b.id) || 0) - (Number(a.id) || 0);
   });
 
   renderArchiveTableRows(allArchiveDatabaseReports);
@@ -12213,6 +12233,14 @@ window.filterArchiveDatabaseTable = function() {
     const matchesSearch = !searchTerm || id.includes(searchTerm) || roadName.includes(searchTerm) || brgyName.includes(searchTerm);
 
     return matchesYear && matchesStatus && matchesSearch;
+  });
+
+  // Maintain chronological order: latest archived first
+  filtered.sort((a, b) => {
+    const timeA = getArchiveTimestamp(a);
+    const timeB = getArchiveTimestamp(b);
+    if (timeB !== timeA) return timeB - timeA;
+    return (Number(b.id) || 0) - (Number(a.id) || 0);
   });
 
   renderArchiveTableRows(filtered);

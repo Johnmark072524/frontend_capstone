@@ -3655,53 +3655,32 @@ function executeFinalSubmission() {
     body: formData
   })
     .then(async response => {
-      if (response.ok) return response.json();
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || errData.message || 'Network response was not ok.');
-    })
-    .then(data => {
-      const rawSev = String(data.severity || '').trim().toLowerCase();
-      const rawStatus = String(data.status || '').trim().toUpperCase();
-      const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
-      const aiMessage = String(data.cvMessage || data.message || '').toLowerCase();
+      const data = await response.json().catch(() => ({}));
 
-      const isUndamaged = rawSev === "undamaged" || rawStatus === "UNDAMAGED";
-      const isNonRoadOrUnassessed = (
-        rawSev === "unassessed" ||
-        rawSev === "" ||
-        rawStatus === "LOW_CONFIDENCE" ||
-        rawStatus === "INVALID_SURFACE"
-      );
+      // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400 PHOTO_REJECTED)
+      if (!response.ok) {
+        if (data.error === "PHOTO REJECTED") {
+          // Clear ONLY the invalid image file and preview
+          clearImageInputOnly();
 
-      // =================================================================
-      // 🚫 REJECTION BRANCH: UNDAMAGED ROAD OR NON-ROAD / RANDOM PHOTOS
-      // =================================================================
-      if (isUndamaged || isNonRoadOrUnassessed) {
-        // Rollback: if backend already created a report record, purge it immediately
-        const reportId = data.id || data.reportId;
-        if (reportId) {
-          fetch(`${API_BASE_URL}/api/reports/${reportId}`, { method: "DELETE" }).catch(() => {});
+          // Show the warning toast with the exact server message
+          showToast(`⚠️ ${data.message}`, "warning");
+
+          // Throw specific cancellation error to bypass the generic error toast
+          throw new Error("PHOTO_VALIDATION_REJECTED");
         }
 
-        // Wipe ONLY the photo upload and preview
-        clearImageInputOnly();
-
-        // Warning toasts
-        if (isUndamaged) {
-          showToast("⚠️ Photo Rejected: No road damage detected. RoadWise is exclusively for reporting road distress. Please upload a photo with visible damage.", "warning");
-        } else if (aiMessage.includes("not show a road") || rawStatus === "INVALID_SURFACE") {
-          showToast("⚠️ Photo Rejected: Image does not appear to show a road surface. Please upload a clear photo of road damage.", "warning");
-        } else {
-          showToast("⚠️ Photo Rejected: The AI could not verify road distress. Please upload a clearer photo showing damage (cracks or potholes).", "warning");
-        }
-
-        // STOP: Keep all road names, measurements, GPS, and map markers intact
-        return;
+        // Generic server or network failure
+        throw new Error(data.message || data.error || 'Network response was not ok.');
       }
 
-      // =================================================================
-      // ✅ SUCCESS BRANCH: CONFIRMED ROAD DAMAGE (Low, Medium, High)
-      // =================================================================
+      return data;
+    })
+    .then(data => {
+      // ✅ SUCCESS BRANCH: Reached ONLY when damage is confirmed and saved to DB
+      const rawSev = String(data.severity || '').trim().toLowerCase();
+      const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
+
       if (rawSev === "high") {
         showToast(`🚨 Report saved! AI verified HIGH Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "medium") {
@@ -3726,11 +3705,16 @@ function executeFinalSubmission() {
       }
     })
     .catch(error => {
+      // Ignore clean photo validation rejections
+      if (error.message === "PHOTO_VALIDATION_REJECTED") {
+        return;
+      }
+
       console.error("Error submitting report:", error);
       showToast(error.message || "Failed to upload report. Check your internet connection.", "error");
     })
     .finally(() => {
-      // Release submission locks and restore button states
+      // Release submission locks and restore buttons
       isSubmittingReport = false;
 
       if (modalConfirmBtn) {
@@ -3824,7 +3808,6 @@ function resetAddReportForm() {
 
   clearImageInputOnly();
 }
-
 
 // ==========================================
 // ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
@@ -5634,6 +5617,9 @@ function openViewModal(reportId) {
     });
 }
 
+// Variable to store the original image URL in case a new upload gets rejected
+let originalEditImageUrl = "";
+
 // 📜 EDIT MODAL ACCORDION TOGGLE
 window.toggleEditTimeline = function() {
   const container = document.getElementById('edit-modal-timeline-container');
@@ -5681,13 +5667,16 @@ function openEditModal(reportId) {
       document.getElementById('edit-modal-road-type').value = report.roadType || "N/A";
       document.getElementById('edit-modal-terrain').value = report.terrainType || "N/A";
 
-      // 🧠 AI Severity & Confidence Display in Edit Field
+      // 🧠 AI Severity & Confidence Display in Edit Fields
       const editSeverityInput = document.getElementById('edit-modal-severity');
-      if (report.severity) {
-        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}% Confidence)` : '';
-        editSeverityInput.value = `${report.severity}${confText}`;
+      const editConfidenceInput = document.getElementById('edit-modal-confidence');
+
+      if (report.severity && report.severity !== "Unassessed") {
+        editSeverityInput.value = report.severity;
+        editConfidenceInput.value = report.cvConfidenceScore ? `${report.cvConfidenceScore}%` : "Assessed";
       } else {
-        editSeverityInput.value = "🤖 Pending AI Assessment";
+        editSeverityInput.value = "Unassessed";
+        editConfidenceInput.value = "0.0%";
       }
 
       document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude)
@@ -5717,6 +5706,9 @@ function openEditModal(reportId) {
         otherInput.classList.remove('hidden');
       }
       document.getElementById('edit-modal-desc').value = report.damageDescription || "";
+
+      // Store original image URL so we can revert if a new photo is rejected
+      originalEditImageUrl = report.damageImage || "";
       loadSecureImage('edit-modal-current-img', report.damageImage);
 
       document.getElementById('edit-modal-img').value = "";
@@ -5742,15 +5734,22 @@ function openEditModal(reportId) {
 function submitEditedReport() {
   const reportId = document.getElementById('edit-report-id').value;
   const fileInput = document.getElementById('edit-modal-img');
+  const submitBtn = document.getElementById('btn-submit-revisions');
 
-  if (fileInput.files.length > 0 && fileInput.files[0].size > 5 * 1024 * 1024) {
+  if (fileInput.files.length > 0 && fileInput.files[0].size > (5 * 1024 * 1024)) {
     if (typeof showToast === 'function') showToast("File is too large! Must be under 5MB.", "error");
     return;
   }
 
+  // Disable button during analysis & save
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Verifying & Resubmitting... ⏳";
+    submitBtn.style.opacity = "0.7";
+  }
+
   const formData = new FormData();
 
-  // 👤 Pass userId for audit trail logging
   const currentUserId = sessionStorage.getItem("userId");
   if (currentUserId) {
     formData.append("userId", currentUserId);
@@ -5781,9 +5780,34 @@ function submitEditedReport() {
     headers: { 'ngrok-skip-browser-warning': 'true' },
     body: formData
   })
-    .then(response => {
-      if (!response.ok) throw new Error("Update failed");
-      return response.json();
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+
+      // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400 PHOTO_REJECTED)
+      if (!response.ok) {
+        if (data.error === "PHOTO REJECTED") {
+          // 1. Wipe ONLY the newly chosen invalid photo input
+          fileInput.value = "";
+          document.getElementById('edit-modal-filename').innerText = "";
+
+          // 2. Revert the preview image back to the original photo
+          if (typeof loadSecureImage === 'function' && originalEditImageUrl) {
+            loadSecureImage('edit-modal-current-img', originalEditImageUrl);
+          }
+
+          // 3. Display warning toast with server message
+          if (typeof showToast === 'function') {
+            showToast(`⚠️ ${data.message}`, "warning");
+          }
+
+          // 4. Cancel downstream processing without closing the modal
+          throw new Error("PHOTO_VALIDATION_REJECTED");
+        }
+
+        throw new Error(data.message || data.error || "Update failed");
+      }
+
+      return data;
     })
     .then(data => {
       const aiSeverity = data.severity || "Unassessed";
@@ -5802,27 +5826,33 @@ function submitEditedReport() {
       closeBdModals();
 
       const storedBarangayId = sessionStorage.getItem("barangayId");
-      if (storedBarangayId) loadBarangayReports(storedBarangayId);
+      if (storedBarangayId && typeof loadBarangayReports === 'function') {
+        loadBarangayReports(storedBarangayId);
+      }
     })
     .catch(error => {
+      // Clean exits for rejected photos
+      if (error.message === "PHOTO_VALIDATION_REJECTED") {
+        return;
+      }
+
       console.error(error);
-      if (typeof showToast === 'function') showToast("Error updating report.", "error");
+      if (typeof showToast === 'function') {
+        showToast(error.message || "Error updating report.", "error");
+      }
+    })
+    .finally(() => {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Submit Revisions";
+        submitBtn.style.opacity = "1";
+      }
     });
 }
 
 // ==========================================
 // 7. UTILITIES & OBSERVERS
 // ==========================================
-function escapeHtml(text) {
-  if (!text) return "";
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   const storedBarangayId = sessionStorage.getItem("barangayId");
   if (!storedBarangayId && document.getElementById('barangay-report-list')) {
@@ -5831,7 +5861,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  if (storedBarangayId && document.getElementById('barangay-report-list')) {
+  if (storedBarangayId && document.getElementById('barangay-report-list') && typeof loadBarangayReports === 'function') {
     loadBarangayReports(storedBarangayId);
   }
 
@@ -5843,7 +5873,7 @@ document.addEventListener("DOMContentLoaded", () => {
     editImageInput.addEventListener('change', function() {
       const file = this.files[0];
       if (file) {
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > (5 * 1024 * 1024)) {
           if (typeof showToast === 'function') showToast("File is too large! Max 5MB.", "error");
           this.value = "";
           if (editFileNameDisplay) editFileNameDisplay.textContent = "";
@@ -5864,7 +5894,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class' && !brgyDashboardSection.classList.contains('hidden')) {
-          loadBarangayReports(storedBarangayId);
+          if (typeof loadBarangayReports === 'function') {
+            loadBarangayReports(storedBarangayId);
+          }
         }
       });
     });

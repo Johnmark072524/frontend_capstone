@@ -3491,7 +3491,6 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
   checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
   toggleBatchActionBar();
 };
-
 // ==========================================
 // BACKEND API CONNECTION & FORM LOGIC (RoadWise)
 // ==========================================
@@ -3531,6 +3530,13 @@ function submitRoadReport() {
     return;
   }
 
+  // 🛡️ Require a road damage photo
+  const imageInput = document.getElementById("damageImageFile");
+  if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+    showToast("Please upload a photo of the road damage.", "error");
+    return;
+  }
+
   const damageType = document.getElementById("damageType")?.value;
   if (damageType === "Other" && !document.getElementById("otherDamageType")?.value.trim()) {
     showToast("Please specify the 'Other' damage type.", "error");
@@ -3563,9 +3569,8 @@ function closeConfirmModal() {
   }
 }
 
-// STEP 3: Single-flight server submission
+// STEP 3: Single-flight server submission & AI verification
 function executeFinalSubmission() {
-  // 🛡️ Block duplicate execution if already in flight
   if (isSubmittingReport) return;
   isSubmittingReport = true;
 
@@ -3575,13 +3580,13 @@ function executeFinalSubmission() {
   const modalConfirmBtn = document.querySelector("#confirm-modal .btn-submit, #confirm-modal [onclick*='executeFinalSubmission']");
   if (modalConfirmBtn) {
     modalConfirmBtn.disabled = true;
-    modalConfirmBtn.innerText = "Submitting... ⏳";
+    modalConfirmBtn.innerText = "Analyzing & Submitting... ⏳";
   }
 
   // Disable form submit button
   const submitBtn = document.getElementById("submit-report-btn");
   if (submitBtn) {
-    submitBtn.innerHTML = "⏳ Submitting...";
+    submitBtn.innerHTML = "⏳ Analyzing & Submitting...";
     submitBtn.disabled = true;
     submitBtn.style.opacity = "0.7";
   }
@@ -3589,14 +3594,10 @@ function executeFinalSubmission() {
   const formData = new FormData();
 
   const loggedInBarangayId = sessionStorage.getItem("barangayId");
-  if (loggedInBarangayId) {
-    formData.append("barangayId", loggedInBarangayId);
-  }
+  if (loggedInBarangayId) formData.append("barangayId", loggedInBarangayId);
 
   const loggedInUserId = sessionStorage.getItem("userId");
-  if (loggedInUserId) {
-    formData.append("userId", loggedInUserId);
-  }
+  if (loggedInUserId) formData.append("userId", loggedInUserId);
 
   function getVal(id) {
     const el = document.getElementById(id);
@@ -3642,14 +3643,13 @@ function executeFinalSubmission() {
   formData.append("longitude", parseFloat(getVal("longitude")) || 0.0);
   formData.append("inventoryYear", new Date().getFullYear());
 
-  // 5. Image Processing
+  // 5. Image Attachment
   const imageInput = document.getElementById("damageImageFile");
-  const hasImage = imageInput && imageInput.files && imageInput.files.length > 0;
-  if (hasImage) {
+  if (imageInput && imageInput.files && imageInput.files.length > 0) {
     formData.append("imageFile", imageInput.files[0]);
   }
 
-  // 6. Send to Spring Boot API
+  // 6. Send to API
   fetch(`${API_BASE_URL}/api/reports`, {
     method: "POST",
     body: formData
@@ -3660,38 +3660,59 @@ function executeFinalSubmission() {
       throw new Error(errData.error || errData.message || 'Network response was not ok.');
     })
     .then(data => {
-      // 🚀 NORMALIZE AI SEVERITY & CONFIDENCE SCORE
       const rawSev = String(data.severity || '').trim().toLowerCase();
+      const rawStatus = String(data.status || '').trim().toUpperCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
-      // Message text from the AI service, if your Spring Boot API passes it through (see note below)
       const aiMessage = String(data.cvMessage || data.message || '').toLowerCase();
 
-      // 🚀 SHOW ACCURATE DYNAMIC TOAST
-      if (!hasImage) {
-        // Case 1: Inspector deliberately submitted without an image
-        showToast(" Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
-      } else if (rawSev === "undamaged") {
-        // Case 2: Photo shows a road with no significant damage
-        showToast(` Report saved! AI found no significant damage on this road (UNDAMAGED, ${aiConfidence}% confidence).`, "success");
-      } else if (rawSev === "unassessed" || rawSev === "") {
-        if (aiMessage.includes("not appear to show a road")) {
-          // Case 3: Photo is not a road (cat, desk, screenshot, etc.)
-          showToast(" Report saved! This photo does not appear to show a road surface (Marked as UNASSESSED). Please upload a photo of the road.", "warning");
-        } else {
-          // Case 4: Road photo, but the AI could not make a reliable call
-          showToast(" Report saved! AI could not make a reliable assessment (Marked as UNASSESSED). Please retake the photo or review manually.", "warning");
+      const isUndamaged = rawSev === "undamaged" || rawStatus === "UNDAMAGED";
+      const isNonRoadOrUnassessed = (
+        rawSev === "unassessed" ||
+        rawSev === "" ||
+        rawStatus === "LOW_CONFIDENCE" ||
+        rawStatus === "INVALID_SURFACE"
+      );
+
+      // =================================================================
+      // 🚫 REJECTION BRANCH: UNDAMAGED ROAD OR NON-ROAD / RANDOM PHOTOS
+      // =================================================================
+      if (isUndamaged || isNonRoadOrUnassessed) {
+        // Rollback: if backend already created a report record, purge it immediately
+        const reportId = data.id || data.reportId;
+        if (reportId) {
+          fetch(`${API_BASE_URL}/api/reports/${reportId}`, { method: "DELETE" }).catch(() => {});
         }
-      } else if (rawSev === "high") {
-        showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
-      } else if (rawSev === "medium") {
-        showToast(`⚠ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
-      } else if (rawSev === "low") {
-        showToast(`ℹ️ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
-      } else {
-        showToast(" Report saved successfully! Severity is UNASSESSED.", "success");
+
+        // Wipe ONLY the photo upload and preview
+        clearImageInputOnly();
+
+        // Warning toasts
+        if (isUndamaged) {
+          showToast("⚠️ Photo Rejected: No road damage detected. RoadWise is exclusively for reporting road distress. Please upload a photo with visible damage.", "warning");
+        } else if (aiMessage.includes("not show a road") || rawStatus === "INVALID_SURFACE") {
+          showToast("⚠️ Photo Rejected: Image does not appear to show a road surface. Please upload a clear photo of road damage.", "warning");
+        } else {
+          showToast("⚠️ Photo Rejected: The AI could not verify road distress. Please upload a clearer photo showing damage (cracks or potholes).", "warning");
+        }
+
+        // STOP: Keep all road names, measurements, GPS, and map markers intact
+        return;
       }
 
-      // Complete reset of form fields, images, coordinates, and "Define on Map" button state
+      // =================================================================
+      // ✅ SUCCESS BRANCH: CONFIRMED ROAD DAMAGE (Low, Medium, High)
+      // =================================================================
+      if (rawSev === "high") {
+        showToast(`🚨 Report saved! AI verified HIGH Severity (${aiConfidence}% confidence).`, "success");
+      } else if (rawSev === "medium") {
+        showToast(`⚠️ Report saved! AI verified MEDIUM Severity (${aiConfidence}% confidence).`, "success");
+      } else if (rawSev === "low") {
+        showToast(`ℹ️ Report saved! AI verified LOW Severity (${aiConfidence}% confidence).`, "success");
+      } else {
+        showToast("✅ Report saved successfully!", "success");
+      }
+
+      // Reset the full form only when the submission is legitimate
       resetAddReportForm();
 
       if (typeof loadBarangayReports === 'function') {
@@ -3709,7 +3730,7 @@ function executeFinalSubmission() {
       showToast(error.message || "Failed to upload report. Check your internet connection.", "error");
     })
     .finally(() => {
-      // Release submission lock
+      // Release submission locks and restore button states
       isSubmittingReport = false;
 
       if (modalConfirmBtn) {
@@ -3726,23 +3747,35 @@ function executeFinalSubmission() {
 }
 
 // ==========================================
+// 📷 WIPE IMAGE ONLY (Preserves Form Details)
+// ==========================================
+function clearImageInputOnly() {
+  const fileInput = document.getElementById("damageImageFile");
+  if (fileInput) fileInput.value = "";
+
+  const preview = document.getElementById("imagePreview");
+  if (preview) {
+    preview.style.display = 'none';
+    preview.src = "";
+  }
+
+  const fileNameDisplay = document.getElementById("fileNameDisplay");
+  if (fileNameDisplay) fileNameDisplay.textContent = "";
+}
+
+// ==========================================
 // 🧹 COMPREHENSIVE FORM & MAP RESET FUNCTION
 // ==========================================
 function resetAddReportForm() {
-  // 1. Native form reset (resets standard inputs and controls)
   const form = document.getElementById("addReportForm");
-  if (form) {
-    form.reset();
-  }
+  if (form) form.reset();
 
-  // 2. Explicitly reset all dropdowns to their placeholder options
   const selectIds = ["cityRoadName", "roadImportance", "roadType", "terrainType", "damageType"];
   selectIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
   });
 
-  // 3. Clear manual & read-only input values
   const inputIds = [
     "cityRoadId", "width", "length", "numberOfBridges",
     "lengthOfCulverts", "damageLength", "damageWidth",
@@ -3753,18 +3786,14 @@ function resetAddReportForm() {
     if (el) el.value = "";
   });
 
-  // 4. Hide and wipe "Other" damage type field
   const otherGroup = document.getElementById("otherDamageTypeGroup");
   const otherInput = document.getElementById("otherDamageType");
   if (otherGroup) {
     otherGroup.classList.add("hidden");
     otherGroup.style.display = "none";
   }
-  if (otherInput) {
-    otherInput.value = "";
-  }
+  if (otherInput) otherInput.value = "";
 
-  // 5. Complete reset of "Define on Map" button and GPS badges
   const latEl = document.getElementById("latitude");
   const lngEl = document.getElementById("longitude");
   if (latEl) latEl.value = "";
@@ -3784,7 +3813,6 @@ function resetAddReportForm() {
     btnDefineMap.style.backgroundColor = '#16a34a';
   }
 
-  // Clear map markers if present in window/global scope
   if (typeof reportMarker !== "undefined" && reportMarker && typeof map !== "undefined" && map) {
     try { map.removeLayer(reportMarker); } catch (e) {}
     reportMarker = null;
@@ -3794,18 +3822,7 @@ function resetAddReportForm() {
     window.reportMarker = null;
   }
 
-  // 6. Wipe image upload, file label, and image preview
-  const fileInput = document.getElementById("damageImageFile");
-  if (fileInput) fileInput.value = "";
-
-  const preview = document.getElementById("imagePreview");
-  if (preview) {
-    preview.style.display = 'none';
-    preview.src = "";
-  }
-
-  const fileNameDisplay = document.getElementById("fileNameDisplay");
-  if (fileNameDisplay) fileNameDisplay.textContent = "";
+  clearImageInputOnly();
 }
 
 

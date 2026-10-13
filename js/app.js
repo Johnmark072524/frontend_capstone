@@ -3669,26 +3669,26 @@ function executeFinalSubmission() {
       // 🚀 SHOW ACCURATE DYNAMIC TOAST
       if (!hasImage) {
         // Case 1: Inspector deliberately submitted without an image
-        showToast("📋 Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
+        showToast(" Report saved successfully! Severity is UNASSESSED (No damage photo attached).", "success");
       } else if (rawSev === "undamaged") {
         // Case 2: Photo shows a road with no significant damage
-        showToast(`✅ Report saved! AI found no significant damage on this road (UNDAMAGED, ${aiConfidence}% confidence).`, "success");
+        showToast(` Report saved! AI found no significant damage on this road (UNDAMAGED, ${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "unassessed" || rawSev === "") {
         if (aiMessage.includes("not appear to show a road")) {
           // Case 3: Photo is not a road (cat, desk, screenshot, etc.)
-          showToast("⚠️ Report saved! This photo does not appear to show a road surface (Marked as UNASSESSED). Please upload a photo of the road.", "warning");
+          showToast(" Report saved! This photo does not appear to show a road surface (Marked as UNASSESSED). Please upload a photo of the road.", "warning");
         } else {
           // Case 4: Road photo, but the AI could not make a reliable call
-          showToast("⚠️ Report saved! AI could not make a reliable assessment (Marked as UNASSESSED). Please retake the photo or review manually.", "warning");
+          showToast(" Report saved! AI could not make a reliable assessment (Marked as UNASSESSED). Please retake the photo or review manually.", "warning");
         }
       } else if (rawSev === "high") {
         showToast(`🚨 Report saved! AI graded this as HIGH Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "medium") {
-        showToast(`⚠️ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
+        showToast(`⚠ Report saved! AI graded this as MEDIUM Severity (${aiConfidence}% confidence).`, "success");
       } else if (rawSev === "low") {
         showToast(`ℹ️ Report saved! AI graded this as LOW Severity (${aiConfidence}% confidence).`, "success");
       } else {
-        showToast("📋 Report saved successfully! Severity is UNASSESSED.", "success");
+        showToast(" Report saved successfully! Severity is UNASSESSED.", "success");
       }
 
       // Complete reset of form fields, images, coordinates, and "Define on Map" button state

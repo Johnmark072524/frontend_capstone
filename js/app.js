@@ -3517,6 +3517,48 @@ window.toggleOtherDamageType = function() {
   }
 };
 
+// =========================================================
+// ⚡ INSTANT IMAGE VALIDATION (Runs the second a file is chosen)
+// =========================================================
+document.getElementById("damageImageFile")?.addEventListener("change", function () {
+  if (!this.files || this.files.length === 0) return;
+
+  const file = this.files[0];
+  const maxSizeBytes = 5 * 1024 * 1024; // 5MB limit
+  const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+
+  // 1. Check Format Immediately
+  if (!validImageTypes.includes(file.type.toLowerCase())) {
+    clearImageInputOnly(); // Only wipes the photo, preserves all typed inputs
+    showToast("Invalid file format! Please select a JPG, PNG, or WebP photo.", "error");
+    return;
+  }
+
+  // 2. Check File Size Immediately
+  if (file.size > maxSizeBytes) {
+    clearImageInputOnly(); // Only wipes the photo, preserves all typed inputs
+    showToast("Image exceeds 5MB limit! Please choose a smaller photo.", "error");
+    return;
+  }
+
+  // Preview & filename display if valid
+  const preview = document.getElementById("imagePreview");
+  const fileNameDisplay = document.getElementById("fileNameDisplay");
+
+  if (fileNameDisplay) {
+    fileNameDisplay.textContent = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+  }
+
+  if (preview) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      preview.src = e.target.result;
+      preview.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
 // STEP 1: Validate and open the confirmation modal
 function submitRoadReport() {
   if (isSubmittingReport) return;
@@ -3530,7 +3572,7 @@ function submitRoadReport() {
     return;
   }
 
-  // 🛡️ Image Validation (Presence, 5MB Limit, and Format)
+  // 🛡️ Final image presence and boundary check
   const imageInput = document.getElementById("damageImageFile");
   if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
     showToast("Please upload a photo of the road damage.", "error");
@@ -3538,7 +3580,7 @@ function submitRoadReport() {
   }
 
   const file = imageInput.files[0];
-  const maxSizeBytes = 5 * 1024 * 1024; // 5MB limit matching application.properties
+  const maxSizeBytes = 5 * 1024 * 1024;
   const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
   if (!validImageTypes.includes(file.type.toLowerCase())) {

@@ -3530,10 +3530,26 @@ function submitRoadReport() {
     return;
   }
 
-  // 🛡️ Require a road damage photo
+  // 🛡️ Image Validation (Presence, 5MB Limit, and Format)
   const imageInput = document.getElementById("damageImageFile");
   if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
     showToast("Please upload a photo of the road damage.", "error");
+    return;
+  }
+
+  const file = imageInput.files[0];
+  const maxSizeBytes = 5 * 1024 * 1024; // 5MB limit matching application.properties
+  const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+
+  if (!validImageTypes.includes(file.type.toLowerCase())) {
+    clearImageInputOnly();
+    showToast("Invalid file format. Please upload a JPG, PNG, or WebP photo.", "error");
+    return;
+  }
+
+  if (file.size > maxSizeBytes) {
+    clearImageInputOnly();
+    showToast("Image size exceeds the 5MB limit. Please upload a smaller photo.", "error");
     return;
   }
 

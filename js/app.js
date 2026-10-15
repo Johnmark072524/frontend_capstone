@@ -3927,19 +3927,15 @@ function handleLogin() {
       if (step1) step1.style.display = "none";
       if (step2) step2.style.display = "block";
 
-      // 🎯 Show Demo OTP in the toast banner for 10 seconds (10000ms)
-      const toastMsg = data.demoOtp
-        ? `🔑 DEMO OTP: [ ${data.demoOtp} ] (Expires in 5 mins)`
-        : (data.message || "A 6-digit code has been sent to your email.");
-
+      const toastMsg = data.message || "A 6-digit verification code has been sent to your email.";
       if (typeof showToast === "function") {
-        showToast(toastMsg, "success", 10000);
+        showToast(toastMsg, "success");
       }
 
-      // Optional convenience: auto-fill the field so you don't even have to type it
       const otpField = document.getElementById("mfa-code");
-      if (otpField && data.demoOtp) {
-        otpField.value = data.demoOtp;
+      if (otpField) {
+        otpField.value = "";
+        otpField.focus();
       }
 
       if (loginBtn) {

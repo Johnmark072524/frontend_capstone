@@ -3518,7 +3518,7 @@ window.toggleOtherDamageType = function() {
 };
 
 // =========================================================
-// ⚡ INSTANT IMAGE VALIDATION (Runs the second a file is chosen)
+// ⚡ INSTANT IMAGE VALIDATION (Runs only when a file is chosen)
 // =========================================================
 document.getElementById("damageImageFile")?.addEventListener("change", function () {
   if (!this.files || this.files.length === 0) return;
@@ -3529,14 +3529,14 @@ document.getElementById("damageImageFile")?.addEventListener("change", function 
 
   // 1. Check Format Immediately
   if (!validImageTypes.includes(file.type.toLowerCase())) {
-    clearImageInputOnly(); // Only wipes the photo, preserves all typed inputs
+    clearImageInputOnly();
     showToast("Invalid file format! Please select a JPG, PNG, or WebP photo.", "error");
     return;
   }
 
   // 2. Check File Size Immediately
   if (file.size > maxSizeBytes) {
-    clearImageInputOnly(); // Only wipes the photo, preserves all typed inputs
+    clearImageInputOnly();
     showToast("Image exceeds 5MB limit! Please choose a smaller photo.", "error");
     return;
   }
@@ -3572,27 +3572,24 @@ function submitRoadReport() {
     return;
   }
 
-  // 🛡️ Final image presence and boundary check
+  // 🛡️ OPTIONAL IMAGE CHECK: Validate format & size ONLY if an image is provided
   const imageInput = document.getElementById("damageImageFile");
-  if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
-    showToast("Please upload a photo of the road damage.", "error");
-    return;
-  }
+  if (imageInput && imageInput.files && imageInput.files.length > 0) {
+    const file = imageInput.files[0];
+    const maxSizeBytes = 5 * 1024 * 1024;
+    const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
-  const file = imageInput.files[0];
-  const maxSizeBytes = 5 * 1024 * 1024;
-  const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!validImageTypes.includes(file.type.toLowerCase())) {
+      clearImageInputOnly();
+      showToast("Invalid file format. Please upload a JPG, PNG, or WebP photo.", "error");
+      return;
+    }
 
-  if (!validImageTypes.includes(file.type.toLowerCase())) {
-    clearImageInputOnly();
-    showToast("Invalid file format. Please upload a JPG, PNG, or WebP photo.", "error");
-    return;
-  }
-
-  if (file.size > maxSizeBytes) {
-    clearImageInputOnly();
-    showToast("Image size exceeds the 5MB limit. Please upload a smaller photo.", "error");
-    return;
+    if (file.size > maxSizeBytes) {
+      clearImageInputOnly();
+      showToast("Image size exceeds the 5MB limit. Please upload a smaller photo.", "error");
+      return;
+    }
   }
 
   const damageType = document.getElementById("damageType")?.value;

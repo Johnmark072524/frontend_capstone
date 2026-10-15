@@ -340,12 +340,11 @@
               </h3>
 
               <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
-
                 <div class="form-column">
                   <div class="form-group">
                     <label for="damageType" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Type</label>
                     <select id="damageType" name="damageType" onchange="toggleOtherDamageType()" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none;">
-                      <option value="" disabled selected>Select Damage Type</option>
+                      <option value="None" selected>None (Passable / Good Condition)</option>
                       <option value="Pothole">Pothole</option>
                       <option value="Surface Cracking">Surface Cracking (Alligator/Longitudinal)</option>
                       <option value="Edge Deformation">Edge Deformation / Rutting</option>

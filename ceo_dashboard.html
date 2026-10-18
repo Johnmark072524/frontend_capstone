@@ -854,14 +854,23 @@
             <div><strong>Length of Culverts (m):</strong> <span id="ceo-modal-culverts">Loading...</span></div>
             <div><strong>Number of Bridges:</strong> <span id="ceo-modal-bridges">Loading...</span></div>
 
-            <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 10px;"></div>
+            <!-- 📐 CPDO TECHNICAL SURVEY MEASUREMENTS -->
+            <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 10px;">
+              <span style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase;">CPDO Validated Damage Measurements</span>
+            </div>
             <div><strong>Damage Type:</strong> <span id="ceo-modal-damage-type">Loading...</span></div>
             <div><strong>Damage Length (m):</strong> <span id="ceo-modal-damage-length">0</span></div>
             <div><strong>Damage Width (m):</strong> <span id="ceo-modal-damage-width">0</span></div>
-            <div style="background: #fff3cd; padding: 4px 8px; border-radius: 4px;"><strong>Damage Area:</strong> <span id="ceo-modal-damage-area" style="font-weight: bold; color: #856404;">0 sq.m</span></div>
+            <div><strong>Damage Depth (m):</strong> <span id="ceo-modal-damage-depth">0</span></div>
+
+            <div style="background: #fff3cd; padding: 6px 10px; border-radius: 4px; border: 1px solid #fde68a;">
+              <strong>Damage Area:</strong> <span id="ceo-modal-damage-area" style="font-weight: bold; color: #856404;">0 sq.m</span>
+            </div>
+            <div style="background: #e0f2fe; padding: 6px 10px; border-radius: 4px; border: 1px solid #bae6fd;">
+              <strong>Est. Patch Volume:</strong> <span id="ceo-modal-damage-volume" style="font-weight: bold; color: #0369a1;">0 cu.m</span>
+            </div>
 
             <div><strong>Priority Level:</strong> <span class="badge" id="ceo-modal-priority">LOADING</span></div>
-
             <div style="grid-column: 1 / -1;"><strong>GPS Coordinates:</strong> <span id="ceo-modal-gps">Loading...</span></div>
 
             <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 5px;">
@@ -890,7 +899,7 @@
           </div>
         </div>
 
-        <!-- ⏳ 1. DEFERRED NOTICE (Appears when project is on hold for budget) -->
+        <!-- ⏳ DEFERRED NOTICE (Appears when project is on hold for budget) -->
         <div id="ceo-deferred-alert" class="report-section" style="display: none; background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 6px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <h4 style="color: #92400e; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
@@ -903,7 +912,7 @@
           </p>
         </div>
 
-        <!-- 👷 2. DISPATCH CREW & SCHEDULING (Hidden when deferred or completed) -->
+        <!-- 👷 DISPATCH CREW & SCHEDULING (Hidden when deferred or completed) -->
         <div id="ceo-dispatch-section" class="report-section" style="background-color: #f4f6f8; padding: 18px; border-radius: 8px; margin-bottom: 20px;">
           <h3 class="section-title" style="margin-bottom: 6px;">Dispatch Crew & Scheduling</h3>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
@@ -941,7 +950,7 @@
           <!-- ⏱️ CEO TIME EXTENSION REQUEST COMPONENT -->
           <div id="ceo-extension-section" style="margin-top: 15px; display: none;">
 
-            <!-- 1. PENDING EXTENSION ALERT (Shown when extensionStatus === 'PENDING') -->
+            <!-- 1. PENDING EXTENSION ALERT -->
             <div id="ceo-extension-pending-card" style="display: none; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <strong style="color: #92400e; font-size: 12.5px;">⏳ Extension Request Under CPDO Review</strong>
@@ -953,7 +962,7 @@
               </div>
             </div>
 
-            <!-- 2. REJECTED EXTENSION ALERT (Shown when extensionStatus === 'REJECTED') -->
+            <!-- 2. REJECTED EXTENSION ALERT -->
             <div id="ceo-extension-rejected-card" style="display: none; background: #fef2f2; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; padding: 12px 14px; border-radius: 6px; margin-bottom: 12px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                 <strong style="color: #991b1b; font-size: 12.5px;">❌ Previous Extension Request Denied</strong>
@@ -1090,7 +1099,6 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <!-- 🚀 THE BEAUTIFUL CUSTOM MODAL (NOW DYNAMIC!) -->

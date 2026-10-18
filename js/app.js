@@ -2496,7 +2496,7 @@ window.openCEOManageModal = function(reportId) {
   const modalBody = modal.querySelector('.modal-body');
   if (modalBody) modalBody.scrollTop = 0;
 
-  // 🕒 1. RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE
+  // 🕒 RESET AND LOAD LIFECYCLE AUDIT TRAIL TIMELINE
   const tlContainer = document.getElementById('ceo-manage-timeline-container');
   const tlArrow = document.getElementById('ceo-timeline-arrow');
   if (tlContainer) {
@@ -2587,20 +2587,35 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-importance').innerText = report.roadImportance || 'N/A';
       document.getElementById('ceo-modal-terrain').innerText = report.terrainType || 'N/A';
       document.getElementById('ceo-modal-road-type').innerText = report.roadType || 'N/A';
-      document.getElementById('ceo-modal-length').innerText = report.length || 0;
-      document.getElementById('ceo-modal-width').innerText = report.width || 0;
-      document.getElementById('ceo-modal-culverts').innerText = report.lengthOfCulverts || 0;
-      document.getElementById('ceo-modal-bridges').innerText = report.numberOfBridges || 0;
+      document.getElementById('ceo-modal-length').innerText = (report.length !== null && report.length !== undefined) ? report.length : 0;
+      document.getElementById('ceo-modal-width').innerText = (report.width && report.width > 0) ? report.width : 'Pending Survey';
+      document.getElementById('ceo-modal-culverts').innerText = (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? report.lengthOfCulverts : 0;
+      document.getElementById('ceo-modal-bridges').innerText = (report.numberOfBridges !== null && report.numberOfBridges !== undefined) ? report.numberOfBridges : 0;
 
+      // 📐 CPDO VALIDATED DAMAGE MEASUREMENTS & ESTIMATION
       document.getElementById('ceo-modal-damage-type').innerText = report.damageType || 'None';
 
       const damageLen = parseFloat(report.damageLength) || 0;
       const damageWid = parseFloat(report.damageWidth) || 0;
-      const damageArea = damageLen * damageWid;
+      const damageDepth = parseFloat(report.damageDepth) || 0;
 
-      document.getElementById('ceo-modal-damage-length').innerText = damageLen;
-      document.getElementById('ceo-modal-damage-width').innerText = damageWid;
-      document.getElementById('ceo-modal-damage-area').innerText = damageArea > 0 ? `${damageArea.toFixed(1)} sq.m` : '0 sq.m';
+      const damageArea = damageLen * damageWid;
+      const damageVolume = damageArea * damageDepth;
+
+      document.getElementById('ceo-modal-damage-length').innerText = damageLen > 0 ? `${damageLen} m` : '0 m';
+      document.getElementById('ceo-modal-damage-width').innerText = damageWid > 0 ? `${damageWid} m` : '0 m';
+
+      const depthEl = document.getElementById('ceo-modal-damage-depth');
+      if (depthEl) {
+        depthEl.innerText = damageDepth > 0 ? `${damageDepth} m` : '0 m';
+      }
+
+      document.getElementById('ceo-modal-damage-area').innerText = damageArea > 0 ? `${damageArea.toFixed(2)} sq.m` : '0 sq.m';
+
+      const volumeEl = document.getElementById('ceo-modal-damage-volume');
+      if (volumeEl) {
+        volumeEl.innerText = damageVolume > 0 ? `${damageVolume.toFixed(3)} cu.m` : '0 cu.m';
+      }
 
       document.getElementById('ceo-modal-gps').innerText = (report.latitude && report.longitude) ? `${report.latitude}°, ${report.longitude}°` : 'No GPS data';
 
@@ -2653,7 +2668,6 @@ window.openCEOManageModal = function(reportId) {
       if (currentStatus.includes('progress')) {
         if (extSectionEl) extSectionEl.style.display = 'block';
 
-        // Set min date to tomorrow or existing target date + 1 day
         if (extDateInputEl) {
           const baseDate = report.targetCompletionDate ? new Date(report.targetCompletionDate) : new Date();
           baseDate.setDate(baseDate.getDate() + 1);
@@ -2761,7 +2775,7 @@ window.openCEOManageModal = function(reportId) {
       };
 
       if (currentStatus === 'pending budget' || currentStatus.includes('defer')) {
-        // STATE 1: PENDING BUDGET / DEFERRED (DISPATCH CREW COMPLETELY REMOVED)
+        // STATE 1: PENDING BUDGET / DEFERRED
         if (dispatchSection) dispatchSection.style.display = 'none';
 
         if (deferredAlert) {
@@ -2776,7 +2790,7 @@ window.openCEOManageModal = function(reportId) {
         if (completedEvidence) completedEvidence.style.display = 'none';
 
       } else if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
-        // STATE 2: COMPLETED (DISPATCH CREW REMOVED & PROOF RENDERED)
+        // STATE 2: COMPLETED
         if (dispatchSection) dispatchSection.style.display = 'none';
         if (deferredAlert) deferredAlert.style.display = 'none';
 
@@ -2797,7 +2811,7 @@ window.openCEOManageModal = function(reportId) {
         if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
       } else if (isRework) {
-        // STATE 3: REWORK REQUIRED (HISTORICAL PROOF + NEW UPLOAD FORM)
+        // STATE 3: REWORK REQUIRED
         if (dispatchSection) dispatchSection.style.display = 'block';
         if (deferredAlert) deferredAlert.style.display = 'none';
         if (targetDateContainer) targetDateContainer.style.display = 'none';
@@ -2814,7 +2828,6 @@ window.openCEOManageModal = function(reportId) {
         }
         if (btnPendingBudget) btnPendingBudget.style.display = 'none';
 
-        // 📸 Display previous rejected CEO submission
         if (completedEvidence) {
           completedEvidence.style.display = 'block';
           completedEvidence.style.backgroundColor = '#fffbeb';
@@ -2829,7 +2842,6 @@ window.openCEOManageModal = function(reportId) {
         }
         if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No previous remarks provided.";
 
-        // New upload dropzone
         if (completionForm) completionForm.style.display = 'block';
 
       } else if (currentStatus.includes('progress')) {
@@ -2854,7 +2866,7 @@ window.openCEOManageModal = function(reportId) {
         if (completedEvidence) completedEvidence.style.display = 'none';
 
       } else {
-        // STATE 5: DISPATCHED / READY TO QUEUE (SMART TIMELINE CALCULATOR ACTIVE)
+        // STATE 5: DISPATCHED / READY TO QUEUE
         if (dispatchSection) dispatchSection.style.display = 'block';
         if (deferredAlert) deferredAlert.style.display = 'none';
         if (countdownBadge) countdownBadge.style.display = 'none';
@@ -3012,7 +3024,6 @@ window.jumpToCEOMasterlistAndManage = function(reportId) {
 // 7. FILE UPLOAD & LEAFLET MAP OBSERVERS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Initial load
   if (document.getElementById('ultimate-ceo-dash-table')) {
     loadCEODashboardData();
   }
@@ -3093,17 +3104,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-// 🗺️ CEO MANAGE MODAL: LOCATE ON MAP (WITH STREETS & BOUNDARIES)
-// ==========================================
-
-// Safe global scoping to prevent duplicate declaration syntax errors
+  // 🗺️ CEO MANAGE MODAL: LOCATE ON MAP
+  // ==========================================
   window.ceoManageMap = window.ceoManageMap || null;
   window.ceoManageMarker = window.ceoManageMarker || null;
   window.ceoManageBoundaryLayer = window.ceoManageBoundaryLayer || null;
   window.ceoManageBounds = window.ceoManageBounds || null;
   window.ceoManageGeoJsonData = window.ceoManageGeoJsonData || null;
 
-// Re-use or pre-fetch official CSJDM boundaries
   function ensureManageMapGeoJsonLoaded() {
     if (typeof sjdmGeoJsonData !== 'undefined' && sjdmGeoJsonData) {
       return Promise.resolve(sjdmGeoJsonData);
@@ -3123,7 +3131,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(err => console.error("Could not load sjdm_barangays.geojson for CEO modal:", err));
   }
 
-// 2. Leaflet Map Locator Event Handler
   const btnLocateMap = document.getElementById('ceo-btn-locate-map');
   if (btnLocateMap) {
     btnLocateMap.addEventListener('click', function(e) {
@@ -3157,27 +3164,24 @@ document.addEventListener('DOMContentLoaded', () => {
           shadowSize: [41, 41]
         });
 
-        // 1. Initialize Map with bounded zoom constraints
         if (!window.ceoManageMap) {
           window.ceoManageMap = L.map('ceo-manage-map', {
-            minZoom: 12,             // Stops zooming out past CSJDM scale
-            maxZoom: 19,             // Stops over-zooming past satellite resolution
-            maxBoundsViscosity: 0.7  // Elastic boundary buffer prevents camera locks
+            minZoom: 12,
+            maxZoom: 19,
+            maxBoundsViscosity: 0.7
           });
 
-          // 🛰️ GOOGLE HYBRID SATELLITE (Subdivisions, road lines, street names, & landmarks)
           L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
             maxZoom: 19,
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             attribution: '&copy; Google Maps'
           }).addTo(window.ceoManageMap);
 
-          // 2. Render CSJDM Barangay Outlines
           ensureManageMapGeoJsonLoaded().then(geoJson => {
             if (geoJson && window.ceoManageMap) {
               window.ceoManageBoundaryLayer = L.geoJSON(geoJson, {
                 style: {
-                  color: '#0284c7',       // Engineering Sky-Blue border
+                  color: '#0284c7',
                   weight: 2,
                   dashArray: '5, 5',
                   fillColor: '#0369a1',
@@ -3191,7 +3195,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
 
-          // 3. Drop & bind Project Pin
           window.ceoManageMarker = L.marker([currentCEOLat, currentCEOLng], { icon: redIcon })
             .addTo(window.ceoManageMap)
             .bindPopup(`<b>Project Location</b><br>Lat: ${currentCEOLat.toFixed(5)}<br>Lng: ${currentCEOLng.toFixed(5)}`);
@@ -3199,7 +3202,6 @@ document.addEventListener('DOMContentLoaded', () => {
           window.ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
 
         } else {
-          // Reuse existing map instance
           window.ceoManageMap.setView([currentCEOLat, currentCEOLng], 17);
 
           if (window.ceoManageMarker) {
@@ -3211,7 +3213,6 @@ document.addEventListener('DOMContentLoaded', () => {
               .addTo(window.ceoManageMap);
           }
 
-          // Failsafe: apply boundaries if GeoJSON finished loading after the first toggle
           if (!window.ceoManageBoundaryLayer) {
             ensureManageMapGeoJsonLoaded().then(geoJson => {
               if (geoJson && window.ceoManageMap) {
@@ -3245,7 +3246,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. Mark as In Progress Action (With Target Date Logging)
+  // 3. Mark as In Progress Action
   const btnStartRepair = document.getElementById('ceo-btn-start-repair');
   if (btnStartRepair) {
     btnStartRepair.addEventListener('click', function() {
@@ -3280,7 +3281,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Crew Dispatched! Target completion date logged.", "success");
           }
 
-          // Reload modal directly to reflect new in-progress state and countdown
           openCEOManageModal(currentCEOProjectID);
 
           if (typeof loadCEODashboardData === "function") {
@@ -3316,10 +3316,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // 🏗️ CEO ACTION: UNIFIED DEFER SYSTEM
 // ==========================================
 
-// Global variable to track if we are deferring a single project from the Review modal
 window.deferringSingleId = null;
 
-// 🔄 HELPER: Safely close defer modal and restore manage modal if needed
 window.closeBatchDeferModal = function() {
   const modal = document.getElementById('batch-defer-modal');
   if (modal) modal.classList.add('hidden');
@@ -3331,7 +3329,6 @@ window.closeBatchDeferModal = function() {
   }
 };
 
-// 1. OPEN FROM INDIVIDUAL REVIEW MODAL (The Single Button)
 window.markAsPendingBudget = function() {
   if (typeof currentCEOProjectID === 'undefined' || !currentCEOProjectID) {
     if (typeof showToast === 'function') showToast("Error: Could not identify the report.", "error");
@@ -3354,7 +3351,6 @@ window.markAsPendingBudget = function() {
   document.getElementById('batch-defer-modal').classList.remove('hidden');
 };
 
-// 2. OPEN FROM BATCH ACTION BAR (The Checkboxes)
 window.openBatchDeferModal = function() {
   window.deferringSingleId = null;
 
@@ -3371,7 +3367,6 @@ window.openBatchDeferModal = function() {
   document.getElementById('batch-defer-modal').classList.remove('hidden');
 };
 
-// 3. VALIDATE REASON & SHOW CONFIRMATION WARNING
 window.submitBatchDefer = function() {
   const reasonInput = document.getElementById('batch-defer-reason');
   const reason = reasonInput ? reasonInput.value.trim() : '';
@@ -3409,7 +3404,6 @@ window.submitBatchDefer = function() {
   document.getElementById('confirm-action-modal').classList.remove('hidden');
 };
 
-// 4. EXECUTE THE API CALL
 window.executeBatchDeferral = function() {
   const reasonInput = document.getElementById('batch-defer-reason');
   const reason = reasonInput ? reasonInput.value.trim() : '';
@@ -5713,19 +5707,40 @@ function openViewModal(reportId) {
       document.getElementById('view-modal-gps').innerText =
         (report.latitude && report.longitude) ? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}` : "Not provided";
 
+      // Road Details
       document.getElementById('view-modal-road-name').innerText = report.cityRoadName || "N/A";
       document.getElementById('view-modal-road-id').innerText = report.cityRoadId || "N/A";
       document.getElementById('view-modal-importance').innerText = report.roadImportance || "N/A";
       document.getElementById('view-modal-terrain').innerText = report.terrainType || "N/A";
       document.getElementById('view-modal-road-type').innerText = report.roadType || "N/A";
-      document.getElementById('view-modal-length').innerText = report.length || "0";
-      document.getElementById('view-modal-width').innerText = report.width || "0";
-      document.getElementById('view-modal-culverts').innerText = report.lengthOfCulverts || "0";
-      document.getElementById('view-modal-bridges').innerText = report.numberOfBridges || "0";
 
-      document.getElementById('view-modal-damage-type').innerText = report.damageType || "None";
-      document.getElementById('view-modal-damage-length').innerText = report.damageLength || "0";
-      document.getElementById('view-modal-damage-width').innerText = report.damageWidth || "0";
+      // Master Dimensions (with units)
+      document.getElementById('view-modal-length').innerText = (report.length !== null && report.length !== undefined) ? `${report.length} km` : "0 km";
+      document.getElementById('view-modal-width').innerText = (report.width && report.width > 0) ? `${report.width} m` : "Pending Survey";
+      document.getElementById('view-modal-culverts').innerText = (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? `${report.lengthOfCulverts} m` : "0 m";
+      document.getElementById('view-modal-bridges').innerText = report.numberOfBridges !== null && report.numberOfBridges !== undefined ? report.numberOfBridges : "0";
+
+      // 📐 CPDO Technical Damage Assessment
+      const isPending = !report.damageType || report.damageType === 'Pending Inspection';
+      const isNone = report.damageType === 'None';
+
+      document.getElementById('view-modal-damage-type').innerText = report.damageType || "Pending Inspection";
+
+      if (isPending) {
+        const pendingNotice = "Awaiting CPDO Inspection";
+        document.getElementById('view-modal-damage-length').innerText = pendingNotice;
+        document.getElementById('view-modal-damage-width').innerText = pendingNotice;
+        document.getElementById('view-modal-damage-depth').innerText = pendingNotice;
+      } else if (isNone) {
+        document.getElementById('view-modal-damage-length').innerText = "0 m";
+        document.getElementById('view-modal-damage-width').innerText = "0 m";
+        document.getElementById('view-modal-damage-depth').innerText = "0 m";
+      } else {
+        document.getElementById('view-modal-damage-length').innerText = report.damageLength ? `${report.damageLength} m` : "0 m";
+        document.getElementById('view-modal-damage-width').innerText = report.damageWidth ? `${report.damageWidth} m` : "0 m";
+        document.getElementById('view-modal-damage-depth').innerText = report.damageDepth ? `${report.damageDepth} m` : "0 m";
+      }
+
       document.getElementById('view-modal-desc').innerText = report.damageDescription || "No description provided.";
 
       loadSecureImage('view-modal-img', report.damageImage);

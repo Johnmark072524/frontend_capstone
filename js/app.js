@@ -3828,7 +3828,6 @@ function resetAddReportForm() {
 
   clearImageInputOnly();
 }
-
 // ==========================================
 // ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
 // ==========================================
@@ -5688,39 +5687,27 @@ function openEditModal(reportId) {
       const editConfidenceInput = document.getElementById('edit-modal-confidence');
 
       if (report.severity && report.severity !== "Unassessed") {
-        editSeverityInput.value = report.severity;
-        editConfidenceInput.value = report.cvConfidenceScore ? `${report.cvConfidenceScore}%` : "Assessed";
+        if (editSeverityInput) editSeverityInput.value = report.severity;
+        if (editConfidenceInput) editConfidenceInput.value = report.cvConfidenceScore ? `${report.cvConfidenceScore}%` : "Assessed";
       } else {
-        editSeverityInput.value = "Unassessed";
-        editConfidenceInput.value = "0.0%";
+        if (editSeverityInput) editSeverityInput.value = "Unassessed";
+        if (editConfidenceInput) editConfidenceInput.value = "0.0%";
       }
 
+      // GPS Coordinates
       document.getElementById('edit-modal-gps').innerText = (report.latitude && report.longitude)
         ? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`
         : "Not Selected";
       document.getElementById('edit-latitude').value = report.latitude || "";
       document.getElementById('edit-longitude').value = report.longitude || "";
 
-      document.getElementById('edit-modal-length').value = report.length || "";
-      document.getElementById('edit-modal-width').value = report.width || "";
-      document.getElementById('edit-modal-culverts').value = report.lengthOfCulverts || "";
-      document.getElementById('edit-modal-bridges').value = report.numberOfBridges || "";
+      // Baseline Road Dimensions (Disabled in HTML)
+      document.getElementById('edit-modal-length').value = report.length ?? 0;
+      document.getElementById('edit-modal-width').value = report.width ?? 0;
+      document.getElementById('edit-modal-culverts').value = report.lengthOfCulverts ?? 0;
+      document.getElementById('edit-modal-bridges').value = report.numberOfBridges ?? 0;
 
-      document.getElementById('edit-modal-damage-length').value = report.damageLength || "";
-      document.getElementById('edit-modal-damage-width').value = report.damageWidth || "";
-
-      const standardTypes = ["Pothole", "Surface Cracking", "Edge Deformation", "Washout/Sinkhole", "None"];
-      const savedType = report.damageType || "None";
-
-      if (standardTypes.includes(savedType)) {
-        document.getElementById('edit-modal-damage-type').value = savedType;
-        document.getElementById('edit-modal-damage-other').classList.add('hidden');
-      } else {
-        document.getElementById('edit-modal-damage-type').value = "Other";
-        const otherInput = document.getElementById('edit-modal-damage-other');
-        otherInput.value = savedType;
-        otherInput.classList.remove('hidden');
-      }
+      // Damage Description
       document.getElementById('edit-modal-desc').value = report.damageDescription || "";
 
       // Store original image URL so we can revert if a new photo is rejected
@@ -5752,9 +5739,20 @@ function submitEditedReport() {
   const fileInput = document.getElementById('edit-modal-img');
   const submitBtn = document.getElementById('btn-submit-revisions');
 
-  if (fileInput.files.length > 0 && fileInput.files[0].size > (5 * 1024 * 1024)) {
-    if (typeof showToast === 'function') showToast("File is too large! Must be under 5MB.", "error");
-    return;
+  // File size & format security check (if a new photo was chosen)
+  if (fileInput && fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+
+    if (!validImageTypes.includes(file.type.toLowerCase())) {
+      if (typeof showToast === 'function') showToast("Invalid format! Please upload a JPG, PNG, or WebP photo.", "error");
+      return;
+    }
+
+    if (file.size > 5242880) { // 5MB limit
+      if (typeof showToast === 'function') showToast("File is too large! Must be under 5MB.", "error");
+      return;
+    }
   }
 
   // Disable button during analysis & save
@@ -5771,25 +5769,19 @@ function submitEditedReport() {
     formData.append("userId", currentUserId);
   }
 
-  formData.append("damageDescription", document.getElementById('edit-modal-desc').value);
-  formData.append("length", document.getElementById('edit-modal-length').value);
-  formData.append("width", document.getElementById('edit-modal-width').value);
-  formData.append("lengthOfCulverts", document.getElementById('edit-modal-culverts').value);
-  formData.append("numberOfBridges", document.getElementById('edit-modal-bridges').value);
-  formData.append("latitude", document.getElementById('edit-latitude').value);
-  formData.append("longitude", document.getElementById('edit-longitude').value);
+  // Baseline Road Dimensions & Coordinates
+  formData.append("damageDescription", document.getElementById('edit-modal-desc')?.value || "");
+  formData.append("length", document.getElementById('edit-modal-length')?.value || 0.0);
+  formData.append("width", document.getElementById('edit-modal-width')?.value || 0.0);
+  formData.append("lengthOfCulverts", document.getElementById('edit-modal-culverts')?.value || 0.0);
+  formData.append("numberOfBridges", document.getElementById('edit-modal-bridges')?.value || 0);
+  formData.append("latitude", document.getElementById('edit-latitude')?.value || "");
+  formData.append("longitude", document.getElementById('edit-longitude')?.value || "");
 
-  if (fileInput.files.length > 0) {
+  // Optional New Photo
+  if (fileInput && fileInput.files.length > 0) {
     formData.append("imageFile", fileInput.files[0]);
   }
-
-  let editedDamageType = document.getElementById('edit-modal-damage-type').value;
-  if (editedDamageType === "Other") {
-    editedDamageType = document.getElementById('edit-modal-damage-other').value || "Other";
-  }
-  formData.append("damageType", editedDamageType);
-  formData.append("damageLength", document.getElementById('edit-modal-damage-length').value || 0);
-  formData.append("damageWidth", document.getElementById('edit-modal-damage-width').value || 0);
 
   fetch(`${API_BASE_URL}/api/reports/update/${reportId}`, {
     method: 'PUT',
@@ -5801,7 +5793,7 @@ function submitEditedReport() {
 
       // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400 PHOTO_REJECTED)
       if (!response.ok) {
-        if (data.error === "PHOTO REJECTED") {
+        if (data.error === "PHOTO_REJECTED" || data.error === "PHOTO REJECTED") {
           // 1. Wipe ONLY the newly chosen invalid photo input
           fileInput.value = "";
           document.getElementById('edit-modal-filename').innerText = "";
@@ -5828,7 +5820,7 @@ function submitEditedReport() {
     .then(data => {
       const aiSeverity = data.severity || "Unassessed";
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
-      const hasNewImage = fileInput.files.length > 0;
+      const hasNewImage = fileInput && fileInput.files.length > 0;
 
       if (typeof showToast === 'function') {
         if (hasNewImage && data.severity) {
@@ -5889,13 +5881,27 @@ document.addEventListener("DOMContentLoaded", () => {
     editImageInput.addEventListener('change', function() {
       const file = this.files[0];
       if (file) {
-        if (file.size > (5 * 1024 * 1024)) {
+        const maxSizeBytes = 5242880; // 5MB limit
+        const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+
+        // 1. Format validation
+        if (!validImageTypes.includes(file.type.toLowerCase())) {
+          if (typeof showToast === 'function') showToast("Invalid format! Please upload a JPG, PNG, or WebP photo.", "error");
+          this.value = "";
+          if (editFileNameDisplay) editFileNameDisplay.textContent = "";
+          return;
+        }
+
+        // 2. Size validation
+        if (file.size > maxSizeBytes) {
           if (typeof showToast === 'function') showToast("File is too large! Max 5MB.", "error");
           this.value = "";
           if (editFileNameDisplay) editFileNameDisplay.textContent = "";
           return;
         }
-        if (editFileNameDisplay) editFileNameDisplay.textContent = "Selected: " + file.name;
+
+        // 3. Name & preview display
+        if (editFileNameDisplay) editFileNameDisplay.textContent = `Selected: ${file.name} (${(file.size / 1048576).toFixed(2)} MB)`;
         const reader = new FileReader();
         reader.onload = function(e) {
           if (editImagePreview) editImagePreview.src = e.target.result;

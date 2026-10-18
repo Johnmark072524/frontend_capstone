@@ -4416,7 +4416,7 @@ function resetModalScroll(modalElementOrId) {
 }
 
 // ==========================================
-// ADMIN MODAL MAP VARIABLES
+// ADMIN MODAL MAP & INSPECTION VARIABLES
 // ==========================================
 let currentReviewLat = null;
 let currentReviewLng = null;
@@ -4428,6 +4428,25 @@ let currentReviewReportId = null;
 if (typeof loadAdminReports === 'function') {
   loadAdminReports();
 }
+
+// 🚀 TOGGLE "OTHER" DAMAGE TYPE FOR CPDO INSPECTION
+window.toggleAdminOtherDamageType = function() {
+  const select = document.getElementById('admin-input-damage-type');
+  const otherGroup = document.getElementById('admin-other-damage-group');
+  const otherInput = document.getElementById('admin-input-damage-other');
+
+  if (!select || !otherGroup) return;
+
+  if (select.value === 'Other') {
+    otherGroup.classList.remove('hidden');
+    otherGroup.style.display = 'block';
+    if (otherInput) otherInput.focus();
+  } else {
+    otherGroup.classList.add('hidden');
+    otherGroup.style.display = 'none';
+    if (otherInput) otherInput.value = '';
+  }
+};
 
 // 📜 ADMIN REVIEW TIMELINE ACCORDION TOGGLE
 window.toggleAdminReviewTimeline = function() {
@@ -4534,22 +4553,79 @@ function reviewReport(reportId) {
       const reportByEl = document.getElementById('modal-report-by');
       if (reportByEl) reportByEl.textContent = submitterText;
 
-      // Road Details
+      // Road Details (Static Headers)
       document.getElementById('modal-road-name').textContent = report.cityRoadName || 'N/A';
       document.getElementById('modal-road-id').textContent = report.cityRoadId || 'N/A';
       document.getElementById('modal-importance').textContent = report.roadImportance || 'N/A';
       document.getElementById('modal-terrain').textContent = report.terrainType || 'N/A';
       document.getElementById('modal-road-type').textContent = report.roadType || 'N/A';
 
-      document.getElementById('modal-length').textContent = parseFloat(report.length) || 0;
-      document.getElementById('modal-width').textContent = parseFloat(report.width) || 0;
-      document.getElementById('modal-culverts').textContent = parseFloat(report.lengthOfCulverts) || 0;
-      document.getElementById('modal-bridges').textContent = report.numberOfBridges || 0;
+      // 🛠️ CPDO EDITABLE ROAD INVENTORY INPUTS
+      const inputWidth = document.getElementById('admin-input-width');
+      const inputLength = document.getElementById('admin-input-length');
+      const inputCulverts = document.getElementById('admin-input-culverts');
+      const inputBridges = document.getElementById('admin-input-bridges');
 
-      document.getElementById('modal-damage-type').textContent = report.damageType || 'None';
-      document.getElementById('modal-damage-length').textContent = parseFloat(report.damageLength) || 0;
-      document.getElementById('modal-damage-width').textContent = parseFloat(report.damageWidth) || 0;
+      if (inputWidth) inputWidth.value = (report.width && report.width > 0) ? report.width : '';
+      if (inputLength) inputLength.value = (report.length !== null && report.length !== undefined) ? report.length : '';
+      if (inputCulverts) inputCulverts.value = (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? report.lengthOfCulverts : '';
+      if (inputBridges) inputBridges.value = (report.numberOfBridges !== null && report.numberOfBridges !== undefined) ? report.numberOfBridges : '';
 
+      // 📐 CPDO TECHNICAL DAMAGE MEASUREMENTS INPUTS
+      const damageTypeSelect = document.getElementById('admin-input-damage-type');
+      const otherGroup = document.getElementById('admin-other-damage-group');
+      const otherInput = document.getElementById('admin-input-damage-other');
+
+      const standardTypes = ["Pothole", "Surface Cracking", "Edge Deformation", "Washout/Sinkhole", "None"];
+      const currentDmgType = report.damageType || "None";
+
+      if (damageTypeSelect) {
+        if (standardTypes.includes(currentDmgType)) {
+          damageTypeSelect.value = currentDmgType;
+          if (otherGroup) otherGroup.classList.add('hidden');
+          if (otherInput) otherInput.value = '';
+        } else if (currentDmgType === "Pending Inspection") {
+          damageTypeSelect.value = "None";
+          if (otherGroup) otherGroup.classList.add('hidden');
+          if (otherInput) otherInput.value = '';
+        } else {
+          damageTypeSelect.value = "Other";
+          if (otherGroup) otherGroup.classList.remove('hidden');
+          if (otherInput) otherInput.value = currentDmgType;
+        }
+      }
+
+      const inputDamageDepth = document.getElementById('admin-input-damage-depth');
+      const inputDamageLength = document.getElementById('admin-input-damage-length');
+      const inputDamageWidth = document.getElementById('admin-input-damage-width');
+
+      if (inputDamageDepth) inputDamageDepth.value = (report.damageDepth && report.damageDepth > 0) ? report.damageDepth : '';
+      if (inputDamageLength) inputDamageLength.value = (report.damageLength && report.damageLength > 0) ? report.damageLength : '';
+      if (inputDamageWidth) inputDamageWidth.value = (report.damageWidth && report.damageWidth > 0) ? report.damageWidth : '';
+
+      // 🛡️ PERMISSION CHECK: Lock inputs if report has already progressed past validation
+      const statusStr = String(report.status || '').toLowerCase();
+      const isAuditable = statusStr.includes('pending') || statusStr.includes('resubmitted');
+
+      [inputWidth, inputLength, inputCulverts, inputBridges, damageTypeSelect, otherInput, inputDamageDepth, inputDamageLength, inputDamageWidth].forEach(el => {
+        if (el) {
+          el.disabled = !isAuditable;
+          el.style.backgroundColor = isAuditable ? '#ffffff' : '#f8fafc';
+          el.style.cursor = isAuditable ? 'text' : 'not-allowed';
+        }
+      });
+
+      if (primaryActions) {
+        if (isAuditable) {
+          primaryActions.classList.remove('hidden');
+          primaryActions.style.display = 'flex';
+        } else {
+          primaryActions.classList.add('hidden');
+          primaryActions.style.display = 'none';
+        }
+      }
+
+      // Damage Evidence & Remarks (From Barangay)
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
       // Image Preview
@@ -4587,13 +4663,10 @@ window.closeReviewModal = function() {
 // ==========================================
 // ADMIN DASHBOARD: LOCATE ON MAP BUTTON (SAFE SCOPE)
 // ==========================================
-
-// Attach helpers to window to avoid duplicate 'let' declaration errors
 window.adminSjdmGeoJsonData = window.adminSjdmGeoJsonData || null;
 window.adminBoundaryLayer = window.adminBoundaryLayer || null;
 window.adminCsjdmBounds = window.adminCsjdmBounds || null;
 
-// Pre-fetch official CSJDM boundaries once
 if (!window.adminSjdmGeoJsonData) {
   fetch('sjdm_barangays.geojson')
     .then(res => res.json())
@@ -4633,22 +4706,19 @@ function toggleAdminReviewMap() {
       shadowSize: [41, 41]
     });
 
-    // 1. Initialize Map with strict zoom limits and Google Hybrid layer
     if (!adminReviewMap) {
       adminReviewMap = L.map('admin-review-map', {
-        minZoom: 12,             // Stops zooming out past CSJDM scale
-        maxZoom: 19,             // Stops over-zooming past satellite resolution
-        maxBoundsViscosity: 0.7  // Elastic boundary lock
+        minZoom: 12,
+        maxZoom: 19,
+        maxBoundsViscosity: 0.7
       });
 
-      // 🛰️ GOOGLE HYBRID SATELLITE (Detailed street names, road lines & landmarks)
       L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
         maxZoom: 19,
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         attribution: '&copy; Google Maps'
       }).addTo(adminReviewMap);
 
-      // 2. Render CSJDM Barangay Boundaries
       if (window.adminSjdmGeoJsonData) {
         window.adminBoundaryLayer = L.geoJSON(window.adminSjdmGeoJsonData, {
           style: {
@@ -4665,7 +4735,6 @@ function toggleAdminReviewMap() {
         adminReviewMap.setMaxBounds(window.adminCsjdmBounds.pad(0.4));
       }
 
-      // 3. Place Report Marker
       adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon })
         .addTo(adminReviewMap)
         .bindPopup(`<b>Reported Damage Location</b><br>Lat: ${currentReviewLat.toFixed(5)}<br>Lng: ${currentReviewLng.toFixed(5)}`);
@@ -4673,7 +4742,6 @@ function toggleAdminReviewMap() {
       adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
 
     } else {
-      // Reuse existing map instance
       adminReviewMap.setView([currentReviewLat, currentReviewLng], 17);
 
       if (adminReviewMarker) {
@@ -4684,7 +4752,6 @@ function toggleAdminReviewMap() {
         adminReviewMarker = L.marker([currentReviewLat, currentReviewLng], { icon: redIcon }).addTo(adminReviewMap);
       }
 
-      // Apply boundary if GeoJSON finished loading after first toggle
       if (!window.adminBoundaryLayer && window.adminSjdmGeoJsonData) {
         window.adminBoundaryLayer = L.geoJSON(window.adminSjdmGeoJsonData, {
           style: {
@@ -4722,7 +4789,6 @@ if (btnLocateMap) {
 // 🎯 REVIEW MODAL ACTION CONTROLLERS (ACCEPT / REJECT)
 // ==========================================
 
-// 🛡️ Global mutex lock to prevent concurrent submissions
 let isReviewSubmitting = false;
 
 // 1. Show Rejection Form
@@ -4763,7 +4829,6 @@ if (btnConfirmReject) {
       e.stopImmediatePropagation();
     }
 
-    // 🛡️ BLOCK DUPLICATE INVOCATION
     if (!currentReviewReportId || isReviewSubmitting) return;
 
     const remarksInput = document.getElementById('admin-remarks-input');
@@ -4826,7 +4891,7 @@ if (btnConfirmReject) {
   };
 }
 
-// 4. Accept & Validate (Attaches userId for audit trail)
+// 4. Save Assessment & Validate Report (CPDO Technical Survey)
 const btnAcceptValidate = document.getElementById('btn-accept-validate');
 if (btnAcceptValidate) {
   btnAcceptValidate.onclick = function(e) {
@@ -4836,18 +4901,76 @@ if (btnAcceptValidate) {
       e.stopImmediatePropagation();
     }
 
-    // 🛡️ BLOCK DUPLICATE INVOCATION
     if (!currentReviewReportId || isReviewSubmitting) return;
+
+    // A. Validate Road Width
+    const widthVal = document.getElementById('admin-input-width')?.value;
+    if (!widthVal || parseFloat(widthVal) <= 0) {
+      if (typeof showToast === 'function') {
+        showToast("Please enter a valid surveyed Road Width (meters).", "warning");
+      } else {
+        alert("Please enter a valid surveyed Road Width (meters).");
+      }
+      document.getElementById('admin-input-width')?.focus();
+      return;
+    }
+
+    // B. Validate Damage Classification
+    let damageType = document.getElementById('admin-input-damage-type')?.value || 'None';
+    if (damageType === 'Other') {
+      const otherVal = document.getElementById('admin-input-damage-other')?.value.trim();
+      if (!otherVal) {
+        if (typeof showToast === 'function') {
+          showToast("Please specify the custom damage type.", "warning");
+        }
+        document.getElementById('admin-input-damage-other')?.focus();
+        return;
+      }
+      damageType = otherVal;
+    }
+
+    // C. Validate Damage Dimensions (If road has physical distress)
+    const dmgLengthVal = document.getElementById('admin-input-damage-length')?.value;
+    const dmgWidthVal = document.getElementById('admin-input-damage-width')?.value;
+    const dmgDepthVal = document.getElementById('admin-input-damage-depth')?.value;
+
+    if (damageType !== 'None') {
+      if (!dmgLengthVal || parseFloat(dmgLengthVal) <= 0 || !dmgWidthVal || parseFloat(dmgWidthVal) <= 0) {
+        if (typeof showToast === 'function') {
+          showToast("Please enter valid Damage Length and Width measurements.", "warning");
+        } else {
+          alert("Please enter valid Damage Length and Width measurements.");
+        }
+        document.getElementById('admin-input-damage-length')?.focus();
+        return;
+      }
+    }
 
     isReviewSubmitting = true;
     const targetReportId = currentReviewReportId;
     const originalText = btnAcceptValidate.innerHTML;
 
-    btnAcceptValidate.innerHTML = "⏳ Validating...";
+    btnAcceptValidate.innerHTML = "⏳ Saving Assessment...";
     btnAcceptValidate.disabled = true;
     btnAcceptValidate.style.pointerEvents = "none";
 
     const currentUserId = sessionStorage.getItem("userId");
+
+    // D. Package Technical Assessment Payload
+    const payload = {
+      status: "Validated",
+      userId: currentUserId,
+      // Road Dimensions
+      width: widthVal,
+      length: document.getElementById('admin-input-length')?.value || "0",
+      lengthOfCulverts: document.getElementById('admin-input-culverts')?.value || "0",
+      numberOfBridges: document.getElementById('admin-input-bridges')?.value || "0",
+      // Technical Damage Assessment
+      damageType: damageType,
+      damageLength: dmgLengthVal || "0",
+      damageWidth: dmgWidthVal || "0",
+      damageDepth: dmgDepthVal || "0"
+    };
 
     fetch(`${API_BASE_URL}/api/reports/${targetReportId}/status`, {
       method: 'PUT',
@@ -4855,10 +4978,7 @@ if (btnAcceptValidate) {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true'
       },
-      body: JSON.stringify({
-        status: "Validated",
-        userId: currentUserId
-      })
+      body: JSON.stringify(payload)
     })
       .then(res => {
         if (!res.ok) throw new Error("Failed to validate report");
@@ -4866,7 +4986,7 @@ if (btnAcceptValidate) {
       })
       .then(() => {
         if (typeof showToast === 'function') {
-          showToast("Report validated!", "success");
+          showToast("✅ Technical assessment saved & report validated!", "success");
         }
         currentReviewReportId = null;
         closeReviewModal();

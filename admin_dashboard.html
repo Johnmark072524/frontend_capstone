@@ -2122,14 +2122,17 @@
     </div>
 
     <div id="review-modal" class="modal-overlay hidden">
-      <div class="modal-content">
+      <div class="modal-content" style="max-width: 780px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
 
-        <div class="modal-header">
-          <h2>Review Report <span class="highlight" id="modal-header-id">#RPT-0000</span></h2>
-          <button class="close-modal-btn" onclick="closeReviewModal()">✕</button>
+        <!-- MODAL HEADER -->
+        <div class="modal-header" style="padding: 18px 24px; border-bottom: 2px solid #f1f5f9; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+          <h2 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 800;">
+            Review & Inspect Report <span class="highlight" id="modal-header-id" style="color: #2563eb;">#RPT-0000</span>
+          </h2>
+          <button class="close-modal-btn" onclick="closeReviewModal()" style="font-size: 20px; cursor: pointer; border: none; background: transparent; color: #64748b;">✕</button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body" style="padding: 24px; overflow-y: auto; flex-grow: 1;">
 
           <!-- ⏱️ TOP ACCORDION: REVISION & LIFECYCLE HISTORY -->
           <div class="edit-timeline-accordion" style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
@@ -2151,86 +2154,162 @@
           </div>
 
           <!-- SECTION 1: ASSESSMENT OVERVIEW & LOCATE MAP -->
-          <div class="report-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <h3 class="section-title" style="margin-bottom: 0;">Assessment Overview</h3>
-              <button class="btn-action" id="btn-admin-locate-map" style="background-color: #4a4a4a;">
+          <div class="report-section" style="margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <h3 class="section-title" style="margin: 0; font-size: 15px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Assessment Overview</h3>
+              <button class="btn-action" id="btn-admin-locate-map" type="button" style="background-color: #334155; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer;">
                 <span class="icon">🗺️</span> Locate on Map
               </button>
             </div>
 
-            <div id="admin-review-map-container" style="display: none; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; overflow: hidden;">
-              <div id="admin-review-map" style="height: 250px; width: 100%; z-index: 1;"></div>
+            <div id="admin-review-map-container" style="display: none; margin-bottom: 15px; border: 1.5px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+              <div id="admin-review-map" style="height: 230px; width: 100%; z-index: 1;"></div>
             </div>
 
-            <div class="report-detail-grid">
-              <div><strong>Report ID:</strong> <span id="modal-report-id"></span></div>
+            <div class="report-detail-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div><strong>Report ID:</strong> <span id="modal-report-id" style="font-family: monospace; font-weight: 700; color: #2563eb;"></span></div>
               <div><strong>Severity Level:</strong> <span id="modal-severity" class="badge"></span></div>
               <div><strong>Date Submitted:</strong> <span id="modal-date"></span></div>
-              <div><strong>GPS Coordinates:</strong> <span id="modal-gps"></span></div>
+              <div><strong>GPS Coordinates:</strong> <span id="modal-gps" style="font-family: monospace; color: #059669; font-weight: 700;"></span></div>
               <div style="grid-column: 1 / -1;">
                 <strong>Submitted By:</strong> <span id="modal-report-by">Barangay Official</span>
               </div>
             </div>
           </div>
 
-          <!-- SECTION 2: ROAD DETAILS -->
-          <div class="report-section">
-            <h3 class="section-title">Road Details</h3>
-            <div class="report-detail-grid">
+          <!-- SECTION 2: ROAD INVENTORY SPECIFICATIONS -->
+          <div class="report-section" style="margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+              <h3 class="section-title" style="margin: 0; font-size: 15px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Road Inventory Details</h3>
+              <span style="font-size: 11px; color: #64748b; font-style: italic;">* Pre-filled from City Road Inventory</span>
+            </div>
+
+            <div class="report-detail-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px; margin-bottom: 14px;">
               <div><strong>Barangay:</strong> <span id="modal-barangay"></span></div>
               <div><strong>City Road Name:</strong> <span id="modal-road-name"></span></div>
-              <div><strong>City Road ID:</strong> <span id="modal-road-id"></span></div>
+              <div><strong>City Road ID:</strong> <span id="modal-road-id" style="font-family: monospace; font-weight: 700;"></span></div>
               <div><strong>Road Importance:</strong> <span id="modal-importance"></span></div>
               <div><strong>Terrain Type:</strong> <span id="modal-terrain"></span></div>
               <div><strong>Road Type:</strong> <span id="modal-road-type"></span></div>
-              <div><strong>Road Length:</strong> <span id="modal-length"></span> km</div>
-              <div><strong>Road Width:</strong> <span id="modal-width"></span> m</div>
-              <div><strong>Length of Culverts:</strong> <span id="modal-culverts"></span> m</div>
-              <div><strong>Number of Bridges:</strong> <span id="modal-bridges"></span></div>
+            </div>
 
-              <div style="grid-column: 1 / -1; border-top: 1px dashed #ccc; margin-top: 5px; padding-top: 5px;"></div>
-              <div><strong>Damage Type:</strong> <span id="modal-damage-type" style="color: #d9534f; font-weight: bold;"></span></div>
-              <div><strong>Damage Length:</strong> <span id="modal-damage-length"></span> m</div>
-              <div><strong>Damage Width:</strong> <span id="modal-damage-width"></span> m</div>
+            <!-- ROAD DIMENSIONS EDITABLE / AUDITABLE BY CPDO -->
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">Road Dimensions (Master Inventory)</span>
+                <span style="font-size: 11px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Updating width syncs with City Road database</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
+                <div>
+                  <label for="admin-input-width" style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px;">Road Width (m) <span style="color: #dc2626;">*</span></label>
+                  <input type="number" id="admin-input-width" step="0.01" min="0" placeholder="e.g. 6.50" style="width: 100%; padding: 7px 10px; font-size: 12.5px; border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+
+                <div>
+                  <label for="admin-input-length" style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px;">Road Length (km)</label>
+                  <input type="number" id="admin-input-length" step="0.001" min="0" placeholder="0.000" style="width: 100%; padding: 7px 10px; font-size: 12.5px; border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+
+                <div>
+                  <label for="admin-input-culverts" style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px;">Culverts Length (m)</label>
+                  <input type="number" id="admin-input-culverts" step="0.01" min="0" placeholder="0.00" style="width: 100%; padding: 7px 10px; font-size: 12.5px; border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+
+                <div>
+                  <label for="admin-input-bridges" style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 4px;">No. of Bridges</label>
+                  <input type="number" id="admin-input-bridges" step="1" min="0" placeholder="0" style="width: 100%; padding: 7px 10px; font-size: 12.5px; border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- SECTION 3: DAMAGE EVIDENCE -->
-          <div class="report-section" style="border-bottom: none;">
-            <h3 class="section-title">Damage Evidence</h3>
-
-            <div class="modal-image-container">
-              <img id="modal-damage-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
+          <!-- SECTION 3: CPDO TECHNICAL DAMAGE ASSESSMENT -->
+          <div class="report-section" style="margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+              <h3 class="section-title" style="margin: 0; font-size: 15px; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                <span>📐</span> Technical Damage Measurements
+              </h3>
+              <span style="font-size: 11px; color: #b91c1c; font-weight: 700;">* Required for Validation</span>
             </div>
 
-            <div class="report-description">
-              <strong>Damage Description:</strong>
-              <p id="modal-description"></p>
+            <div style="background: #fff5f5; border: 1.5px solid #fecaca; border-radius: 8px; padding: 14px;">
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px;">
+                <div>
+                  <label for="admin-input-damage-type" style="display: block; font-size: 11.5px; font-weight: 700; color: #7f1d1d; margin-bottom: 4px;">Damage Classification <span style="color: #dc2626;">*</span></label>
+                  <select id="admin-input-damage-type" onchange="toggleAdminOtherDamageType()" style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1.5px solid #fca5a5; border-radius: 6px; outline: none; background: #ffffff; font-weight: 600;">
+                    <option value="None">None (Passable / Undamaged)</option>
+                    <option value="Pothole">Pothole</option>
+                    <option value="Surface Cracking">Surface Cracking (Alligator/Longitudinal)</option>
+                    <option value="Edge Deformation">Edge Deformation / Rutting</option>
+                    <option value="Washout/Sinkhole">Washout / Sinkhole</option>
+                    <option value="Other">Other (Please specify)</option>
+                  </select>
+
+                  <div id="admin-other-damage-group" class="hidden" style="margin-top: 8px;">
+                    <input type="text" id="admin-input-damage-other" placeholder="Specify custom damage type..." style="width: 100%; padding: 7px 10px; font-size: 12px; border: 1.5px solid #ef4444; border-radius: 6px; outline: none; background: #ffffff;">
+                  </div>
+                </div>
+
+                <div>
+                  <label for="admin-input-damage-depth" style="display: block; font-size: 11.5px; font-weight: 700; color: #7f1d1d; margin-bottom: 4px;">Pothole / Damage Depth (m)</label>
+                  <input type="number" id="admin-input-damage-depth" step="0.01" min="0" placeholder="e.g. 0.08 (8 cm)" style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1.5px solid #fca5a5; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                <div>
+                  <label for="admin-input-damage-length" style="display: block; font-size: 11.5px; font-weight: 700; color: #7f1d1d; margin-bottom: 4px;">Damage Length (m)</label>
+                  <input type="number" id="admin-input-damage-length" step="0.01" min="0" placeholder="Length in meters" style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1.5px solid #fca5a5; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+
+                <div>
+                  <label for="admin-input-damage-width" style="display: block; font-size: 11.5px; font-weight: 700; color: #7f1d1d; margin-bottom: 4px;">Damage Width (m)</label>
+                  <input type="number" id="admin-input-damage-width" step="0.01" min="0" placeholder="Width in meters" style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1.5px solid #fca5a5; border-radius: 6px; outline: none; background: #ffffff;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 4: DAMAGE EVIDENCE (SUBMITTED BY BARANGAY) -->
+          <div class="report-section" style="border-bottom: none; margin-bottom: 10px;">
+            <h3 class="section-title" style="margin: 0 0 12px; font-size: 15px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Damage Evidence</h3>
+
+            <div class="modal-image-container" style="text-align: center; margin-bottom: 12px;">
+              <img id="modal-damage-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)" style="max-height: 220px; border-radius: 8px; border: 1.5px solid #e2e8f0; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+            </div>
+
+            <div class="report-description" style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; line-height: 1.5;">
+              <strong>Barangay Survey Notes / Remarks:</strong>
+              <p id="modal-description" style="margin: 4px 0 0; color: #475569;"></p>
             </div>
           </div>
 
           <!-- MODAL ACTIONS -->
-          <div class="modal-actions" id="primary-actions" style="margin-top: 20px;">
-            <button type="button" class="btn-reject" id="btn-show-reject"><span class="icon">❌</span> Reject</button>
-            <button type="button" class="btn-submit" id="btn-accept-validate"><span class="icon">✅</span> Accept & Validate</button>
+          <div class="modal-actions" id="primary-actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn-reject" id="btn-show-reject" style="background-color: #ef4444; color: #ffffff; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
+              <span class="icon">❌</span> Reject
+            </button>
+            <button type="button" class="btn-submit" id="btn-accept-validate" style="background-color: #16a34a; color: #ffffff; border: none; padding: 10px 22px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
+              <span class="icon">✅</span> Save Assessment & Validate
+            </button>
           </div>
 
           <!-- REJECTION REASON FORM -->
-          <div id="reject-feedback-form" class="hidden" style="margin-top: 15px;">
-            <label for="admin-remarks-input" style="font-weight: bold; color: #d9534f;">Reason for Rejection:</label>
-            <textarea id="admin-remarks-input" rows="3" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc;" placeholder="Tell the Barangay Official what needs to be fixed..."></textarea>
+          <div id="reject-feedback-form" class="hidden" style="margin-top: 15px; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 14px;">
+            <label for="admin-remarks-input" style="font-weight: 700; color: #be123c; font-size: 13px; display: block; margin-bottom: 6px;">Reason for Rejection / Revision Instructions:</label>
+            <textarea id="admin-remarks-input" rows="3" style="width: 100%; padding: 10px; border-radius: 6px; border: 1.5px solid #fda4af; font-size: 13px; outline: none; font-family: inherit;" placeholder="Tell the Barangay Official what needs to be fixed..."></textarea>
 
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-              <button type="button" class="btn-secondary" id="btn-cancel-reject">Cancel</button>
-              <button type="button" class="btn-reject" id="btn-confirm-reject">Submit Rejection</button>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+              <button type="button" class="btn-secondary" id="btn-cancel-reject" style="padding: 8px 16px; font-size: 12.5px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; cursor: pointer; font-weight: 600;">Cancel</button>
+              <button type="button" class="btn-reject" id="btn-confirm-reject" style="padding: 8px 18px; font-size: 12.5px; border-radius: 6px; border: none; background: #e11d48; color: #ffffff; cursor: pointer; font-weight: 700;">Submit Rejection</button>
             </div>
           </div>
 
         </div>
       </div>
     </div>
-
+    
     <!-- ========================================== -->
     <!-- LOGOUT CONFIRMATION MODAL -->
     <!-- ========================================== -->

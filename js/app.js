@@ -3498,7 +3498,7 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
 // 🛡️ Global Submission Guard (Prevents duplicate requests / rapid clicks)
 let isSubmittingReport = false;
 
-// 🚀 Toggle for "Other" damage type selection
+// 🚀 Toggle for "Other" damage type selection (Kept safe for CPDO Admin usage)
 window.toggleOtherDamageType = function() {
   const select = document.getElementById('damageType');
   const otherGroup = document.getElementById('otherDamageTypeGroup');
@@ -3524,7 +3524,7 @@ document.getElementById("damageImageFile")?.addEventListener("change", function 
   if (!this.files || this.files.length === 0) return;
 
   const file = this.files[0];
-  const maxSizeBytes = 5 * 1024 * 1024; // 5MB limit
+  const maxSizeBytes = 5242880; // 5MB limit (5 * 1024 * 1024)
   const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
   // 1. Check Format Immediately
@@ -3546,7 +3546,7 @@ document.getElementById("damageImageFile")?.addEventListener("change", function 
   const fileNameDisplay = document.getElementById("fileNameDisplay");
 
   if (fileNameDisplay) {
-    fileNameDisplay.textContent = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+    fileNameDisplay.textContent = `Selected: ${file.name} (${(file.size / 1048576).toFixed(2)} MB)`;
   }
 
   if (preview) {
@@ -3564,11 +3564,15 @@ function submitRoadReport() {
   if (isSubmittingReport) return;
 
   const roadName = document.getElementById("cityRoadName")?.value;
-  const widthVal = document.getElementById("width")?.value;
-  const lengthVal = document.getElementById("length")?.value;
+  if (!roadName) {
+    showToast("Please select a City Road Name.", "error");
+    return;
+  }
 
-  if (!roadName || !widthVal || !lengthVal) {
-    showToast("Please fill in all required fields (Road Name, Width, and Length).", "error");
+  const latVal = document.getElementById("latitude")?.value;
+  const lngVal = document.getElementById("longitude")?.value;
+  if (!latVal || !lngVal) {
+    showToast("Please pin the location on the map first.", "error");
     return;
   }
 
@@ -3576,7 +3580,7 @@ function submitRoadReport() {
   const imageInput = document.getElementById("damageImageFile");
   if (imageInput && imageInput.files && imageInput.files.length > 0) {
     const file = imageInput.files[0];
-    const maxSizeBytes = 5 * 1024 * 1024;
+    const maxSizeBytes = 5242880; // 5MB limit
     const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
     if (!validImageTypes.includes(file.type.toLowerCase())) {
@@ -3590,22 +3594,6 @@ function submitRoadReport() {
       showToast("Image size exceeds the 5MB limit. Please upload a smaller photo.", "error");
       return;
     }
-  }
-
-  const damageType = document.getElementById("damageType")?.value;
-  if (damageType === "Other" && !document.getElementById("otherDamageType")?.value.trim()) {
-    showToast("Please specify the 'Other' damage type.", "error");
-    return;
-  }
-
-  const width = parseFloat(widthVal);
-  const length = parseFloat(lengthVal);
-  const bridges = parseInt(document.getElementById("numberOfBridges")?.value) || 0;
-  const culverts = parseFloat(document.getElementById("lengthOfCulverts")?.value) || 0;
-
-  if (width < 0 || length < 0 || bridges < 0 || culverts < 0) {
-    showToast("Measurements cannot be negative numbers! Please correct them.", "error");
-    return;
   }
 
   const modal = document.getElementById('confirm-modal');
@@ -3667,31 +3655,24 @@ function executeFinalSubmission() {
     return el.value || "";
   }
 
-  // 1. Road Details
+  // 1. Road Details (Auto-filled from CityRoad selection)
   formData.append("cityRoadName", getVal("cityRoadName"));
   formData.append("cityRoadId", getVal("cityRoadId"));
   formData.append("roadImportance", getVal("roadImportance"));
   formData.append("roadType", getVal("roadType"));
   formData.append("terrainType", getVal("terrainType"));
 
-  // 2. Measurements
+  // 2. Auto-filled Baseline Measurements & Barangay Description
   formData.append("width", parseFloat(getVal("width")) || 0.0);
   formData.append("length", parseFloat(getVal("length")) || 0.0);
   formData.append("numberOfBridges", parseInt(getVal("numberOfBridges")) || 0);
   formData.append("lengthOfCulverts", parseFloat(getVal("lengthOfCulverts")) || 0.0);
   formData.append("damageDescription", getVal("damageDescription"));
 
-  // 3. Damage Information
-  let finalDamageType = getVal("damageType");
-  if (!finalDamageType || finalDamageType.includes("Select Damage")) {
-    finalDamageType = "None";
-  } else if (finalDamageType === "Other") {
-    finalDamageType = getVal("otherDamageType") || "Other";
-  }
-
-  formData.append("damageType", finalDamageType);
-  formData.append("damageLength", parseFloat(getVal("damageLength")) || 0.0);
-  formData.append("damageWidth", parseFloat(getVal("damageWidth")) || 0.0);
+  // 3. Damage Information (Deferred to CPDO Admin Inspection)
+  formData.append("damageType", "Pending Inspection");
+  formData.append("damageLength", 0.0);
+  formData.append("damageWidth", 0.0);
 
   // 4. GPS & Analytics
   formData.append("latitude", parseFloat(getVal("latitude")) || 0.0);
@@ -3714,25 +3695,18 @@ function executeFinalSubmission() {
 
       // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400 PHOTO_REJECTED)
       if (!response.ok) {
-        if (data.error === "PHOTO REJECTED") {
-          // Clear ONLY the invalid image file and preview
+        if (data.error === "PHOTO_REJECTED" || data.error === "PHOTO REJECTED") {
           clearImageInputOnly();
-
-          // Show the warning toast with the exact server message
           showToast(`⚠️ ${data.message}`, "warning");
-
-          // Throw specific cancellation error to bypass the generic error toast
           throw new Error("PHOTO_VALIDATION_REJECTED");
         }
 
-        // Generic server or network failure
         throw new Error(data.message || data.error || 'Network response was not ok.');
       }
 
       return data;
     })
     .then(data => {
-      // ✅ SUCCESS BRANCH: Reached ONLY when damage is confirmed and saved to DB
       const rawSev = String(data.severity || '').trim().toLowerCase();
       const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
@@ -3746,7 +3720,6 @@ function executeFinalSubmission() {
         showToast("✅ Report saved successfully!", "success");
       }
 
-      // Reset the full form only when the submission is legitimate
       resetAddReportForm();
 
       if (typeof loadBarangayReports === 'function') {
@@ -3760,7 +3733,6 @@ function executeFinalSubmission() {
       }
     })
     .catch(error => {
-      // Ignore clean photo validation rejections
       if (error.message === "PHOTO_VALIDATION_REJECTED") {
         return;
       }
@@ -3769,7 +3741,6 @@ function executeFinalSubmission() {
       showToast(error.message || "Failed to upload report. Check your internet connection.", "error");
     })
     .finally(() => {
-      // Release submission locks and restore buttons
       isSubmittingReport = false;
 
       if (modalConfirmBtn) {
@@ -3809,29 +3780,23 @@ function resetAddReportForm() {
   const form = document.getElementById("addReportForm");
   if (form) form.reset();
 
-  const selectIds = ["cityRoadName", "roadImportance", "roadType", "terrainType", "damageType"];
-  selectIds.forEach(id => {
+  const roadDropdown = document.getElementById("cityRoadName");
+  if (roadDropdown) roadDropdown.selectedIndex = 0;
+
+  // Reset disabled auto-fill dropdowns back to placeholder
+  ["roadImportance", "roadType", "terrainType"].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.selectedIndex = 0;
+    if (el) el.innerHTML = '<option value="">Auto-filled</option>';
   });
 
   const inputIds = [
     "cityRoadId", "width", "length", "numberOfBridges",
-    "lengthOfCulverts", "damageLength", "damageWidth",
-    "damageDescription", "otherDamageType"
+    "lengthOfCulverts", "damageDescription"
   ];
   inputIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
-
-  const otherGroup = document.getElementById("otherDamageTypeGroup");
-  const otherInput = document.getElementById("otherDamageType");
-  if (otherGroup) {
-    otherGroup.classList.add("hidden");
-    otherGroup.style.display = "none";
-  }
-  if (otherInput) otherInput.value = "";
 
   const latEl = document.getElementById("latitude");
   const lngEl = document.getElementById("longitude");
@@ -6036,16 +6001,32 @@ function loadRoadsToDropdown() {
     .then(roads => {
       roadDropdown.innerHTML = '<option value="" disabled selected>Select a City Road...</option>';
 
+      // Count duplicate road names (e.g., subdivisions with multiple segments)
+      const nameCounts = {};
+      roads.forEach(r => {
+        nameCounts[r.roadName] = (nameCounts[r.roadName] || 0) + 1;
+      });
+
       // 4. Loop directly through the roads (Spring Boot already filtered them for us!)
       roads.forEach(road => {
         const option = document.createElement("option");
         option.value = road.roadName;
-        option.textContent = road.roadName;
 
-        option.dataset.roadId = road.roadId || road.id;
-        option.dataset.importance = road.roadImportance;
-        option.dataset.type = road.roadType;
-        option.dataset.terrain = road.terrainType;
+        // Show Road ID in parentheses if the subdivision/road has multiple segments
+        const displayId = road.roadId || road.id;
+        option.textContent = nameCounts[road.roadName] > 1
+          ? `${road.roadName} (${displayId})`
+          : road.roadName;
+
+        // Store all baseline attributes in data-* attributes
+        option.dataset.roadId = displayId;
+        option.dataset.importance = road.roadImportance || "";
+        option.dataset.type = road.roadType || "";
+        option.dataset.terrain = road.terrainType || "";
+        option.dataset.roadLength = road.roadLength ?? 0;
+        option.dataset.roadWidth = road.roadWidth ?? 0;
+        option.dataset.culverts = road.lengthOfCulverts ?? 0;
+        option.dataset.bridges = road.numberOfBridges ?? 0;
 
         roadDropdown.appendChild(option);
       });
@@ -6055,16 +6036,29 @@ function loadRoadsToDropdown() {
   // THE AUTO-FILL LISTENER
   roadDropdown.addEventListener("change", function() {
     const selectedOption = this.options[this.selectedIndex];
+    if (!selectedOption) return;
 
     const idBox = document.getElementById("cityRoadId");
     const importanceBox = document.getElementById("roadImportance");
     const typeBox = document.getElementById("roadType");
     const terrainBox = document.getElementById("terrainType");
 
+    // New baseline measurement boxes
+    const lengthBox = document.getElementById("length");
+    const widthBox = document.getElementById("width");
+    const culvertsBox = document.getElementById("lengthOfCulverts");
+    const bridgesBox = document.getElementById("numberOfBridges");
+
     if (idBox) idBox.value = selectedOption.dataset.roadId || "";
     if (importanceBox) importanceBox.innerHTML = `<option value="${selectedOption.dataset.importance}">${selectedOption.dataset.importance}</option>`;
     if (typeBox) typeBox.innerHTML = `<option value="${selectedOption.dataset.type}">${selectedOption.dataset.type}</option>`;
     if (terrainBox) terrainBox.innerHTML = `<option value="${selectedOption.dataset.terrain}">${selectedOption.dataset.terrain}</option>`;
+
+    // Auto-fill the 4 baseline inventory numbers
+    if (lengthBox) lengthBox.value = selectedOption.dataset.roadLength ?? 0;
+    if (widthBox) widthBox.value = selectedOption.dataset.roadWidth ?? 0;
+    if (culvertsBox) culvertsBox.value = selectedOption.dataset.culverts ?? 0;
+    if (bridgesBox) bridgesBox.value = selectedOption.dataset.bridges ?? 0;
   });
 }
 // ==========================================

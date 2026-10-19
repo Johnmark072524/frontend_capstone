@@ -2281,8 +2281,10 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
 
   tbody.innerHTML = '';
 
+  // Fix: 7 columns on dashboard overview, 8 columns on masterlist (due to checkbox)
+  const colCount = isDashboard ? 7 : 8;
+
   if (dataArray.length === 0) {
-    const colCount = isDashboard ? "7" : "7";
     tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 35px; color: #94a3b8; font-style: italic;">No active projects matching criteria.</td></tr>`;
     return;
   }
@@ -2293,10 +2295,21 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     const formatName = report.cityRoadName || 'Unnamed Road';
     const damageType = report.damageType || 'Road Damage';
 
+    // 📐 Dimensions, Depth & Volume Math
     const dLen = parseFloat(report.damageLength) || 0;
     const dWid = parseFloat(report.damageWidth) || 0;
+    const dDepth = parseFloat(report.damageDepth) || 0;
+
     const area = dLen * dWid;
-    const formatArea = area > 0 ? `${area.toFixed(1)} sq.m` : 'Unknown';
+    const volume = area * dDepth;
+
+    // Dimension breakdown string (e.g., "2.5m × 1.2m × 0.08m")
+    let dimensionStr = '';
+    if (dLen > 0 && dWid > 0) {
+      dimensionStr = dDepth > 0
+        ? `(${dLen}m × ${dWid}m × ${dDepth}m depth)`
+        : `(${dLen}m × ${dWid}m)`;
+    }
 
     const status = String(report.status || '').toLowerCase();
     const hasRework = Boolean(report.adminRemarks && report.adminRemarks.trim() !== '');
@@ -2305,7 +2318,6 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
     // Status Badge & Action Button Configuration
     let statusHtml = `<span style="background: #e0f2fe; color: #0369a1; padding: 4px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #bae6fd; white-space: nowrap;">Dispatched</span>`;
 
-    // 🚀 UPDATED: CEO Theme Primary Orange (#ea580c) with smooth hover and shadow
     let btnHtml = `<button onclick="${onClickAction}" style="background-color: #ea580c; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.28); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#c2410c'" onmouseout="this.style.backgroundColor='#ea580c'">Manage</button>`;
 
     if (status === 'in progress') {
@@ -2342,20 +2354,23 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
 
     tr.innerHTML = `
       ${checkboxHtml}
-      <td style="padding: 12px 15px; border-left: 4px solid ${report.tierColor}; white-space: nowrap;">
+      <td style="padding: 12px 15px; border-left: 4px solid ${report.tierColor || '#cbd5e1'}; white-space: nowrap;">
         <strong style="font-family: monospace; font-size: 12.5px; color: #0f172a;">${formatId}</strong>
       </td>
       <td style="padding: 12px 15px; font-size: 12.5px; color: #475569;">${formatBrgy}</td>
       <td style="padding: 12px 15px;">
         <div style="font-weight: 700; color: #0f172a; font-size: 13.5px;">${formatName}</div>
-        <div style="font-size: 11.5px; color: #64748b; margin-top: 1px;">🛠️ ${damageType} ${dLen > 0 ? `(${dLen}m × ${dWid}m)` : ''}</div>
+        <div style="font-size: 11.5px; color: #64748b; margin-top: 1px;">🛠️ ${damageType} ${dimensionStr}</div>
       </td>
-      <td style="padding: 12px 15px; color: #475569; font-weight: 600; white-space: nowrap;">${formatArea}</td>
+      <td style="padding: 12px 15px; color: #475569; font-weight: 600; white-space: nowrap;">
+        <div>${area > 0 ? `${area.toFixed(1)} sq.m` : 'Unknown'}</div>
+        ${volume > 0 ? `<div style="font-size: 11px; color: #0284c7; font-weight: 700;">${volume.toFixed(2)} cu.m</div>` : ''}
+      </td>
       <td style="padding: 12px 15px; text-align: center; white-space: nowrap;">
-  <span style="background-color: ${report.tierColor || '#ecfdf5'}; color: ${report.tierTextColor || '#047857'}; border: ${report.tierBorder || '1px solid #34d399'}; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
-    ${report.tierLabel || 'UNASSESSED'}
-  </span>
-</td>
+        <span style="background-color: ${report.tierColor || '#ecfdf5'}; color: ${report.tierTextColor || '#047857'}; border: ${report.tierBorder || '1px solid #34d399'}; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
+          ${report.tierLabel || 'UNASSESSED'}
+        </span>
+      </td>
       <td style="padding: 12px 15px; text-align: center;">
         ${statusHtml}
       </td>
@@ -2462,7 +2477,6 @@ window.toggleCEOTimeline = function() {
     container.style.display = 'block';
     if (arrow) arrow.innerText = '▲';
 
-    // Always scroll to top upon expanding
     container.scrollTop = 0;
     requestAnimationFrame(() => { container.scrollTop = 0; });
   } else {
@@ -2525,7 +2539,6 @@ window.openCEOManageModal = function(reportId) {
   const countdownBadge = document.getElementById('ceo-target-countdown-badge');
   if (countdownBadge) countdownBadge.style.display = 'none';
 
-  // Reset Extension Sections
   const extSection = document.getElementById('ceo-extension-section');
   if (extSection) extSection.style.display = 'none';
   const extPendingCard = document.getElementById('ceo-extension-pending-card');
@@ -2552,7 +2565,6 @@ window.openCEOManageModal = function(reportId) {
     btnPendingBudget.style.display = 'none';
   }
 
-  // Reset inputs & previews
   const dmgImg = document.getElementById('ceo-modal-image');
   if (dmgImg) dmgImg.src = '';
   const proofImg = document.getElementById('ceo-modal-proof-image');
@@ -2575,7 +2587,6 @@ window.openCEOManageModal = function(reportId) {
       currentCEOLat = report.latitude;
       currentCEOLng = report.longitude;
 
-      // Extract unified status once
       const status = String(report.status || '');
       const currentStatus = status.toLowerCase();
 
@@ -2584,11 +2595,11 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-road-name').innerText = report.cityRoadName || 'Unnamed Road';
 
       document.getElementById('ceo-modal-road-id').innerText = report.cityRoadId || 'N/A';
-      document.getElementById('ceo-modal-importance').innerText = report.roadImportance || 'N/A';
+      document.getElementById('ceo-modal-importance').innerText = report.roadImportance || 'Non-Core';
       document.getElementById('ceo-modal-terrain').innerText = report.terrainType || 'N/A';
       document.getElementById('ceo-modal-road-type').innerText = report.roadType || 'N/A';
       document.getElementById('ceo-modal-length').innerText = (report.length !== null && report.length !== undefined) ? report.length : 0;
-      document.getElementById('ceo-modal-width').innerText = (report.width && report.width > 0) ? report.width : 'Pending Survey';
+      document.getElementById('ceo-modal-width').innerText = (report.width && report.width > 0) ? `${report.width} m` : 'Pending Survey';
       document.getElementById('ceo-modal-culverts').innerText = (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? report.lengthOfCulverts : 0;
       document.getElementById('ceo-modal-bridges').innerText = (report.numberOfBridges !== null && report.numberOfBridges !== undefined) ? report.numberOfBridges : 0;
 
@@ -2630,26 +2641,41 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-description').innerText = report.damageDescription || 'No description provided.';
 
       // ========================================================
-      // 🧠 SOLID AI SEVERITY & CONFIDENCE BADGE
+      // 🧠 1. OFFICIAL ENGINEERING PRIORITY (Clean badge without AI confidence)
       // ========================================================
       const rawSev = String(report.severity || '').trim().toLowerCase();
-      const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
-      const confText = confScore ? ` (${confScore}%)` : '';
       const priorityBadge = document.getElementById('ceo-modal-priority');
 
       if (priorityBadge) {
+        const displaySev = (report.severity || 'UNASSESSED').toUpperCase();
         if (rawSev === 'high') {
-          priorityBadge.innerText = `HIGH${confText}`;
+          priorityBadge.innerText = displaySev;
           priorityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
         } else if (rawSev === 'medium') {
-          priorityBadge.innerText = `MEDIUM${confText}`;
+          priorityBadge.innerText = displaySev;
           priorityBadge.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
         } else if (rawSev === 'low') {
-          priorityBadge.innerText = `LOW${confText}`;
+          priorityBadge.innerText = displaySev;
           priorityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
         } else {
           priorityBadge.innerText = 'UNASSESSED';
           priorityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;';
+        }
+      }
+
+      // ========================================================
+      // 🤖 2. INITIAL AI SCREENING TRIAGE DISPLAY
+      // ========================================================
+      const aiSeverityEl = document.getElementById('ceo-modal-ai-severity');
+      if (aiSeverityEl) {
+        const rawAiSev = report.aiSeverity || report.cvDamageClassification;
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        if (rawAiSev && rawAiSev !== 'None') {
+          aiSeverityEl.innerText = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
+        } else if (report.damageImage) {
+          aiSeverityEl.innerText = `🤖 Unassessed`;
+        } else {
+          aiSeverityEl.innerText = `No photo attached (Good Condition)`;
         }
       }
 
@@ -2664,7 +2690,6 @@ window.openCEOManageModal = function(reportId) {
       const extDisplayReasonEl = document.getElementById('ceo-extension-display-reason');
       const extDateInputEl = document.getElementById('ceo-extension-target-date');
 
-      // Only display extension controls if project is currently In Progress
       if (currentStatus.includes('progress')) {
         if (extSectionEl) extSectionEl.style.display = 'block';
 
@@ -2727,7 +2752,6 @@ window.openCEOManageModal = function(reportId) {
         if (reworkAlert) reworkAlert.style.display = 'none';
       }
 
-      // Image Loading
       const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
       if (placeholderEl) placeholderEl.style.display = 'none';
       if (typeof loadSecureImage === 'function') {
@@ -2744,7 +2768,6 @@ window.openCEOManageModal = function(reportId) {
       const targetDateInput = document.getElementById('ceo-target-date-input');
       const targetDateHint = document.getElementById('ceo-target-date-hint');
 
-      // Countdown Helper for In Progress projects
       const renderCountdown = () => {
         if (!countdownBadge) return;
         if (!report.targetCompletionDate) {
@@ -2775,7 +2798,6 @@ window.openCEOManageModal = function(reportId) {
       };
 
       if (currentStatus === 'pending budget' || currentStatus.includes('defer')) {
-        // STATE 1: PENDING BUDGET / DEFERRED
         if (dispatchSection) dispatchSection.style.display = 'none';
 
         if (deferredAlert) {
@@ -2790,7 +2812,6 @@ window.openCEOManageModal = function(reportId) {
         if (completedEvidence) completedEvidence.style.display = 'none';
 
       } else if (currentStatus.includes('complet') || currentStatus.includes('repair')) {
-        // STATE 2: COMPLETED
         if (dispatchSection) dispatchSection.style.display = 'none';
         if (deferredAlert) deferredAlert.style.display = 'none';
 
@@ -2811,7 +2832,6 @@ window.openCEOManageModal = function(reportId) {
         if (proofRemarks) proofRemarks.innerText = report.repairRemarks || "No official remarks provided.";
 
       } else if (isRework) {
-        // STATE 3: REWORK REQUIRED
         if (dispatchSection) dispatchSection.style.display = 'block';
         if (deferredAlert) deferredAlert.style.display = 'none';
         if (targetDateContainer) targetDateContainer.style.display = 'none';
@@ -2845,7 +2865,6 @@ window.openCEOManageModal = function(reportId) {
         if (completionForm) completionForm.style.display = 'block';
 
       } else if (currentStatus.includes('progress')) {
-        // STATE 4: STANDARD IN PROGRESS
         if (dispatchSection) dispatchSection.style.display = 'block';
         if (deferredAlert) deferredAlert.style.display = 'none';
         if (targetDateContainer) targetDateContainer.style.display = 'none';
@@ -2866,7 +2885,6 @@ window.openCEOManageModal = function(reportId) {
         if (completedEvidence) completedEvidence.style.display = 'none';
 
       } else {
-        // STATE 5: DISPATCHED / READY TO QUEUE
         if (dispatchSection) dispatchSection.style.display = 'block';
         if (deferredAlert) deferredAlert.style.display = 'none';
         if (countdownBadge) countdownBadge.style.display = 'none';
@@ -2885,7 +2903,6 @@ window.openCEOManageModal = function(reportId) {
           btnPendingBudget.disabled = false;
         }
 
-        // 🧠 Auto-Compute Estimated Target Completion Date
         const est = calculateEstimatedDays(report.damageType, report.severity, damageArea);
         const estDate = new Date();
         estDate.setDate(estDate.getDate() + est.days);
@@ -3485,6 +3502,7 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
   checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
   toggleBatchActionBar();
 };
+
 // ==========================================
 // BACKEND API CONNECTION & FORM LOGIC (RoadWise)
 // ==========================================
@@ -4459,26 +4477,139 @@ window.toggleAdminReviewTimeline = function() {
 };
 
 // ==========================================
+// ADMIN MODAL MAP & INSPECTION VARIABLES
+// ==========================================
+let currentReviewLat = null;
+let currentReviewLng = null;
+let adminReviewMap = null;
+let adminReviewMarker = null;
+let currentReviewReportId = null;
+let currentReviewRoadImportance = "Non-Core"; // Tracks road tier for live calculation
+
+// Ensure it runs when the script loads
+if (typeof loadAdminReports === 'function') {
+  loadAdminReports();
+}
+
+// 🚀 TOGGLE "OTHER" DAMAGE TYPE FOR CPDO INSPECTION
+window.toggleAdminOtherDamageType = function() {
+  const select = document.getElementById('admin-input-damage-type');
+  const otherGroup = document.getElementById('admin-other-damage-group');
+  const otherInput = document.getElementById('admin-input-damage-other');
+
+  if (!select || !otherGroup) return;
+
+  if (select.value === 'Other') {
+    otherGroup.classList.remove('hidden');
+    otherGroup.style.display = 'block';
+    if (otherInput) otherInput.focus();
+  } else {
+    otherGroup.classList.add('hidden');
+    otherGroup.style.display = 'none';
+    if (otherInput) otherInput.value = '';
+  }
+};
+
+// 📐 CLIENT-SIDE MULTI-CRITERIA SEVERITY PREVIEW CALCULATOR
+window.triggerAdminSeverityRecalc = function() {
+  const previewBadge = document.getElementById('admin-projected-severity-badge');
+  if (!previewBadge) return;
+
+  let damageType = document.getElementById('admin-input-damage-type')?.value || 'None';
+  if (damageType === 'Other') {
+    damageType = document.getElementById('admin-input-damage-other')?.value.trim() || 'Other';
+  }
+
+  const depth = parseFloat(document.getElementById('admin-input-damage-depth')?.value) || 0;
+  const length = parseFloat(document.getElementById('admin-input-damage-length')?.value) || 0;
+  const width = parseFloat(document.getElementById('admin-input-damage-width')?.value) || 0;
+  const area = length * width;
+
+  if (damageType === 'None') {
+    previewBadge.textContent = 'NONE';
+    previewBadge.style.cssText = 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 800;';
+    return;
+  }
+
+  const isCore = String(currentReviewRoadImportance || '').trim().equalsIgnoreCase ? currentReviewRoadImportance.equalsIgnoreCase('Core') : (String(currentReviewRoadImportance || '').trim().toLowerCase() === 'core');
+  const typeStr = damageType.toLowerCase();
+
+  // OVERRIDE 1: Sinkhole / Washout
+  if (typeStr.includes('sinkhole') || typeStr.includes('washout')) {
+    setPreviewBadge(previewBadge, 'HIGH (Critical Hazard)');
+    return;
+  }
+
+  // OVERRIDE 2: Deep pothole on Core road
+  if (typeStr.includes('pothole') && depth >= 0.08 && isCore) {
+    setPreviewBadge(previewBadge, 'HIGH (Core Depth ≥ 8cm)');
+    return;
+  }
+
+  // Point Scoring
+  let score = 0;
+  if (typeStr.includes('pothole')) score += 4;
+  else if (typeStr.includes('edge') || typeStr.includes('rutting')) score += 3;
+  else if (typeStr.includes('crack')) score += 2;
+  else score += 2;
+
+  // Dimensions
+  if (depth >= 0.12) score += 3;
+  else if (depth >= 0.06) score += 2;
+
+  if (area >= 3.0) score += 2;
+  else if (area >= 1.0) score += 1;
+
+  // Core exposure
+  if (isCore) score += 2;
+
+  if (score >= 7) setPreviewBadge(previewBadge, 'HIGH');
+  else if (score >= 4) setPreviewBadge(previewBadge, 'MEDIUM');
+  else setPreviewBadge(previewBadge, 'LOW');
+};
+
+function setPreviewBadge(el, text) {
+  el.textContent = text;
+  if (text.startsWith('HIGH')) {
+    el.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 800;';
+  } else if (text.startsWith('MEDIUM')) {
+    el.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 800;';
+  } else {
+    el.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 800;';
+  }
+}
+
+// 📜 ADMIN REVIEW TIMELINE ACCORDION TOGGLE
+window.toggleAdminReviewTimeline = function() {
+  const container = document.getElementById('admin-review-timeline-container');
+  const arrow = document.getElementById('admin-timeline-arrow');
+  if (!container) return;
+
+  const isHidden = container.classList.toggle('hidden');
+  if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+
+  if (!isHidden) {
+    container.scrollTop = 0;
+    requestAnimationFrame(() => { container.scrollTop = 0; });
+  }
+};
+
+// ==========================================
 // ADMIN DASHBOARD: OPEN REVIEW MODAL
 // ==========================================
 function reviewReport(reportId) {
   currentReviewReportId = reportId;
   isReviewSubmitting = false;
 
-  // 1. Grab and unhide modal
   const modal = document.getElementById('review-modal');
   if (!modal) return;
 
   modal.classList.remove('hidden');
-
-  // 2. 🚀 Initial Scroll Reset to Top
   resetModalScroll(modal);
 
-  // 3. Force map container closed on open
   const mapContainer = document.getElementById('admin-review-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
 
-  // 4. Reset Rejection Form & Actions
   const primaryActions = document.getElementById('primary-actions');
   const rejectFeedbackForm = document.getElementById('reject-feedback-form');
   const adminRemarksInput = document.getElementById('admin-remarks-input');
@@ -4487,7 +4618,6 @@ function reviewReport(reportId) {
   if (rejectFeedbackForm) rejectFeedbackForm.classList.add('hidden');
   if (adminRemarksInput) adminRemarksInput.value = '';
 
-  // 5. ⏱️ Reset accordion to collapsed state (at top)
   const timelineContainer = document.getElementById('admin-review-timeline-container');
   if (timelineContainer) {
     timelineContainer.classList.add('hidden');
@@ -4496,38 +4626,52 @@ function reviewReport(reportId) {
   const arrow = document.getElementById('admin-timeline-arrow');
   if (arrow) arrow.style.transform = 'rotate(0deg)';
 
-  // Temporary loading text
   document.getElementById('modal-header-id').textContent = `#RPT-${String(reportId).padStart(4, '0')} (Loading...)`;
 
-  // 6. Fetch report data
+  // Fetch report data
   apiFetch(`/api/reports/${reportId}`)
     .then(report => {
       const formattedId = `#RPT-${String(report.id).padStart(4, '0')}`;
 
       currentReviewLat = parseFloat(report.latitude) || 0;
       currentReviewLng = parseFloat(report.longitude) || 0;
+      currentReviewRoadImportance = report.roadImportance || "Non-Core";
 
       document.getElementById('modal-header-id').textContent = formattedId;
       document.getElementById('modal-report-id').textContent = formattedId;
 
-      // Severity Badge with Confidence
+      // 1. OFFICIAL SEVERITY BADGE (Without the AI confidence score)
       const rawSev = String(report.severity || '').trim().toLowerCase();
-      const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
       const severityBadge = document.getElementById('modal-severity');
 
       if (severityBadge) {
+        const displaySev = (report.severity || 'UNASSESSED').toUpperCase();
         if (rawSev === 'high') {
-          severityBadge.textContent = `HIGH${confText}`;
+          severityBadge.textContent = displaySev;
           severityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         } else if (rawSev === 'medium') {
-          severityBadge.textContent = `MEDIUM${confText}`;
+          severityBadge.textContent = displaySev;
           severityBadge.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         } else if (rawSev === 'low') {
-          severityBadge.textContent = `LOW${confText}`;
+          severityBadge.textContent = displaySev;
           severityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
         } else {
           severityBadge.textContent = 'UNASSESSED';
           severityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11.5px; display: inline-block; letter-spacing: 0.4px;';
+        }
+      }
+
+      // 2. INITIAL AI SCREENING TRIAGE
+      const aiSeverityEl = document.getElementById('modal-ai-severity');
+      if (aiSeverityEl) {
+        const rawAiSev = report.aiSeverity || report.cvDamageClassification;
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        if (rawAiSev && rawAiSev !== 'None') {
+          aiSeverityEl.textContent = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
+        } else if (report.damageImage) {
+          aiSeverityEl.textContent = `🤖 Unassessed`;
+        } else {
+          aiSeverityEl.textContent = `No photo attached (Good Condition)`;
         }
       }
 
@@ -4547,14 +4691,14 @@ function reviewReport(reportId) {
       const reportByEl = document.getElementById('modal-report-by');
       if (reportByEl) reportByEl.textContent = submitterText;
 
-      // Road Details (Static Headers)
+      // Road Details
       document.getElementById('modal-road-name').textContent = report.cityRoadName || 'N/A';
       document.getElementById('modal-road-id').textContent = report.cityRoadId || 'N/A';
-      document.getElementById('modal-importance').textContent = report.roadImportance || 'N/A';
+      document.getElementById('modal-importance').textContent = report.roadImportance || 'Non-Core';
       document.getElementById('modal-terrain').textContent = report.terrainType || 'N/A';
       document.getElementById('modal-road-type').textContent = report.roadType || 'N/A';
 
-      // 🛠️ CPDO EDITABLE ROAD INVENTORY INPUTS
+      // 🛠️ CPDO Editable Road Inventory Inputs
       const inputWidth = document.getElementById('admin-input-width');
       const inputLength = document.getElementById('admin-input-length');
       const inputCulverts = document.getElementById('admin-input-culverts');
@@ -4565,7 +4709,7 @@ function reviewReport(reportId) {
       if (inputCulverts) inputCulverts.value = (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? report.lengthOfCulverts : '';
       if (inputBridges) inputBridges.value = (report.numberOfBridges !== null && report.numberOfBridges !== undefined) ? report.numberOfBridges : '';
 
-      // 📐 CPDO TECHNICAL DAMAGE MEASUREMENTS INPUTS
+      // 📐 CPDO Technical Damage Measurements Inputs
       const damageTypeSelect = document.getElementById('admin-input-damage-type');
       const otherGroup = document.getElementById('admin-other-damage-group');
       const otherInput = document.getElementById('admin-input-damage-other');
@@ -4597,7 +4741,10 @@ function reviewReport(reportId) {
       if (inputDamageLength) inputDamageLength.value = (report.damageLength && report.damageLength > 0) ? report.damageLength : '';
       if (inputDamageWidth) inputDamageWidth.value = (report.damageWidth && report.damageWidth > 0) ? report.damageWidth : '';
 
-      // 🛡️ PERMISSION CHECK: Lock inputs if report has already progressed past validation
+      // ⚡ Run initial calculation preview
+      triggerAdminSeverityRecalc();
+
+      // Lock controls if report has passed validation
       const statusStr = String(report.status || '').toLowerCase();
       const isAuditable = statusStr.includes('pending') || statusStr.includes('resubmitted');
 
@@ -4619,22 +4766,18 @@ function reviewReport(reportId) {
         }
       }
 
-      // Damage Evidence & Remarks (From Barangay)
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
-      // Image Preview
       const placeholderEl = document.getElementById('modal-damage-image');
       if (placeholderEl) placeholderEl.style.display = 'none';
       if (typeof loadSecureImage === 'function') {
         loadSecureImage('modal-damage-image', report.damageImage);
       }
 
-      // 🕒 Load Timeline into the Accordion
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'admin-review-timeline');
       }
 
-      // 🚀 Final Scroll Reset after data & timeline injection completes
       resetModalScroll(modal);
     })
     .catch(error => {
@@ -4813,7 +4956,7 @@ if (btnCancelReject) {
   };
 }
 
-// 3. Confirm Rejection (Attaches userId for audit trail)
+// 3. Confirm Rejection
 const btnConfirmReject = document.getElementById('btn-confirm-reject');
 if (btnConfirmReject) {
   btnConfirmReject.onclick = function(e) {
@@ -4897,7 +5040,6 @@ if (btnAcceptValidate) {
 
     if (!currentReviewReportId || isReviewSubmitting) return;
 
-    // A. Validate Road Width
     const widthVal = document.getElementById('admin-input-width')?.value;
     if (!widthVal || parseFloat(widthVal) <= 0) {
       if (typeof showToast === 'function') {
@@ -4909,7 +5051,6 @@ if (btnAcceptValidate) {
       return;
     }
 
-    // B. Validate Damage Classification
     let damageType = document.getElementById('admin-input-damage-type')?.value || 'None';
     if (damageType === 'Other') {
       const otherVal = document.getElementById('admin-input-damage-other')?.value.trim();
@@ -4923,7 +5064,6 @@ if (btnAcceptValidate) {
       damageType = otherVal;
     }
 
-    // C. Validate Damage Dimensions (If road has physical distress)
     const dmgLengthVal = document.getElementById('admin-input-damage-length')?.value;
     const dmgWidthVal = document.getElementById('admin-input-damage-width')?.value;
     const dmgDepthVal = document.getElementById('admin-input-damage-depth')?.value;
@@ -4950,16 +5090,13 @@ if (btnAcceptValidate) {
 
     const currentUserId = sessionStorage.getItem("userId");
 
-    // D. Package Technical Assessment Payload
     const payload = {
       status: "Validated",
       userId: currentUserId,
-      // Road Dimensions
       width: widthVal,
       length: document.getElementById('admin-input-length')?.value || "0",
       lengthOfCulverts: document.getElementById('admin-input-culverts')?.value || "0",
       numberOfBridges: document.getElementById('admin-input-bridges')?.value || "0",
-      // Technical Damage Assessment
       damageType: damageType,
       damageLength: dmgLengthVal || "0",
       damageWidth: dmgWidthVal || "0",
@@ -5471,10 +5608,8 @@ function loadReportTimeline(reportId, targetContainerId) {
   const container = document.getElementById(targetContainerId);
   if (!container) return;
 
-  // 1. Identify the outer scroll box (the one with max-height & overflow-y: auto)
   const scrollBox = container.closest('[id$="-timeline-container"]') || container.parentElement || container;
 
-  // Reset scroll on start
   container.scrollTop = 0;
   if (scrollBox) scrollBox.scrollTop = 0;
 
@@ -5503,7 +5638,6 @@ function loadReportTimeline(reportId, targetContainerId) {
         const actionLower = (event.action || '').toLowerCase();
         item.className = `timeline-item ${actionLower}`;
 
-        // Select badge style
         let badgeClass = 'badge-green';
         if (['rejected', 'repair_rework_requested'].includes(actionLower)) {
           badgeClass = 'badge-red';
@@ -5513,13 +5647,9 @@ function loadReportTimeline(reportId, targetContainerId) {
           badgeClass = 'badge-yellow';
         }
 
-        // Format label
         const displayAction = (event.action || '').replace(/_/g, ' ');
-
-        // 🇵🇭 EXACT LINE CHANGED: Guaranteed Philippine Standard Time (Asia/Manila)
         const dateStr = event.createdAt ? formatPST(event.createdAt, true) : 'Recent';
 
-        // Build remarks block
         let remarksHtml = '';
         if (event.remarks && event.remarks.trim()) {
           const isRedBox = ['rejected', 'repair_rework_requested'].includes(actionLower);
@@ -5530,7 +5660,6 @@ function loadReportTimeline(reportId, targetContainerId) {
           `;
         }
 
-        // Build attachment thumbnail link
         let attachmentHtml = '';
         if (event.attachmentUrl && event.attachmentUrl !== 'no_image.jpg') {
           attachmentHtml = `
@@ -5558,11 +5687,8 @@ function loadReportTimeline(reportId, targetContainerId) {
         container.appendChild(item);
       });
 
-      // 🚀 RESET TIMELINE SCROLL POSITION TO TOP ONCE CONTENT IS INJECTED
       container.scrollTop = 0;
-      if (scrollBox) {
-        scrollBox.scrollTop = 0;
-      }
+      if (scrollBox) scrollBox.scrollTop = 0;
       requestAnimationFrame(() => {
         container.scrollTop = 0;
         if (scrollBox) scrollBox.scrollTop = 0;
@@ -5591,20 +5717,6 @@ function escapeHtml(str) {
 }
 
 // ==========================================
-// 📜 VIEW MODAL TIMELINE ACCORDION TOGGLE
-// ==========================================
-window.toggleViewTimeline = function() {
-  const container = document.getElementById('view-modal-timeline-container');
-  const arrow = document.getElementById('view-timeline-arrow');
-
-  if (!container) return;
-  const isHidden = container.classList.toggle('hidden');
-  if (arrow) {
-    arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
-  }
-};
-
-// ==========================================
 // 🚀 BULLETPROOF MODAL SCROLL RESET HELPER
 // ==========================================
 function resetModalScroll(modalElementOrId) {
@@ -5615,13 +5727,11 @@ function resetModalScroll(modalElementOrId) {
   if (!modal) return;
 
   const performReset = () => {
-    // 1. Reset Modal Overlay / Wrapper
     modal.scrollTop = 0;
     if (typeof modal.scrollTo === 'function') {
       modal.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
 
-    // 2. Reset All Possible Inner Scroll Containers & Timelines
     const scrollableTargets = modal.querySelectorAll(
       '.modal-body, .bd-modal-body, .modal-content, .bd-modal-box, .report-timeline, [id$="-timeline-container"]'
     );
@@ -5634,14 +5744,13 @@ function resetModalScroll(modalElementOrId) {
     });
   };
 
-  // Immediate reset, next animation frame, and delayed resets for async image/timeline insertion
   performReset();
   requestAnimationFrame(performReset);
   setTimeout(performReset, 50);
   setTimeout(performReset, 200);
 }
 
-// 📜 VIEW MODAL ACCORDION TOGGLE
+// 📜 VIEW MODAL ACCORDION TOGGLE (SINGLE DECLARATION)
 window.toggleViewTimeline = function() {
   const container = document.getElementById('view-modal-timeline-container');
   const arrow = document.getElementById('view-timeline-arrow');
@@ -5650,7 +5759,6 @@ window.toggleViewTimeline = function() {
   const isHidden = container.classList.toggle('hidden');
   if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
 
-  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
   if (!isHidden) {
     container.scrollTop = 0;
     requestAnimationFrame(() => { container.scrollTop = 0; });
@@ -5663,7 +5771,7 @@ window.toggleViewTimeline = function() {
 function openViewModal(reportId) {
   const viewModal = document.getElementById('bd-view-modal');
 
-  // 1. ⏱️ Reset accordion state to collapsed
+  // 1. Reset accordion state to collapsed
   const timelineContainer = document.getElementById('view-modal-timeline-container');
   if (timelineContainer) timelineContainer.classList.add('hidden');
   const arrow = document.getElementById('view-timeline-arrow');
@@ -5685,22 +5793,36 @@ function openViewModal(reportId) {
         (report.status === 'Validated' ? 'bd-badge-validated' :
           (report.status === 'Rejected' ? 'bd-badge-rejected' : 'bd-badge-pending'));
 
-      // AI Severity Display
+      // 🧠 1. OFFICIAL SEVERITY DISPLAY
       const severityEl = document.getElementById('view-modal-severity');
-      if (report.severity) {
-        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
-        severityEl.innerText = `${report.severity}${confText}`;
+      if (report.severity && report.severity !== 'None') {
+        const sevUpper = String(report.severity).toUpperCase();
+        severityEl.innerText = sevUpper;
 
-        if (report.severity === 'High') {
+        if (sevUpper === 'HIGH') {
           severityEl.style.color = '#dc2626';
-        } else if (report.severity === 'Medium') {
+        } else if (sevUpper === 'MEDIUM') {
           severityEl.style.color = '#d97706';
         } else {
           severityEl.style.color = '#16a34a';
         }
       } else {
-        severityEl.innerText = "🤖 Pending AI Assessment";
+        severityEl.innerText = report.severity === 'None' ? 'None (Passable)' : "Pending Assessment";
         severityEl.style.color = '#64748b';
+      }
+
+      // 🤖 2. INITIAL AI SCREENING TRIAGE
+      const aiSeverityEl = document.getElementById('view-modal-ai-severity');
+      if (aiSeverityEl) {
+        const rawAiSev = report.aiSeverity || report.cvDamageClassification;
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        if (rawAiSev && rawAiSev !== 'None') {
+          aiSeverityEl.innerText = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
+        } else if (report.damageImage) {
+          aiSeverityEl.innerText = `🤖 Unassessed`;
+        } else {
+          aiSeverityEl.innerText = `No photo attached (Good Condition)`;
+        }
       }
 
       document.getElementById('view-modal-date').innerText = new Date(report.dateSubmitted).toLocaleDateString();
@@ -5714,11 +5836,11 @@ function openViewModal(reportId) {
       document.getElementById('view-modal-terrain').innerText = report.terrainType || "N/A";
       document.getElementById('view-modal-road-type').innerText = report.roadType || "N/A";
 
-      // Master Dimensions (with units)
+      // Master Dimensions
       document.getElementById('view-modal-length').innerText = (report.length !== null && report.length !== undefined) ? `${report.length} km` : "0 km";
       document.getElementById('view-modal-width').innerText = (report.width && report.width > 0) ? `${report.width} m` : "Pending Survey";
       document.getElementById('view-modal-culverts').innerText = (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? `${report.lengthOfCulverts} m` : "0 m";
-      document.getElementById('view-modal-bridges').innerText = report.numberOfBridges !== null && report.numberOfBridges !== undefined ? report.numberOfBridges : "0";
+      document.getElementById('view-modal-bridges').innerText = (report.numberOfBridges !== null && report.numberOfBridges !== undefined) ? report.numberOfBridges : "0";
 
       // 📐 CPDO Technical Damage Assessment
       const isPending = !report.damageType || report.damageType === 'Pending Inspection';
@@ -5745,20 +5867,16 @@ function openViewModal(reportId) {
 
       loadSecureImage('view-modal-img', report.damageImage);
 
-      // Extract assigned barangay name
       const reportBarangayName = (report.barangay && report.barangay.name)
         ? report.barangay.name
         : (sessionStorage.getItem("barangayName") || "Kaypian");
 
-      // Render satellite map pin with the barangay boundary overlay
       renderViewModalMap(report.latitude, report.longitude, reportBarangayName);
 
-      // 🕒 Load audit trail timeline into the accordion
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'view-modal-timeline');
       }
 
-      // 🚀 Bulletproof Scroll Reset after all DOM insertions complete
       resetModalScroll(viewModal);
     })
     .catch(err => {
@@ -5779,7 +5897,6 @@ window.toggleEditTimeline = function() {
   const isHidden = container.classList.toggle('hidden');
   if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
 
-  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
   if (!isHidden) {
     container.scrollTop = 0;
     requestAnimationFrame(() => { container.scrollTop = 0; });
@@ -7474,9 +7591,9 @@ function resetModalScroll(modalElementOrId) {
 // 7 & 8. TRACKING MODAL ENGINE (RELIABLE GLOBAL HANDLERS)
 // ==========================================
 let currentTrackingReportId = null;
-let currentTrackingReportStatus = null; // 🚀 Tracks status for dynamic rework vs deferral rejection
+let currentTrackingReportStatus = null;
 
-// 🗺️ 1. MAP STATE VARIABLES
+// 🗺️ MAP STATE VARIABLES
 let currentTrackLat = 0;
 let currentTrackLng = 0;
 let trackModalMap = null;
@@ -7578,12 +7695,12 @@ window.openTrackingModal = function(reportId) {
       setText('track-modal-brgy', report.barangay?.barangayName || 'Unknown');
       setText('track-modal-road', report.cityRoadName || 'Unknown Road');
       setText('track-modal-road-id', report.cityRoadId || 'N/A');
-      setText('track-modal-importance', report.roadImportance || 'N/A');
+      setText('track-modal-importance', report.roadImportance || 'Non-Core');
       setText('track-modal-terrain', report.terrainType || 'N/A');
       setText('track-modal-road-type', report.roadType || 'N/A');
-      setText('track-modal-road-length', report.length ? `${report.length} km` : '0 km');
-      setText('track-modal-road-width', report.width ? `${report.width} m` : '0 m');
-      setText('track-modal-culverts', report.lengthOfCulverts ? `${report.lengthOfCulverts} m` : '0 m');
+      setText('track-modal-road-length', (report.length !== null && report.length !== undefined) ? `${report.length} km` : '0 km');
+      setText('track-modal-road-width', (report.width && report.width > 0) ? `${report.width} m` : 'Pending Survey');
+      setText('track-modal-culverts', (report.lengthOfCulverts !== null && report.lengthOfCulverts !== undefined) ? `${report.lengthOfCulverts} m` : '0 m');
       setText('track-modal-gps', (report.latitude && report.longitude) ? `${report.latitude.toFixed(5)}° N, ${report.longitude.toFixed(5)}° E` : 'No GPS data');
 
       // Submitter Info
@@ -7595,33 +7712,51 @@ window.openTrackingModal = function(reportId) {
       }
       setText('track-modal-submitter', submitterText);
 
-      // AI Severity Badge
+      // 🧠 1. OFFICIAL ENGINEERING PRIORITY BADGE (Decoupled from AI Confidence)
       const sevBox = document.getElementById('track-modal-severity');
       if (sevBox) {
         const rawSev = String(report.severity || '').trim().toLowerCase();
-        const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
-        const confText = confScore ? ` (${confScore}%)` : '';
+        const displaySev = (report.severity || 'UNASSESSED').toUpperCase();
 
         if (rawSev === 'high') {
-          sevBox.innerHTML = `<span style="background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">HIGH${confText}</span>`;
+          sevBox.innerHTML = `<span style="background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">${displaySev}</span>`;
         } else if (rawSev === 'medium') {
-          sevBox.innerHTML = `<span style="background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">MEDIUM${confText}</span>`;
+          sevBox.innerHTML = `<span style="background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">${displaySev}</span>`;
         } else if (rawSev === 'low') {
-          sevBox.innerHTML = `<span style="background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">LOW${confText}</span>`;
+          sevBox.innerHTML = `<span style="background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">${displaySev}</span>`;
         } else {
           sevBox.innerHTML = `<span style="background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 11px; display: inline-block; letter-spacing: 0.4px;">UNASSESSED</span>`;
         }
       }
 
-      // Damage Specifications & Area
+      // 🤖 2. INITIAL AI SCREENING TRIAGE
+      const aiSeverityEl = document.getElementById('track-modal-ai-severity');
+      if (aiSeverityEl) {
+        const rawAiSev = report.aiSeverity || report.cvDamageClassification;
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        if (rawAiSev && rawAiSev !== 'None') {
+          aiSeverityEl.textContent = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
+        } else if (report.damageImage) {
+          aiSeverityEl.textContent = `🤖 Unassessed`;
+        } else {
+          aiSeverityEl.textContent = `No photo attached (Good Condition)`;
+        }
+      }
+
+      // 📐 DAMAGE SPECIFICATIONS, DEPTH, AREA & VOLUME MATH (Fixed syntax)
       const dmgType = report.damageType || 'Not specified';
       const dmgLen = parseFloat(report.damageLength) || 0;
       const dmgWid = parseFloat(report.damageWidth) || 0;
+      const dmgDepth = parseFloat(report.damageDepth) || 0;
+
       const dmgArea = dmgLen * dmgWid;
+      const dmgVolume = dmgArea * dmgDepth;
 
       setText('track-modal-damage-type', dmgType);
       setText('track-modal-damage-dimensions', (dmgLen > 0 || dmgWid > 0) ? `${dmgLen}m (L) × ${dmgWid}m (W)` : 'Not specified');
-      setText('track-modal-damage-area', dmgArea > 0 ? `${dmgArea.toFixed(1)} sq.m` : '0 sq.m');
+      setText('track-modal-damage-depth', dmgDepth > 0 ? `${dmgDepth} m` : '0 m');
+      setText('track-modal-damage-area', dmgArea > 0 ? `${dmgArea.toFixed(2)} sq.m` : '0 sq.m');
+      setText('track-modal-damage-volume', dmgVolume > 0 ? `${dmgVolume.toFixed(3)} cu.m` : '0 cu.m');
       setText('track-modal-desc', report.damageDescription || 'No description provided.');
 
       if (typeof window.loadSecureImage === 'function') {
@@ -7639,12 +7774,10 @@ window.openTrackingModal = function(reportId) {
       const reworkInstructions = document.getElementById('track-modal-rework-instructions');
       const deferredRemarks = document.getElementById('track-modal-deferred-remarks');
 
-      // ⏱️ Extension Request Review Elements
       const extAlert = document.getElementById('track-modal-extension-alert');
       const extDate = document.getElementById('track-modal-extension-date');
       const extReason = document.getElementById('track-modal-extension-reason');
 
-      // 🔔 Reminder Elements
       const reminderHint = document.getElementById('track-modal-reminder-hint');
       const btnReminder = document.getElementById('btn-send-deadline-reminder');
       const btnReminderText = document.getElementById('btn-reminder-text');
@@ -7674,7 +7807,7 @@ window.openTrackingModal = function(reportId) {
         if (reworkAlert) reworkAlert.style.display = 'none';
       }
 
-      // ⏱️ EXTENSION REQUEST CHECK (If CEO has submitted a pending extension)
+      // ⏱️ EXTENSION REQUEST CHECK
       if (report.extensionStatus === 'PENDING') {
         if (extAlert) extAlert.style.display = 'block';
         if (extDate) extDate.textContent = report.extensionTargetDate || 'N/A';
@@ -7683,7 +7816,7 @@ window.openTrackingModal = function(reportId) {
         if (extAlert) extAlert.style.display = 'none';
       }
 
-      // ⏳ LIVE COUNTDOWN & REMINDER CONTROLLER
+      // ⏳ LIVE COUNTDOWN & REMINDER CONTROLLER (Fixed arithmetic)
       const calculateCountdown = () => {
         if (!report.targetCompletionDate) {
           if (targetBadge) targetBadge.style.display = 'none';
@@ -7700,7 +7833,6 @@ window.openTrackingModal = function(reportId) {
         const diffMs = target - now;
         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
-        // Render countdown header badge
         if (targetBadge) {
           targetBadge.style.display = 'inline-block';
           if (diffDays > 1) {
@@ -7723,7 +7855,7 @@ window.openTrackingModal = function(reportId) {
           }
         }
 
-        // 🔔 REMINDER BUTTON & 12-HOUR DATABASE COOLDOWN LOGIC
+        // 🔔 REMINDER BUTTON & 12-HOUR DATABASE COOLDOWN LOGIC (Fixed arithmetic)
         if (reminderContainer && btnReminder) {
           if (diffDays <= 2) {
             reminderContainer.style.display = 'flex';
@@ -7785,7 +7917,7 @@ window.openTrackingModal = function(reportId) {
         }
       };
 
-      // 🏁 ACTUAL TURNAROUND CALCULATOR
+      // 🏁 ACTUAL TURNAROUND CALCULATOR (Fixed arithmetic)
       const calculateTurnaround = () => {
         const completedTimeStr = report.actualCompletionDate || report.dateArchived;
         if (!completedTimeStr) {
@@ -8079,7 +8211,6 @@ window.handleReviewExtension = function(decision) {
 
       toggleExtensionRemarksForm(false);
 
-      // Re-populate modal to show updated countdown and audit trail
       openTrackingModal(currentTrackingReportId);
 
       if (typeof loadTrackingData === 'function') loadTrackingData();

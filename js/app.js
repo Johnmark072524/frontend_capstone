@@ -4427,54 +4427,6 @@ function resetModalScroll(modalElementOrId) {
   setTimeout(performReset, 200);
 }
 
-// ==========================================
-// ADMIN MODAL MAP & INSPECTION VARIABLES
-// ==========================================
-let currentReviewLat = null;
-let currentReviewLng = null;
-let adminReviewMap = null;
-let adminReviewMarker = null;
-let currentReviewReportId = null;
-
-// Ensure it runs when the script loads
-if (typeof loadAdminReports === 'function') {
-  loadAdminReports();
-}
-
-// 🚀 TOGGLE "OTHER" DAMAGE TYPE FOR CPDO INSPECTION
-window.toggleAdminOtherDamageType = function() {
-  const select = document.getElementById('admin-input-damage-type');
-  const otherGroup = document.getElementById('admin-other-damage-group');
-  const otherInput = document.getElementById('admin-input-damage-other');
-
-  if (!select || !otherGroup) return;
-
-  if (select.value === 'Other') {
-    otherGroup.classList.remove('hidden');
-    otherGroup.style.display = 'block';
-    if (otherInput) otherInput.focus();
-  } else {
-    otherGroup.classList.add('hidden');
-    otherGroup.style.display = 'none';
-    if (otherInput) otherInput.value = '';
-  }
-};
-
-// 📜 ADMIN REVIEW TIMELINE ACCORDION TOGGLE
-window.toggleAdminReviewTimeline = function() {
-  const container = document.getElementById('admin-review-timeline-container');
-  const arrow = document.getElementById('admin-timeline-arrow');
-  if (!container) return;
-
-  const isHidden = container.classList.toggle('hidden');
-  if (arrow) arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
-
-  // 🚀 RESET INNER TIMELINE SCROLL UPON OPENING
-  if (!isHidden) {
-    container.scrollTop = 0;
-    requestAnimationFrame(() => { container.scrollTop = 0; });
-  }
-};
 
 // ==========================================
 // ADMIN MODAL MAP & INSPECTION VARIABLES

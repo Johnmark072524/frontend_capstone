@@ -1984,10 +1984,23 @@ document.addEventListener('DOMContentLoaded', () => {
           const dWid = parseFloat(report.damageWidth) || 0;
           const dDepth = parseFloat(report.damageDepth) || 0;
 
-          // Build dimensions display with optional depth indicator
-          let dimText = `${dLen}m × ${dWid}m`;
-          if (dDepth > 0) {
-            dimText += `<br><span style="font-size: 11px; color: #b91c1c; font-weight: 700;">Depth: ${dDepth}m</span>`;
+          const area = dLen * dWid;
+          const volume = area * dDepth;
+
+          // 📐 Formatted Engineering Dimensions & Material Volume
+          let dimDisplay = '';
+          if (dLen > 0 && dWid > 0) {
+            dimDisplay = dDepth > 0
+              ? `<strong>${dLen}m × ${dWid}m × ${dDepth}m</strong>`
+              : `<strong>${dLen}m × ${dWid}m</strong>`;
+
+            dimDisplay += `<br><span style="font-size: 10px; color: #64748b;">${area.toFixed(2)} sq.m`;
+            if (volume > 0) {
+              dimDisplay += ` • <strong style="color: #0284c7;">${volume.toFixed(3)} cu.m</strong>`;
+            }
+            dimDisplay += `</span>`;
+          } else {
+            dimDisplay = `<span style="color: #94a3b8; font-style: italic;">No measurements</span>`;
           }
 
           const tr = document.createElement('tr');
@@ -1996,10 +2009,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
           <td style="padding: 8px 6px; border: 1px solid #334155;">
             <strong>${formatName}</strong><br>
-            <span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy} • <em style="color: #0284c7;">${report.roadImportance || 'Non-Core'}</em></span>
+            <span style="font-size: 10.5px; color: #64748b;">Brgy. ${formatBrgy} • <em style="color: #0284c7; font-weight: 600;">${report.roadImportance || 'Non-Core'}</em></span>
           </td>
           <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
-          <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dimText}</td>
+          <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dimDisplay}</td>
           <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
         `;
           tbody.appendChild(tr);
@@ -12701,11 +12714,10 @@ window.openArchiveDetailModal = function(reportId) {
       const year = typeof getReportYear === 'function' ? getReportYear(report) : (report.inventoryYear || 'N/A');
       document.getElementById('archive-modal-year').innerText = year || 'N/A';
 
-      // 🎯 1. PULL ACTUAL "CLOSED" / "ARCHIVED" DATE DIRECTLY FROM TIMELINE
+      // 🎯 PULL ACTUAL "CLOSED" / "ARCHIVED" DATE DIRECTLY FROM TIMELINE
       apiFetch(`/api/reports/${report.id}/timeline`)
         .then(timeline => {
           if (Array.isArray(timeline) && timeline.length > 0) {
-            // Find the concluding action (CLOSED, ARCHIVED, or COMPLETED)
             const closedEvent = [...timeline].reverse().find(ev => {
               const act = String(ev.action || '').toUpperCase();
               return act === 'CLOSED' || act === 'ARCHIVED' || act === 'COMPLETED' || act === 'RESOLVED';
@@ -12744,7 +12756,7 @@ window.openArchiveDetailModal = function(reportId) {
         }
       }
 
-      // 1. Road Specifications (Separated Fields)
+      // 1. Road Specifications
       document.getElementById('archive-modal-road-name').innerText = report.cityRoadName || 'Unnamed Road';
       document.getElementById('archive-modal-brgy').innerText = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : (report.barangayName || 'Unknown');
       document.getElementById('archive-modal-road-id').innerText = report.cityRoadId || `31420000${String(report.id).padStart(2, '0')}`;
@@ -12757,40 +12769,69 @@ window.openArchiveDetailModal = function(reportId) {
       const rLen = parseFloat(report.length) || 0;
       const rWid = parseFloat(report.width) || 0;
       document.getElementById('archive-modal-road-length').innerText = rLen > 0 ? `${rLen} km` : '0 km';
-      document.getElementById('archive-modal-road-width').innerText = rWid > 0 ? `${rWid} m` : '0 m';
+      document.getElementById('archive-modal-road-width').innerText = rWid > 0 ? `${rWid} m` : 'Pending Survey';
 
       const culverts = report.lengthOfCulverts != null && !isNaN(report.lengthOfCulverts) ? Number(report.lengthOfCulverts).toFixed(2) : '0.00';
       document.getElementById('archive-modal-culverts').innerText = `${culverts} m`;
       document.getElementById('archive-modal-bridges').innerText = report.numberOfBridges != null ? report.numberOfBridges : 0;
 
-      // 2. Damage Assessment & Scope
+      // 2. Damage Assessment & Scope (Dimensions, Depth & Volume)
       document.getElementById('archive-modal-damage-type').innerText = report.damageType || 'General Wear';
 
       const dLen = parseFloat(report.damageLength) || 0;
       const dWid = parseFloat(report.damageWidth) || 0;
-      const dArea = dLen * dWid;
-      document.getElementById('archive-modal-damage-dims').innerText = (dLen > 0 || dWid > 0) ? `${dLen}m (L) × ${dWid}m (W)` : 'Not specified';
-      document.getElementById('archive-modal-damage-area').innerText = `${dArea > 0 ? dArea.toFixed(1) : '0.0'} sq.m`;
+      const dDepth = parseFloat(report.damageDepth) || 0;
 
-      // 🧠 3. AI Severity Badge
+      const dArea = dLen * dWid;
+      const dVolume = dArea * dDepth;
+
+      document.getElementById('archive-modal-damage-dims').innerText = (dLen > 0 || dWid > 0) ? `${dLen}m (L) × ${dWid}m (W)` : 'Not specified';
+
+      const depthEl = document.getElementById('archive-modal-damage-depth');
+      if (depthEl) {
+        depthEl.innerText = dDepth > 0 ? `${dDepth} m` : '0 m';
+      }
+
+      document.getElementById('archive-modal-damage-area').innerText = `${dArea > 0 ? dArea.toFixed(2) : '0.00'} sq.m`;
+
+      const volEl = document.getElementById('archive-modal-damage-volume');
+      if (volEl) {
+        volEl.innerText = `${dVolume > 0 ? dVolume.toFixed(3) : '0.000'} cu.m`;
+      }
+
+      // 🧠 3. OFFICIAL ENGINEERING PRIORITY (Clean badge without raw AI confidence)
       const rawSev = String(report.severity || '').trim().toLowerCase();
-      const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
-      const confText = confScore ? ` (${confScore}%)` : '';
       const priorityBadge = document.getElementById('archive-modal-priority-badge');
 
       if (priorityBadge) {
+        const displaySev = (report.severity || 'UNASSESSED').toUpperCase();
         if (rawSev === 'high') {
-          priorityBadge.innerText = `HIGH${confText}`;
+          priorityBadge.innerText = displaySev;
           priorityBadge.style.cssText = 'background-color: #dc2626; color: #ffffff; border: 1px solid #b91c1c; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
         } else if (rawSev === 'medium') {
-          priorityBadge.innerText = `MEDIUM${confText}`;
+          priorityBadge.innerText = displaySev;
           priorityBadge.style.cssText = 'background-color: #f59e0b; color: #ffffff; border: 1px solid #d97706; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
         } else if (rawSev === 'low') {
-          priorityBadge.innerText = `LOW${confText}`;
+          priorityBadge.innerText = displaySev;
           priorityBadge.style.cssText = 'background-color: #16a34a; color: #ffffff; border: 1px solid #15803d; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
         } else {
           priorityBadge.innerText = 'UNASSESSED';
           priorityBadge.style.cssText = 'background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 5px; display: inline-block; letter-spacing: 0.3px;';
+        }
+      }
+
+      // 🤖 INITIAL AI SCREENING TRIAGE
+      const aiSeverityEl = document.getElementById('archive-modal-ai-severity');
+      if (aiSeverityEl) {
+        const rawAiSev = report.aiSeverity || report.cvDamageClassification;
+        const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
+        const confText = confScore ? ` (${confScore}%)` : '';
+        if (rawAiSev && rawAiSev !== 'None') {
+          aiSeverityEl.innerText = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
+        } else if (report.damageImage) {
+          aiSeverityEl.innerText = `🤖 Unassessed`;
+        } else {
+          aiSeverityEl.innerText = `No photo attached (Good Condition)`;
         }
       }
 
@@ -13125,38 +13166,48 @@ window.renderArchivePreviewPriority = function(selectedYear) {
         return;
       }
 
+      // Map Tier Score directly from the Official Validated Severity
       backlog.forEach(report => {
-        const severity = String(report.severity || 'Unassessed').toLowerCase();
-        const importance = String(report.roadImportance || '').toLowerCase();
+        const sev = String(report.severity || '').trim().toLowerCase();
 
-        report.tierScore = 0;
-        report.tierLabel = 'PENDING AI';
-        report.tierColor = '#6c757d';
-
-        if (severity === 'high') {
-          report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
-        } else if (severity === 'medium') {
-          if (importance.includes('core')) {
-            report.tierScore = 3; report.tierLabel = 'HIGH'; report.tierColor = '#dc3545';
-          } else {
-            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
-          }
-        } else if (severity === 'low') {
-          if (importance.includes('core')) {
-            report.tierScore = 2; report.tierLabel = 'MEDIUM'; report.tierColor = '#ff8c00';
-          } else {
-            report.tierScore = 1; report.tierLabel = 'LOW'; report.tierColor = '#28a745';
-          }
+        if (sev === 'high') {
+          report.tierScore = 3;
+          report.tierLabel = 'HIGH';
+          report.tierColor = '#dc2626';
+        } else if (sev === 'medium') {
+          report.tierScore = 2;
+          report.tierLabel = 'MEDIUM';
+          report.tierColor = '#d97706';
+        } else if (sev === 'low') {
+          report.tierScore = 1;
+          report.tierLabel = 'LOW';
+          report.tierColor = '#16a34a';
+        } else {
+          report.tierScore = 0;
+          report.tierLabel = 'UNASSESSED';
+          report.tierColor = '#64748b';
         }
 
-        const dLength = parseFloat(report.damageLength) || 0;
-        const dWidth = parseFloat(report.damageWidth) || 0;
-        report.areaScore = dLength * dWidth;
+        const dLen = parseFloat(report.damageLength) || 0;
+        const dWid = parseFloat(report.damageWidth) || 0;
+        const dDepth = parseFloat(report.damageDepth) || 0;
+
+        report.areaScore = dLen * dWid;
+        report.depthScore = dDepth;
+        report.volumeScore = report.areaScore * dDepth;
       });
 
+      // Sort: 1) Priority Tier (High > Med > Low), 2) Deepest Cavity, 3) Largest Area
       backlog.sort((a, b) => {
-        if (b.tierScore !== a.tierScore) return b.tierScore - a.tierScore;
-        if (b.areaScore !== a.areaScore) return b.areaScore - a.areaScore;
+        if (b.tierScore !== a.tierScore) {
+          return b.tierScore - a.tierScore;
+        }
+        if (b.depthScore !== a.depthScore) {
+          return b.depthScore - a.depthScore;
+        }
+        if (b.areaScore !== a.areaScore) {
+          return b.areaScore - a.areaScore;
+        }
         return Number(a.id) - Number(b.id);
       });
 
@@ -13166,20 +13217,41 @@ window.renderArchivePreviewPriority = function(selectedYear) {
         const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
         const formatName = report.cityRoadName || 'Unnamed Road';
         const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : (report.barangayName || 'Unknown');
-        const formatDamage = report.damageType || 'Unspecified';
-        const dLength = report.damageLength || 0;
-        const dWidth = report.damageWidth || 0;
+        const formatDamage = report.damageType || 'Road Distress';
+
+        const dLen = parseFloat(report.damageLength) || 0;
+        const dWid = parseFloat(report.damageWidth) || 0;
+        const dDepth = parseFloat(report.damageDepth) || 0;
+
+        const area = dLen * dWid;
+        const volume = area * dDepth;
+
+        // Formatted Engineering Dimensions & Material Volume
+        let dimDisplay = '';
+        if (dLen > 0 && dWid > 0) {
+          dimDisplay = dDepth > 0
+            ? `<strong>${dLen}m × ${dWid}m × ${dDepth}m</strong>`
+            : `<strong>${dLen}m × ${dWid}m</strong>`;
+
+          dimDisplay += `<br><span style="font-size: 10px; color: #64748b;">${area.toFixed(2)} sq.m`;
+          if (volume > 0) {
+            dimDisplay += ` • <strong style="color: #0284c7;">${volume.toFixed(3)} cu.m</strong>`;
+          }
+          dimDisplay += `</span>`;
+        } else {
+          dimDisplay = `<span style="color: #94a3b8; font-style: italic;">No measurements</span>`;
+        }
 
         return `
           <tr style="border-bottom: 1px solid #e2e8f0; background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};">
             <td style="padding: 10px 8px; border: 1px solid #cbd5e1; text-align: center;"><strong>${index + 1}</strong></td>
-            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; font-weight: 700;">${formatId}</td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; font-weight: 700; font-family: monospace;">${formatId}</td>
             <td style="padding: 10px 8px; border: 1px solid #cbd5e1;">
               <strong>${formatName}</strong><br>
-              <span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy}</span>
+              <span style="font-size: 10.5px; color: #64748b;">Brgy. ${formatBrgy} • <em style="color: #0284c7; font-weight: 600;">${report.roadImportance || 'Non-Core'}</em></span>
             </td>
             <td style="padding: 10px 8px; border: 1px solid #cbd5e1;">${formatDamage}</td>
-            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; font-size: 11px;">${dLength}m × ${dWidth}m</td>
+            <td style="padding: 10px 8px; border: 1px solid #cbd5e1; text-align: center; font-size: 11px;">${dimDisplay}</td>
             <td style="padding: 10px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
           </tr>
         `;

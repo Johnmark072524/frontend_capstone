@@ -346,12 +346,13 @@
             <table class="document-table" style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; border: 1.5px solid #0f172a;">
               <thead>
               <tr style="background-color: #0f172a !important; color: #ffffff !important; text-align: center; font-weight: 700;">
-                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 50px;">Rank</th>
-                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 110px;">Project ID</th>
+                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 45px;">Rank</th>
+                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 100px;">Project ID</th>
                 <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; text-align: left;">Road Name & Barangay</th>
-                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 160px;">Damage Type</th>
-                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 130px;">Est. Area (L x W)</th>
-                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 100px;">Priority Tier</th>
+                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 140px;">Damage Type</th>
+                <!-- 📐 UPDATED HEADER WITH DEPTH (L × W × D) -->
+                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 150px;">Dimensions (L × W × D)</th>
+                <th style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px 8px; border: 1px solid #334155; width: 95px;">Priority Tier</th>
               </tr>
               </thead>
               <tbody id="priority-table-body">
@@ -731,7 +732,7 @@
                 <div><strong style="color: #64748b;">Barangay:</strong> <span id="archive-modal-brgy" style="font-weight: 600;">-</span></div>
                 <div><strong style="color: #64748b;">City Road ID:</strong> <span id="archive-modal-road-id" style="font-family: monospace; font-weight: 700;">-</span></div>
                 <div><strong style="color: #64748b;">Road Classification:</strong> <span>City Road</span></div>
-                <div><strong style="color: #64748b;">Road Importance:</strong> <span id="archive-modal-importance">-</span></div>
+                <div><strong style="color: #64748b;">Road Importance:</strong> <span id="archive-modal-importance" style="font-weight: 700; color: #0284c7;">-</span></div>
                 <div><strong style="color: #64748b;">Terrain Type:</strong> <span id="archive-modal-terrain">-</span></div>
                 <div><strong style="color: #64748b;">Pavement Type:</strong> <span id="archive-modal-road-type">-</span></div>
                 <div><strong style="color: #64748b;">Road Length (km):</strong> <span id="archive-modal-road-length">0 km</span></div>
@@ -750,8 +751,11 @@
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 12px; font-size: 11px; margin-bottom: 8px;">
                 <div><strong style="color: #64748b;">Damage Type:</strong> <span id="archive-modal-damage-type" style="font-weight: 700; color: #0f172a;">-</span></div>
                 <div><strong style="color: #64748b;">Damage Dimensions:</strong> <span id="archive-modal-damage-dims" style="font-weight: 600;">-</span></div>
+                <div><strong style="color: #64748b;">Damage Depth:</strong> <span id="archive-modal-damage-depth" style="font-weight: 700; color: #b91c1c;">-</span></div>
                 <div><strong style="color: #64748b;">Estimated Area:</strong> <span id="archive-modal-damage-area" style="font-weight: 700; color: #0284c7;">-</span></div>
-                <div><strong style="color: #64748b;">Severity Tier:</strong> <span id="archive-modal-priority-badge" style="font-weight: 800; padding: 2px 7px; border-radius: 4px;">-</span></div>
+                <div><strong style="color: #64748b;">Est. Patch Volume:</strong> <span id="archive-modal-damage-volume" style="font-weight: 700; color: #0369a1;">-</span></div>
+                <div><strong style="color: #64748b;">Official Severity:</strong> <span id="archive-modal-priority-badge" style="font-weight: 800; padding: 2px 7px; border-radius: 4px;">-</span></div>
+                <div><strong style="color: #64748b;">Initial AI Triage:</strong> <span id="archive-modal-ai-severity" style="font-weight: 700; color: #475569;">-</span></div>
                 <div><strong style="color: #64748b;">GPS Coordinates:</strong> <span id="archive-modal-gps" style="font-family: monospace;">-</span></div>
                 <div style="grid-column: 1 / -1;"><strong style="color: #64748b;">Originally Submitted By:</strong> <span id="archive-modal-submitter" style="font-weight: 700; color: #2563eb;">-</span></div>
               </div>
@@ -2918,12 +2922,13 @@
         <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left; border: 1.5px solid #0f172a;">
           <thead>
           <tr style="background: #0f172a; color: #ffffff; text-align: center; font-weight: 700;">
-            <th style="padding: 10px 8px; border: 1px solid #334155; width: 50px;">Rank</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 45px;">Rank</th>
             <th style="padding: 10px 8px; border: 1px solid #334155; width: 100px;">Project ID</th>
             <th style="padding: 10px 8px; border: 1px solid #334155; text-align: left;">Road Name & Barangay</th>
-            <th style="padding: 10px 8px; border: 1px solid #334155; width: 150px;">Damage Type</th>
-            <th style="padding: 10px 8px; border: 1px solid #334155; width: 120px;">Est. Area (L x W)</th>
-            <th style="padding: 10px 8px; border: 1px solid #334155; width: 100px;">Priority Tier</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 140px;">Damage Type</th>
+            <!-- 📐 UPDATED HEADER WITH DEPTH -->
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 150px;">Dimensions (L × W × D)</th>
+            <th style="padding: 10px 8px; border: 1px solid #334155; width: 95px;">Priority Tier</th>
           </tr>
           </thead>
           <tbody id="archive-preview-priority-tbody">

@@ -1855,18 +1855,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
 // ==========================================
 // 🧠 THE STRICT PRIORITY ALGORITHM & SIGNATORY LOADER
 // ==========================================
   async function generatePriorityList() {
-    // 🚀 1. SET DATE
+    // 1. SET DATE
     const dateEl = document.getElementById('priority-doc-date');
     if (dateEl) {
       dateEl.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     }
 
-    // 🚀 2. POPULATE CPDO ADMIN NAME (WITH MIDDLE INITIAL)
+    // 2. POPULATE CPDO ADMIN NAME
     const adminFirst = sessionStorage.getItem("firstName") || "";
     const adminMiddle = sessionStorage.getItem("middleName") || "";
     const adminLast = sessionStorage.getItem("lastName") || "";
@@ -1877,7 +1876,7 @@ document.addEventListener('DOMContentLoaded', () => {
       adminNameEl.textContent = adminFormattedName || "CPDO Administrator";
     }
 
-    // 🚀 3. DYNAMICALLY FETCH CEO (CITY ENGINEER) NAME
+    // 3. DYNAMICALLY FETCH CEO (CITY ENGINEER) NAME
     const ceoNameEl = document.getElementById('priority-ceo-name');
     if (ceoNameEl) {
       try {
@@ -1907,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 🚀 4. FETCH & POPULATE REPORTS TABLE
+    // 4. FETCH & POPULATE REPORTS TABLE
     apiFetch(`/api/reports`)
       .then(reports => {
         // Filter: Validated reports WITH a valid photographic damage image
@@ -1922,62 +1921,56 @@ document.addEventListener('DOMContentLoaded', () => {
           return isValidated && hasValidImage;
         });
 
-        // Calculate Priority Scores
+        // Map Tier Score directly from the Official Validated Severity
         validatedReports.forEach(report => {
-          const severity = String(report.severity || 'Unassessed').toLowerCase();
-          const importance = String(report.roadImportance || '').toLowerCase();
+          const sev = String(report.severity || '').trim().toLowerCase();
 
-          report.tierScore = 0;
-          report.tierLabel = 'PENDING AI';
-          report.tierColor = '#6c757d';
-
-          if (severity === 'high') {
+          if (sev === 'high') {
             report.tierScore = 3;
             report.tierLabel = 'HIGH';
-            report.tierColor = '#dc3545';
-          } else if (severity === 'medium') {
-            if (importance.includes('core')) {
-              report.tierScore = 3;
-              report.tierLabel = 'HIGH';
-              report.tierColor = '#dc3545';
-            } else {
-              report.tierScore = 2;
-              report.tierLabel = 'MEDIUM';
-              report.tierColor = '#ff8c00';
-            }
-          } else if (severity === 'low') {
-            if (importance.includes('core')) {
-              report.tierScore = 2;
-              report.tierLabel = 'MEDIUM';
-              report.tierColor = '#ff8c00';
-            } else {
-              report.tierScore = 1;
-              report.tierLabel = 'LOW';
-              report.tierColor = '#28a745';
-            }
+            report.tierColor = '#dc2626';
+          } else if (sev === 'medium') {
+            report.tierScore = 2;
+            report.tierLabel = 'MEDIUM';
+            report.tierColor = '#d97706';
+          } else if (sev === 'low') {
+            report.tierScore = 1;
+            report.tierLabel = 'LOW';
+            report.tierColor = '#16a34a';
+          } else {
+            report.tierScore = 0;
+            report.tierLabel = 'UNASSESSED';
+            report.tierColor = '#64748b';
           }
 
-          const dLength = parseFloat(report.damageLength) || 0;
-          const dWidth = parseFloat(report.damageWidth) || 0;
-          report.areaScore = dLength * dWidth;
+          const dLen = parseFloat(report.damageLength) || 0;
+          const dWid = parseFloat(report.damageWidth) || 0;
+          const dDepth = parseFloat(report.damageDepth) || 0;
+
+          report.areaScore = dLen * dWid;
+          report.depthScore = dDepth;
+          report.volumeScore = report.areaScore * dDepth;
         });
 
-        // Sort: Highest Priority Tier first, then Largest Area
+        // Sort: 1) Priority Tier (High > Med > Low), 2) Deepest Cavity, 3) Largest Area
         validatedReports.sort((a, b) => {
           if (b.tierScore !== a.tierScore) {
             return b.tierScore - a.tierScore;
           }
+          if (b.depthScore !== a.depthScore) {
+            return b.depthScore - a.depthScore;
+          }
           return b.areaScore - a.areaScore;
         });
 
-        // Render to HTML Table
+        // Render to Table
         const tbody = document.getElementById('priority-table-body') || document.querySelector('.document-table tbody');
         if (!tbody) return;
 
         tbody.innerHTML = '';
 
         if (validatedReports.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #64748b;">No validated reports with damage evidence available for dispatch.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 25px; color: #64748b; font-style: italic;">No validated reports with damage evidence available for dispatch.</td></tr>`;
           return;
         }
 
@@ -1985,19 +1978,30 @@ document.addEventListener('DOMContentLoaded', () => {
           const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
           const formatName = report.cityRoadName || 'Unnamed Road';
           const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-          const formatDamage = report.damageType || 'Unspecified';
-          const dLength = report.damageLength || 0;
-          const dWidth = report.damageWidth || 0;
+          const formatDamage = report.damageType || 'Road Distress';
+
+          const dLen = parseFloat(report.damageLength) || 0;
+          const dWid = parseFloat(report.damageWidth) || 0;
+          const dDepth = parseFloat(report.damageDepth) || 0;
+
+          // Build dimensions display with optional depth indicator
+          let dimText = `${dLen}m × ${dWid}m`;
+          if (dDepth > 0) {
+            dimText += `<br><span style="font-size: 11px; color: #b91c1c; font-weight: 700;">Depth: ${dDepth}m</span>`;
+          }
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
-        <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155;"><strong>${index + 1}</strong></td>
-        <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
-        <td style="padding: 8px 6px; border: 1px solid #334155;"><strong>${formatName}</strong><br><span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy}</span></td>
-        <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
-        <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dLength}m × ${dWidth}m</td>
-        <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
-      `;
+          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155;"><strong>${index + 1}</strong></td>
+          <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
+          <td style="padding: 8px 6px; border: 1px solid #334155;">
+            <strong>${formatName}</strong><br>
+            <span style="font-size: 11px; color: #64748b;">Brgy. ${formatBrgy} • <em style="color: #0284c7;">${report.roadImportance || 'Non-Core'}</em></span>
+          </td>
+          <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
+          <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dimText}</td>
+          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
+        `;
           tbody.appendChild(tr);
         });
       })

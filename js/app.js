@@ -3519,15 +3519,12 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
   checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
   toggleBatchActionBar();
 };
-
 // ==========================================
-// BACKEND API CONNECTION & FORM LOGIC (RoadWise)
+// 🛡️ SUBMISSION GUARDS & IN-MEMORY PHOTO STORE
 // ==========================================
-
-// 🛡️ Global Submission Guard (Prevents duplicate requests / rapid clicks)
 let isSubmittingReport = false;
+let scannerInterval = null;
 
-// 📸 In-memory store for selected raw angle files
 const anglePhotoFiles = {
   whole: null,
   top: null,
@@ -3536,27 +3533,130 @@ const anglePhotoFiles = {
   close: null
 };
 
-// 🚀 Toggle for "Other" damage type selection (Kept safe for CPDO Admin usage)
-window.toggleOtherDamageType = function() {
-  const select = document.getElementById('damageType');
-  const otherGroup = document.getElementById('otherDamageTypeGroup');
-  const otherInput = document.getElementById('otherDamageType');
+// ==========================================
+// 🤖 LIVE AI SCANNER CONTROLLER
+// ==========================================
+function startAiScanner(totalAngles = 2) {
+  const modal = document.getElementById("ai-scanner-modal");
+  if (!modal) return;
 
-  if (!select || !otherGroup) return;
+  modal.style.display = "flex";
 
-  if (select.value === 'Other') {
-    otherGroup.classList.remove('hidden');
-    otherGroup.style.display = 'block';
-    if (otherInput) otherInput.focus();
-  } else {
-    otherGroup.classList.add('hidden');
-    otherGroup.style.display = 'none';
-    if (otherInput) otherInput.value = '';
+  // Reset steps
+  for (let i = 1; i <= 5; i++) {
+    const stepEl = document.getElementById(`scan-step-${i}`);
+    if (stepEl) {
+      stepEl.className = "scan-step";
+      stepEl.querySelector(".step-icon").textContent = "⏳";
+    }
   }
-};
+
+  // Hide auxiliary step if only mandatory 2 angles were submitted
+  const step4 = document.getElementById("scan-step-4");
+  if (step4) {
+    if (totalAngles <= 2) {
+      step4.style.display = "none";
+    } else {
+      step4.style.display = "flex";
+      step4.querySelector(".step-desc").textContent = `Scanning ${totalAngles - 2} auxiliary angle(s) for cavity & depth`;
+    }
+  }
+
+  let progress = 5;
+  updateScannerUi(1, progress, "Optimizing & uploading photos...");
+
+  let secondsElapsed = 0;
+  clearInterval(scannerInterval);
+
+  scannerInterval = setInterval(() => {
+    secondsElapsed++;
+
+    if (secondsElapsed <= 4) {
+      // 0-4s: Compressing & Network Dispatch
+      progress = Math.min(22, progress + 4);
+      updateScannerUi(1, progress, "Transmitting multi-angle frames...");
+    } else if (secondsElapsed <= 15) {
+      // 5-15s: AI Gatekeeper & Slot 1
+      markStepComplete(1);
+      progress = Math.min(45, progress + 2);
+      updateScannerUi(2, progress, "Inspecting Road Context (Slot 1: Whole View)...");
+    } else if (secondsElapsed <= 28) {
+      // 16-28s: Slot 2 Top-Down
+      markStepComplete(2);
+      progress = Math.min(68, progress + 2);
+      updateScannerUi(3, progress, "Analyzing Pavement Distress (Slot 2: Top-Down)...");
+    } else if (secondsElapsed <= 45 && totalAngles > 2) {
+      // 29-45s: Oblique auxiliary angles
+      markStepComplete(3);
+      progress = Math.min(86, progress + 1);
+      updateScannerUi(4, progress, "Evaluating Oblique Cavity & Shadow Angles...");
+    } else {
+      // 45s+: Ensemble Consensus & Cloud Storing
+      if (totalAngles > 2) markStepComplete(4);
+      else markStepComplete(3);
+
+      progress = Math.min(96, progress + 1);
+      updateScannerUi(5, progress, "Aggregating Multi-Perspective Consensus...");
+    }
+  }, 1000);
+}
+
+function updateScannerUi(currentStepNum, percent, statusText) {
+  const bar = document.getElementById("ai-scanner-bar");
+  const pct = document.getElementById("ai-scanner-percent");
+  const tag = document.getElementById("ai-scanner-status-tag");
+
+  if (bar) bar.style.width = `${percent}%`;
+  if (pct) pct.textContent = `${percent}%`;
+  if (tag) tag.textContent = statusText;
+
+  const currentStep = document.getElementById(`scan-step-${currentStepNum}`);
+  if (currentStep && !currentStep.classList.contains("completed")) {
+    currentStep.className = "scan-step active";
+    currentStep.querySelector(".step-icon").textContent = "🔄";
+  }
+}
+
+function markStepComplete(stepNum) {
+  const step = document.getElementById(`scan-step-${stepNum}`);
+  if (step) {
+    step.className = "scan-step completed";
+    step.querySelector(".step-icon").textContent = "✅";
+  }
+}
+
+function completeAiScanner(verdictText) {
+  clearInterval(scannerInterval);
+
+  for (let i = 1; i <= 5; i++) {
+    markStepComplete(i);
+  }
+
+  const bar = document.getElementById("ai-scanner-bar");
+  const pct = document.getElementById("ai-scanner-percent");
+  const tag = document.getElementById("ai-scanner-status-tag");
+
+  if (bar) bar.style.width = "100%";
+  if (pct) pct.textContent = "100%";
+  if (tag) {
+    tag.textContent = verdictText || "Consensus Reached! Complete.";
+    tag.style.background = "#dcfce7";
+    tag.style.color = "#15803d";
+  }
+
+  setTimeout(() => {
+    closeAiScanner();
+  }, 1200);
+}
+
+function closeAiScanner() {
+  clearInterval(scannerInterval);
+  const modal = document.getElementById("ai-scanner-modal");
+  if (modal) modal.style.display = "none";
+}
 
 // =========================================================
-// ⚡ CLIENT-SIDE IMAGE COMPRESSOR (HTML5 Canvas)
+// ⚡ HTML5 CANVAS COMPRESSOR (Syntax Repaired)
 // =========================================================
 function compressImage(file, maxDimension = 1024, quality = 0.82) {
   return new Promise((resolve) => {
@@ -3588,10 +3688,7 @@ function compressImage(file, maxDimension = 1024, quality = 0.82) {
 
         canvas.toBlob(
           (blob) => {
-            if (!blob) {
-              resolve(file); // Fallback to raw file if compression fails
-              return;
-            }
+            if (!blob) return resolve(file);
             const cleanName = file.name ? file.name.replace(/\.[^/.]+$/, ".jpg") : "angle.jpg";
             const compressedFile = new File([blob], cleanName, {
               type: "image/jpeg",
@@ -3620,14 +3717,12 @@ window.handleAngleImageSelected = function (inputEl, angleKey) {
 
   if (!validTypes.includes(file.type.toLowerCase())) {
     clearSpecificAngleSlot(angleKey);
-    showToast("Invalid format! Please upload JPG, PNG, or WebP.", "error");
+    if (typeof showToast === 'function') showToast("Invalid format! Please upload JPG, PNG, or WebP.", "error");
     return;
   }
 
-  // Store in memory
   anglePhotoFiles[angleKey] = file;
 
-  // Render thumbnail & toggle UI indicators
   const imgEl = document.getElementById(`img-${angleKey}`);
   const cardEl = document.getElementById(`card-${angleKey}`);
   const removeBtn = document.getElementById(`remove-${angleKey}`);
@@ -3638,8 +3733,6 @@ window.handleAngleImageSelected = function (inputEl, angleKey) {
     reader.onload = (e) => {
       imgEl.src = e.target.result;
       imgEl.style.display = "block";
-
-      // Hide placeholder icon & text inside the box
       Array.from(previewBox.children).forEach((child) => {
         if (child.id !== `img-${angleKey}`) child.style.display = "none";
       });
@@ -3680,11 +3773,7 @@ window.clearSpecificAngleSlot = function (angleKey) {
 
   const cardEl = document.getElementById(`card-${angleKey}`);
   if (cardEl) {
-    if (angleKey === "whole" || angleKey === "top") {
-      cardEl.style.border = "2px dashed #86efac";
-    } else {
-      cardEl.style.border = "1px solid #cbd5e1";
-    }
+    cardEl.style.border = (angleKey === "whole" || angleKey === "top") ? "2px dashed #86efac" : "1px solid #cbd5e1";
     cardEl.style.backgroundColor = "white";
   }
 
@@ -3716,29 +3805,28 @@ function updateMultiAngleSummaryStatus() {
 }
 
 // =========================================================
-// 🚀 STEP 1: VALIDATE & OPEN CONFIRMATION MODAL
+// 🚀 REPORT SUBMISSION
 // =========================================================
 function submitRoadReport() {
   if (isSubmittingReport) return;
 
   const roadName = document.getElementById("cityRoadName")?.value;
   if (!roadName) {
-    showToast("Please select a City Road Name.", "error");
+    if (typeof showToast === 'function') showToast("Please select a City Road Name.", "error");
     return;
   }
 
   const latVal = document.getElementById("latitude")?.value;
   const lngVal = document.getElementById("longitude")?.value;
   if (!latVal || !lngVal) {
-    showToast("Please pin the location on the map first.", "error");
+    if (typeof showToast === 'function') showToast("Please pin the location on the map first.", "error");
     return;
   }
 
-  // 🛡️ MULTI-ANGLE VALIDATION GUARD
   const attachedCount = Object.values(anglePhotoFiles).filter((f) => f !== null).length;
   if (attachedCount > 0) {
     if (!anglePhotoFiles.whole || !anglePhotoFiles.top) {
-      showToast("Both Whole View (Slot 1) and Top-Down View (Slot 2) are required.", "warning");
+      if (typeof showToast === 'function') showToast("Both Whole View (Slot 1) and Top-Down View (Slot 2) are required.", "warning");
       return;
     }
   }
@@ -3750,7 +3838,6 @@ function submitRoadReport() {
   }
 }
 
-// STEP 2: Close confirmation modal
 function closeConfirmModal() {
   const modal = document.getElementById("confirm-modal");
   if (modal) {
@@ -3759,26 +3846,24 @@ function closeConfirmModal() {
   }
 }
 
-// =========================================================
-// 🚀 STEP 3: COMPRESS, DISPATCH TO API & AI VERIFICATION
-// =========================================================
 async function executeFinalSubmission() {
   if (isSubmittingReport) return;
   isSubmittingReport = true;
 
   closeConfirmModal();
 
-  const modalConfirmBtn = document.querySelector("#confirm-modal .btn-submit, #confirm-modal [onclick*='executeFinalSubmission']");
-  if (modalConfirmBtn) {
-    modalConfirmBtn.disabled = true;
-    modalConfirmBtn.innerText = "Analyzing & Submitting... ⏳";
-  }
-
   const submitBtn = document.getElementById("submit-report-btn");
   if (submitBtn) {
-    submitBtn.innerHTML = "⏳ Compressing Photos...";
     submitBtn.disabled = true;
     submitBtn.style.opacity = "0.7";
+  }
+
+  const attachedCount = Object.values(anglePhotoFiles).filter((f) => f !== null).length;
+  const hasPhotos = anglePhotoFiles.whole !== null && anglePhotoFiles.top !== null;
+
+  // 🚀 Launch live scanner overlay
+  if (hasPhotos) {
+    startAiScanner(attachedCount);
   }
 
   try {
@@ -3793,7 +3878,6 @@ async function executeFinalSubmission() {
     function getVal(id) {
       const el = document.getElementById(id);
       if (!el) return "";
-
       if (el.tagName === "SELECT") {
         if (el.selectedIndex === -1) return "";
         const opt = el.options[el.selectedIndex];
@@ -3803,36 +3887,32 @@ async function executeFinalSubmission() {
       return el.value || "";
     }
 
-    // 1. Road Details (Auto-filled from CityRoad selection)
+    // 1. Road Details
     formData.append("cityRoadName", getVal("cityRoadName"));
     formData.append("cityRoadId", getVal("cityRoadId"));
     formData.append("roadImportance", getVal("roadImportance"));
     formData.append("roadType", getVal("roadType"));
     formData.append("terrainType", getVal("terrainType"));
 
-    // 2. Auto-filled Baseline Measurements & Barangay Description
+    // 2. Baseline Measurements
     formData.append("width", parseFloat(getVal("width")) || 0.0);
     formData.append("length", parseFloat(getVal("length")) || 0.0);
     formData.append("numberOfBridges", parseInt(getVal("numberOfBridges")) || 0);
     formData.append("lengthOfCulverts", parseFloat(getVal("lengthOfCulverts")) || 0.0);
     formData.append("damageDescription", getVal("damageDescription"));
 
-    // 3. Damage Information (Deferred to CPDO Admin Inspection)
+    // 3. Technical Inspection (Deferred to CPDO)
     formData.append("damageType", "Pending Inspection");
     formData.append("damageLength", 0.0);
     formData.append("damageWidth", 0.0);
 
-    // 4. GPS & Analytics
+    // 4. GPS Coordinates
     formData.append("latitude", parseFloat(getVal("latitude")) || 0.0);
     formData.append("longitude", parseFloat(getVal("longitude")) || 0.0);
     formData.append("inventoryYear", new Date().getFullYear());
 
     // 5. Compress & Attach Multi-Perspective Photos
-    const hasPhotos = anglePhotoFiles.whole !== null && anglePhotoFiles.top !== null;
-
     if (hasPhotos) {
-      if (submitBtn) submitBtn.innerHTML = "⏳ Compressing Photos...";
-
       const [cWhole, cTop, cLeft, cRight, cClose] = await Promise.all([
         compressImage(anglePhotoFiles.whole),
         compressImage(anglePhotoFiles.top),
@@ -3841,8 +3921,6 @@ async function executeFinalSubmission() {
         compressImage(anglePhotoFiles.close)
       ]);
 
-      if (submitBtn) submitBtn.innerHTML = "🤖 AI Multi-Angle Inspection... ⏳";
-
       formData.append("imageWhole", cWhole);
       formData.append("imageTop", cTop);
       if (cLeft) formData.append("imageLeft", cLeft);
@@ -3850,7 +3928,7 @@ async function executeFinalSubmission() {
       if (cClose) formData.append("imageClose", cClose);
     }
 
-    // 6. Send to Spring Boot Backend API
+    // 6. Send payload to Spring Boot Backend
     const response = await fetch(`${API_BASE_URL}/api/reports`, {
       method: "POST",
       body: formData
@@ -3858,27 +3936,34 @@ async function executeFinalSubmission() {
 
     const data = await response.json().catch(() => ({}));
 
-    // 🚫 INTERCEPT SPRING BOOT / AI REJECTION GATES (HTTP 400)
+    // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400)
     if (!response.ok) {
+      closeAiScanner();
       if (data.error === "PHOTO_REJECTED" || data.error === "PHOTO REJECTED") {
-        showToast(`⚠️ ${data.message}`, "warning");
+        if (typeof showToast === 'function') showToast(`⚠️ ${data.message}`, "warning");
         return;
       }
       throw new Error(data.message || data.error || "Server rejected report submission.");
     }
 
-    // Display AI Severity Result & Consensus
-    const rawSev = String(data.severity || "").trim().toLowerCase();
+    // Finish Scanner with final consensus verdict
+    const rawSev = String(data.severity || "").trim().toUpperCase();
     const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
-    if (rawSev === "high") {
-      showToast(`🚨 Report saved! Multi-View AI verified HIGH Severity (${aiConfidence}% consensus).`, "success");
-    } else if (rawSev === "medium") {
-      showToast(`⚠️ Report saved! Multi-View AI verified MEDIUM Severity (${aiConfidence}% consensus).`, "success");
-    } else if (rawSev === "low") {
-      showToast(`ℹ️ Report saved! Multi-View AI verified LOW Severity (${aiConfidence}% consensus).`, "success");
-    } else {
-      showToast("✅ Report saved successfully!", "success");
+    if (hasPhotos) {
+      completeAiScanner(`Consensus: ${rawSev} (${aiConfidence}%)`);
+    }
+
+    if (typeof showToast === 'function') {
+      if (rawSev === "HIGH") {
+        showToast(`🚨 Report saved! Verified HIGH Severity (${aiConfidence}% consensus).`, "success");
+      } else if (rawSev === "MEDIUM") {
+        showToast(`⚠️ Report saved! Verified MEDIUM Severity (${aiConfidence}% consensus).`, "success");
+      } else if (rawSev === "LOW") {
+        showToast(`ℹ️ Report saved! Verified LOW Severity (${aiConfidence}% consensus).`, "success");
+      } else {
+        showToast("✅ Report saved successfully!", "success");
+      }
     }
 
     resetAddReportForm();
@@ -3891,17 +3976,13 @@ async function executeFinalSubmission() {
       }
       if (brgyId) loadBarangayReports(brgyId);
     }
+
   } catch (error) {
+    closeAiScanner();
     console.error("Error submitting report:", error);
-    showToast(error.message || "Failed to submit report. Check your connection.", "error");
+    if (typeof showToast === 'function') showToast(error.message || "Failed to submit report.", "error");
   } finally {
     isSubmittingReport = false;
-
-    if (modalConfirmBtn) {
-      modalConfirmBtn.disabled = false;
-      modalConfirmBtn.innerText = "Yes, Submit";
-    }
-
     if (submitBtn) {
       submitBtn.innerHTML = "Submit Report";
       submitBtn.disabled = false;
@@ -6113,7 +6194,7 @@ window.handleEditAngleSelected = function(inputEl, angleKey) {
   const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
   if (!validImageTypes.includes(file.type.toLowerCase())) {
-    showToast("Invalid format! Please upload a JPG, PNG, or WebP photo.", "error");
+    if (typeof showToast === 'function') showToast("Invalid format! Please upload a JPG, PNG, or WebP photo.", "error");
     inputEl.value = "";
     return;
   }
@@ -6356,7 +6437,7 @@ async function submitEditedReport() {
   const reportId = document.getElementById('edit-report-id').value;
   const submitBtn = document.getElementById('btn-submit-revisions');
 
-  // Check if any replacement photos were uploaded
+  // Check if any replacement photos were staged
   const newPhotosAttached = Object.values(editAngleNewFiles).some(f => f !== null);
 
   // If replacing photos, check mandatory pairs
@@ -6365,7 +6446,9 @@ async function submitEditedReport() {
     const hasTop = editAngleNewFiles.top !== null || (editExistingImageUrls.top && editExistingImageUrls.top.trim() !== "");
 
     if (!hasWhole || !hasTop) {
-      showToast("Both Whole View (Slot 1) and Top-Down View (Slot 2) are required when updating photos.", "warning");
+      if (typeof showToast === 'function') {
+        showToast("Both Whole View (Slot 1) and Top-Down View (Slot 2) are required when updating photos.", "warning");
+      }
       return;
     }
   }
@@ -6374,6 +6457,12 @@ async function submitEditedReport() {
     submitBtn.disabled = true;
     submitBtn.innerText = newPhotosAttached ? "Compressing & Verifying... ⏳" : "Updating Details... ⏳";
     submitBtn.style.opacity = "0.7";
+  }
+
+  // 🤖 Trigger AI Scanner Overlay if new photos are being submitted for inference
+  if (newPhotosAttached && typeof startAiScanner === 'function') {
+    const totalAnglesBeingSent = Object.values(editAngleNewFiles).filter(f => f !== null).length;
+    startAiScanner(Math.max(totalAnglesBeingSent, 2));
   }
 
   try {
@@ -6417,6 +6506,8 @@ async function submitEditedReport() {
 
     // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400 PHOTO_REJECTED)
     if (!response.ok) {
+      if (typeof closeAiScanner === 'function') closeAiScanner();
+
       if (data.error === "PHOTO_REJECTED" || data.error === "PHOTO REJECTED") {
         // Reset staged files and restore original previews
         ["whole", "top", "left", "right", "close"].forEach(k => clearEditAngleSlot(k));
@@ -6429,8 +6520,13 @@ async function submitEditedReport() {
       throw new Error(data.message || data.error || "Update failed");
     }
 
+    // Finish Scanner with final consensus verdict
     const aiSeverity = data.severity || "Unassessed";
     const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
+
+    if (newPhotosAttached && typeof completeAiScanner === 'function') {
+      completeAiScanner(`Consensus: ${aiSeverity.toUpperCase()} (${aiConfidence}%)`);
+    }
 
     if (typeof showToast === 'function') {
       if (newPhotosAttached && data.severity) {
@@ -6448,6 +6544,7 @@ async function submitEditedReport() {
       loadBarangayReports(storedBarangayId);
     }
   } catch (error) {
+    if (typeof closeAiScanner === 'function') closeAiScanner();
     console.error(error);
     if (typeof showToast === 'function') {
       showToast(error.message || "Error updating report.", "error");

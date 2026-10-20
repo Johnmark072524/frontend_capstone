@@ -1391,6 +1391,89 @@
   </div>
 </div>
 
+<!-- ========================================== -->
+<!-- 🤖 LIVE MULTI-PERSPECTIVE AI SCANNER OVERLAY -->
+<!-- ========================================== -->
+<div id="ai-scanner-modal" class="ai-scanner-overlay" style="display: none;">
+  <div class="ai-scanner-card">
+
+    <!-- Top Radar / Animation Header -->
+    <div class="ai-scanner-header">
+      <div class="ai-pulse-ring">
+        <span class="ai-pulse-icon">🤖</span>
+      </div>
+      <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #0f172a;">RoadWise Multi-View AI Triage</h3>
+      <p id="ai-scanner-subhead" style="margin: 4px 0 0; font-size: 12.5px; color: #64748b;">
+        Conducting forensic pavement consensus...
+      </p>
+    </div>
+
+    <!-- Live Animated Progress Bar -->
+    <div style="margin: 18px 0 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span id="ai-scanner-status-tag" style="font-size: 11.5px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 4px;">
+          Starting inspection...
+        </span>
+        <span id="ai-scanner-percent" style="font-size: 13px; font-weight: 800; color: #15803d; font-family: monospace;">
+          0%
+        </span>
+      </div>
+      <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; position: relative;">
+        <div id="ai-scanner-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e); border-radius: 999px; transition: width 0.4s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Live Ticking Step Checklist -->
+    <div class="ai-steps-list" style="display: flex; flex-direction: column; gap: 9px; margin-top: 16px; text-align: left;">
+      <div id="scan-step-1" class="scan-step active">
+        <span class="step-icon">🔄</span>
+        <div class="step-content">
+          <span class="step-title">Stage 1: Frame Scaling &amp; Cloud Transmission</span>
+          <span class="step-desc">Compressing perspectives &amp; preparing payload</span>
+        </div>
+      </div>
+
+      <div id="scan-step-2" class="scan-step">
+        <span class="step-icon">⏳</span>
+        <div class="step-content">
+          <span class="step-title">Stage 2: Road Surface Verification (Whole View)</span>
+          <span class="step-desc">Gatekeeper confirming road geometry &amp; surface limits</span>
+        </div>
+      </div>
+
+      <div id="scan-step-3" class="scan-step">
+        <span class="step-icon">⏳</span>
+        <div class="step-content">
+          <span class="step-title">Stage 3: Pavement Distress Analysis (Top-Down)</span>
+          <span class="step-desc">Classifying crack morphology &amp; structural breakdown</span>
+        </div>
+      </div>
+
+      <div id="scan-step-4" class="scan-step">
+        <span class="step-icon">⏳</span>
+        <div class="step-content">
+          <span class="step-title">Stage 4: Auxiliary Angle Consensus (Oblique/Close)</span>
+          <span class="step-desc">Scanning cavity depth, edge spalling &amp; shadows</span>
+        </div>
+      </div>
+
+      <div id="scan-step-5" class="scan-step">
+        <span class="step-icon">⏳</span>
+        <div class="step-content">
+          <span class="step-title">Stage 5: Final Multi-Perspective Verdict</span>
+          <span class="step-desc">Computing consensus score &amp; indexing record</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Notice -->
+    <div style="margin-top: 18px; padding-top: 12px; border-top: 1px dashed #e2e8f0; font-size: 11px; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      <span>🔒</span> Render AI Container &bull; DPWH ASTM D6433 Screening Engine
+    </div>
+
+  </div>
+</div>
+
 
 <div id="toast-notification" style="position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 8px; color: white; transition: all 0.3s ease; z-index: 9999; opacity: 0; transform: translateY(-20px); pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
   <span id="toast-icon" style="font-size: 20px;"></span>

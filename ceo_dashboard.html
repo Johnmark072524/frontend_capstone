@@ -789,6 +789,9 @@
 
   </div>
 
+  <!-- ======================================================= -->
+  <!-- 👷 CEO DASHBOARD: MANAGE PROJECT MODAL                 -->
+  <!-- ======================================================= -->
   <div id="manage-modal" class="modal-overlay hidden">
     <div class="modal-content">
 
@@ -817,7 +820,7 @@
             onclick="toggleCEOTimeline()"
             style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
           >
-            <span>⏱️ View Full Lifecycle & Audit History</span>
+            <span>⏱️ View Full Lifecycle &amp; Audit History</span>
             <span id="ceo-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
           </button>
 
@@ -882,17 +885,29 @@
           </div>
         </div>
 
-        <!-- 📸 SECTION 2: DAMAGE EVIDENCE -->
+        <!-- 📸 SECTION 2: MULTI-ANGLE DAMAGE EVIDENCE -->
         <div class="report-section">
-          <h3 class="section-title">Damage Evidence</h3>
-          <div class="report-image-placeholder" id="ceo-modal-image-container" style="text-align: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 class="section-title" style="margin: 0;">Damage Evidence</h3>
+            <!-- 📷 Active Perspective Indicator -->
+            <span id="ceo-active-angle-label" style="font-size: 11px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+            Whole View
+          </span>
+          </div>
+
+          <div class="report-image-placeholder" id="ceo-modal-image-container" style="text-align: center; margin-bottom: 8px;">
             <div class="modal-image-container">
-              <img id="ceo-modal-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)">
+              <img id="ceo-modal-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)" style="max-height: 230px; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;">
             </div>
             <div id="ceo-modal-image-placeholder-text">
               <span class="icon">📷</span>
               <p>Loading photo...</p>
             </div>
+          </div>
+
+          <!-- 📸 Multi-Perspective Thumbnail Strip -->
+          <div id="ceo-manage-thumbnail-strip" style="display: flex; gap: 8px; margin-top: 10px; margin-bottom: 12px; overflow-x: auto; padding: 4px 2px; justify-content: center;">
+            <!-- Dynamically populated with angle thumbnails by openCEOManageModal() -->
           </div>
 
           <div class="report-description" style="margin-top: 15px;">
@@ -916,7 +931,7 @@
 
         <!-- 👷 DISPATCH CREW & SCHEDULING (Hidden when deferred or completed) -->
         <div id="ceo-dispatch-section" class="report-section" style="background-color: #f4f6f8; padding: 18px; border-radius: 8px; margin-bottom: 20px;">
-          <h3 class="section-title" style="margin-bottom: 6px;">Dispatch Crew & Scheduling</h3>
+          <h3 class="section-title" style="margin-bottom: 6px;">Dispatch Crew &amp; Scheduling</h3>
           <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
             Deploy on-site engineers or defer this project to a later budget cycle.
           </p>
@@ -1048,7 +1063,7 @@
           <h3 class="section-title" style="color: #28a745; margin-bottom: 10px;">Project Resolution</h3>
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Please upload photographic proof of the completed road repair and provide optional remarks to officially close this project ticket.</p>
 
-          <strong style="display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Upload Repair Image <span style="color: #dc3545;">(Required)*</span></strong>
+          <strong style="display: block; margin-bottom: 10px; font-size: 13px; color: var(--text-main);">Upload Repair Image <span style="color: #dc2626;">(Required)*</span></strong>
 
           <div id="ceo-dropzone-container" class="upload-dropzone" style="position: relative; cursor: pointer; border: 2px dashed #cbd5e1; padding: 30px; text-align: center; border-radius: 8px; transition: 0.3s; background: #f8fafc; margin-bottom: 15px;">
             <input type="file" id="ceo-repair-image-upload" accept="image/*" style="display: none;" />
@@ -1083,7 +1098,7 @@
 
         <!-- ✅ SECTION 4: COMPLETED EVIDENCE (PROOF DISPLAY) -->
         <div id="ceo-completed-evidence-section" class="report-section" style="display: none; background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-top: 20px;">
-          <h3 class="section-title" style="color: #16434a; margin-bottom: 10px;"><span class="icon">✅</span> Repair Completed</h3>
+          <h3 class="section-title" style="color: #166534; margin-bottom: 10px;"><span class="icon">✅</span> Repair Completed</h3>
           <div style="margin-bottom: 15px;">
             <strong style="color: #166534; font-size: 13px;">Proof of Repair:</strong>
             <div style="margin-top: 10px; text-align: center; background: white; padding: 10px; border-radius: 8px; border: 1px solid #dcfce3;">

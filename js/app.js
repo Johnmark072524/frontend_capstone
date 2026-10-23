@@ -2504,6 +2504,43 @@ window.toggleCEOTimeline = function() {
 };
 
 // ==========================================
+// 📸 MULTI-ANGLE GALLERY STATE FOR CEO MODAL
+// ==========================================
+let currentCeoAngleMap = {};
+
+window.switchCeoManageAngle = function(angleKey, label) {
+  const targetUrl = currentCeoAngleMap[angleKey];
+  const mainImg = document.getElementById('ceo-modal-image');
+  const labelEl = document.getElementById('ceo-active-angle-label');
+
+  if (mainImg && targetUrl) {
+    if (typeof loadSecureImage === 'function') {
+      loadSecureImage('ceo-modal-image', targetUrl);
+    } else {
+      mainImg.src = targetUrl;
+    }
+    mainImg.style.display = 'block';
+  }
+
+  if (labelEl) {
+    labelEl.textContent = label;
+  }
+
+  // Update active border styles on all CEO thumbnails
+  document.querySelectorAll('.ceo-angle-thumb-btn').forEach(btn => {
+    if (btn.getAttribute('data-angle') === angleKey) {
+      btn.style.borderColor = '#1d4ed8';
+      btn.style.boxShadow = '0 0 0 2px rgba(29, 78, 216, 0.25)';
+      btn.style.backgroundColor = '#eff6ff';
+    } else {
+      btn.style.borderColor = '#cbd5e1';
+      btn.style.boxShadow = 'none';
+      btn.style.backgroundColor = '#ffffff';
+    }
+  });
+};
+
+// ==========================================
 // 6. MODAL & MAP CONTROLLERS (CEO MANAGE MODAL)
 // ==========================================
 window.openCEOManageModal = function(reportId) {
@@ -2658,7 +2695,7 @@ window.openCEOManageModal = function(reportId) {
       document.getElementById('ceo-modal-description').innerText = report.damageDescription || 'No description provided.';
 
       // ========================================================
-      // 🧠 1. OFFICIAL ENGINEERING PRIORITY (Clean badge without AI confidence)
+      // 🧠 OFFICIAL ENGINEERING PRIORITY
       // ========================================================
       const rawSev = String(report.severity || '').trim().toLowerCase();
       const priorityBadge = document.getElementById('ceo-modal-priority');
@@ -2681,18 +2718,96 @@ window.openCEOManageModal = function(reportId) {
       }
 
       // ========================================================
-      // 🤖 2. INITIAL AI SCREENING TRIAGE DISPLAY
+      // 🤖 2. INITIAL AI SCREENING TRIAGE & MULTI-ANGLE CONSENSUS
       // ========================================================
       const aiSeverityEl = document.getElementById('ceo-modal-ai-severity');
       if (aiSeverityEl) {
         const rawAiSev = report.aiSeverity || report.cvDamageClassification;
-        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}% consensus)` : '';
         if (rawAiSev && rawAiSev !== 'None') {
           aiSeverityEl.innerText = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
-        } else if (report.damageImage) {
+        } else if (report.damageImage || report.damageImageWhole) {
           aiSeverityEl.innerText = `🤖 Unassessed`;
         } else {
           aiSeverityEl.innerText = `No photo attached (Good Condition)`;
+        }
+      }
+
+      // ========================================================
+      // 📸 MULTI-ANGLE EVIDENCE GALLERY POPULATION
+      // ========================================================
+      currentCeoAngleMap = {
+        whole: report.damageImageWhole || report.damageImage || "",
+        top: report.damageImageTop || "",
+        left: report.damageImageLeft || "",
+        right: report.damageImageRight || "",
+        close: report.damageImageClose || ""
+      };
+
+      const thumbnailStrip = document.getElementById('ceo-manage-thumbnail-strip');
+      const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
+
+      if (thumbnailStrip) {
+        thumbnailStrip.innerHTML = '';
+
+        const angleDefinitions = [
+          { key: "whole", icon: "🛣️", label: "Whole View" },
+          { key: "top", icon: "📐", label: "Top-Down" },
+          { key: "left", icon: "⬅️", label: "Left Angle" },
+          { key: "right", icon: "➡️", label: "Right Angle" },
+          { key: "close", icon: "🔍", label: "Close-Up" }
+        ];
+
+        let firstAvailableAngle = null;
+
+        angleDefinitions.forEach(def => {
+          const url = currentCeoAngleMap[def.key];
+          if (url && url.trim() !== '' && url !== 'no_image.jpg') {
+            if (!firstAvailableAngle) firstAvailableAngle = def.key;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ceo-angle-thumb-btn';
+            btn.setAttribute('data-angle', def.key);
+            btn.title = def.label;
+            btn.style.cssText = `
+              width: 58px; height: 58px; border-radius: 6px; padding: 2px;
+              border: 1.5px solid ${firstAvailableAngle === def.key ? '#1d4ed8' : '#cbd5e1'};
+              background: ${firstAvailableAngle === def.key ? '#eff6ff' : '#ffffff'};
+              cursor: pointer; overflow: hidden; display: flex;
+              flex-direction: column; align-items: center; justify-content: center;
+              transition: all 0.2s; position: relative; flex-shrink: 0;
+            `;
+
+            btn.onclick = () => switchCeoManageAngle(def.key, def.label);
+
+            btn.innerHTML = `
+              <img src="${url}" alt="${def.label}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+              <span style="position: absolute; bottom: 2px; right: 2px; font-size: 9px; background: rgba(0,0,0,0.65); color: white; padding: 1px 3px; border-radius: 2px; font-weight: 700;">
+                ${def.icon}
+              </span>
+            `;
+            thumbnailStrip.appendChild(btn);
+          }
+        });
+
+        if (placeholderEl) placeholderEl.style.display = 'none';
+
+        if (firstAvailableAngle) {
+          const initialDef = angleDefinitions.find(d => d.key === firstAvailableAngle);
+          switchCeoManageAngle(firstAvailableAngle, initialDef ? initialDef.label : "Evidence Photo");
+        } else {
+          if (typeof loadSecureImage === 'function') {
+            loadSecureImage('ceo-modal-image', report.damageImage);
+          } else {
+            const mainImg = document.getElementById('ceo-modal-image');
+            if (mainImg) mainImg.src = report.damageImage || "";
+          }
+        }
+      } else {
+        if (placeholderEl) placeholderEl.style.display = 'none';
+        if (typeof loadSecureImage === 'function') {
+          loadSecureImage('ceo-modal-image', report.damageImage);
         }
       }
 
@@ -2769,12 +2884,6 @@ window.openCEOManageModal = function(reportId) {
         if (reworkAlert) reworkAlert.style.display = 'none';
       }
 
-      const placeholderEl = document.getElementById('ceo-modal-image-placeholder-text');
-      if (placeholderEl) placeholderEl.style.display = 'none';
-      if (typeof loadSecureImage === 'function') {
-        loadSecureImage('ceo-modal-image', report.damageImage);
-      }
-
       // ========================================================
       // 🎯 BUTTONS, DEFER & RESOLUTION LOGIC
       // ========================================================
@@ -2795,7 +2904,7 @@ window.openCEOManageModal = function(reportId) {
         countdownBadge.style.display = 'inline-block';
         const target = new Date(report.targetCompletionDate + 'T23:59:59');
         const now = new Date();
-        const diffMs = target - now;
+        const diffMs = target.getTime() - now.getTime();
         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
         if (diffDays > 1) {

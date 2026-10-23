@@ -643,7 +643,7 @@
       </div>
 
       <!-- ======================================================= -->
-      <!-- 📋 MODAL: INDIVIDUAL PROJECT ARCHIVE & AUDIT DETAIL     -->
+      <!-- 📋 3. CPDO ADMIN: INDIVIDUAL AUDIT RECORD MODAL         -->
       <!-- ======================================================= -->
       <div id="archive-detail-modal" class="modal-overlay hidden" style="z-index: 100000; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">
         <div style="background: white; border-radius: 12px; width: 95%; max-width: 920px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
@@ -672,7 +672,7 @@
                 <p style="margin: 0; font-size: 9.5px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; font-weight: 600;">Republic of the Philippines • Province of Bulacan</p>
                 <h2 style="margin: 1px 0; font-size: 15px; color: #0f172a; font-weight: 800; text-transform: uppercase;">City of San Jose Del Monte</h2>
                 <h3 style="margin: 0; font-size: 10.5px; font-weight: 700; color: #dc2626;">CITY PLANNING AND DEVELOPMENT OFFICE</h3>
-                <p style="margin: 1px 0 0 0; font-size: 11px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">PROJECT AUDIT & VERIFICATION RECORD</p>
+                <p style="margin: 1px 0 0 0; font-size: 11px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">PROJECT AUDIT &amp; VERIFICATION RECORD</p>
               </div>
               <img src="img/logo.png" alt="RoadWise Logo" style="height: 48px; width: auto;" onerror="this.style.display='none'">
             </div>
@@ -702,7 +702,7 @@
                 onclick="toggleArchiveTimeline()"
                 style="width: 100%; padding: 8px 12px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #334155;"
               >
-                <span>⏱️ View Full Project Lifecycle & Audit History</span>
+                <span>⏱️ View Full Project Lifecycle &amp; Audit History</span>
                 <span id="archive-timeline-arrow" style="font-size: 11px; transition: transform 0.2s ease;">▼</span>
               </button>
 
@@ -716,7 +716,7 @@
             <!-- Section 1: Road Specifications -->
             <div class="audit-section" style="margin-bottom: 14px; page-break-inside: avoid;">
               <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 8px;">
-                <h4 style="margin: 0; font-size: 12px; font-weight: 800; color: #0b2545; text-transform: uppercase; letter-spacing: 0.5px;">1. Road Details & Specifications</h4>
+                <h4 style="margin: 0; font-size: 12px; font-weight: 800; color: #0b2545; text-transform: uppercase; letter-spacing: 0.5px;">1. Road Details &amp; Specifications</h4>
                 <button type="button" id="archive-btn-locate-map" onclick="toggleArchiveMap()" class="no-print" style="padding: 3px 9px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                   🗺️ Locate on Map
                 </button>
@@ -745,7 +745,7 @@
             <!-- Section 2: Damage Assessment & Scope -->
             <div class="audit-section" style="margin-bottom: 14px; page-break-inside: avoid;">
               <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #0b2545; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px;">
-                2. Damage Assessment & Scope
+                2. Damage Assessment &amp; Scope
               </h4>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 12px; font-size: 11px; margin-bottom: 8px;">
@@ -769,22 +769,40 @@
             <!-- Section 3: Photographic Evidence (Before & After) -->
             <div class="audit-section" style="margin-bottom: 14px; page-break-inside: avoid;">
               <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #0b2545; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px;">
-                3. Photographic Evidence & Accomplishment
+                3. Photographic Evidence &amp; Accomplishment
               </h4>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
-                <!-- Before Photo -->
+                <!-- Before Photo (Multi-Angle Gallery) -->
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; text-align: center;">
-                  <strong style="display: block; font-size: 11px; color: #475569; margin-bottom: 5px;">Initial Damage Evidence (Before)</strong>
-                  <div style="height: 120px; width: 100%; background: #ffffff; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; padding: 2px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <strong style="font-size: 11px; color: #475569;">Initial Evidence (Before)</strong>
+                    <!-- 📷 Active Perspective Indicator -->
+                    <span id="archive-active-angle-label" style="font-size: 9.5px; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; padding: 1px 6px; border-radius: 3px; font-weight: 700;">
+                Whole View
+              </span>
+                  </div>
+
+                  <div style="height: 125px; width: 100%; background: #ffffff; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; padding: 2px;">
                     <img id="archive-modal-damage-image" src="" alt="Damage Photo" onclick="if(typeof openFullscreenImage==='function') openFullscreenImage(this)" style="max-height: 100%; max-width: 100%; object-fit: contain; cursor: zoom-in;">
+                  </div>
+
+                  <!-- 📸 Multi-Angle Thumbnail Strip (Hidden during Print) -->
+                  <div id="archive-modal-thumbnail-strip" class="no-print" style="display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding: 2px; justify-content: flex-start;">
+                    <!-- Dynamically populated with angle thumbnails by openArchiveDetailModal() -->
                   </div>
                 </div>
 
                 <!-- After Photo (Proof of Repair) -->
                 <div id="archive-modal-proof-container" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px; text-align: center;">
-                  <strong style="display: block; font-size: 11px; color: #166534; margin-bottom: 5px;">Proof of Completed Repair (After)</strong>
-                  <div style="height: 120px; width: 100%; background: #ffffff; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #bbf7d0; padding: 2px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <strong style="font-size: 11px; color: #166534;">Proof of Repair (After)</strong>
+                    <span style="font-size: 9.5px; background: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 1px 6px; border-radius: 3px; font-weight: 700;">
+                Completed Work
+              </span>
+                  </div>
+
+                  <div style="height: 125px; width: 100%; background: #ffffff; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #bbf7d0; padding: 2px;">
                     <img id="archive-modal-proof-image" src="" alt="Proof of Repair" onclick="if(typeof openFullscreenImage==='function') openFullscreenImage(this)" style="max-height: 100%; max-width: 100%; object-fit: contain; cursor: zoom-in;">
                   </div>
                 </div>
@@ -794,7 +812,7 @@
             <!-- Section 4: Audit Remarks & Log History -->
             <div class="audit-section" style="margin-bottom: 10px; page-break-inside: avoid;">
               <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 800; color: #0b2545; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px;">
-                4. Official Remarks & Resolution Log
+                4. Official Remarks &amp; Resolution Log
               </h4>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px;">
@@ -812,11 +830,11 @@
             <!-- 🚀 Dynamic Print Signatory Block -->
             <div class="only-print audit-signature" style="display: none; margin-top: 15px; page-break-inside: avoid;">
               <div style="width: 220px; text-align: center;">
-                <p style="text-align: left; margin: 0 0 2px 0; font-size: 10px; font-weight: 600; color: #334155;">Verified & Certified By:</p>
+                <p style="text-align: left; margin: 0 0 2px 0; font-size: 10px; font-weight: 600; color: #334155;">Verified &amp; Certified By:</p>
                 <div style="border-bottom: 1.5px solid #0f172a; height: 25px; margin-bottom: 3px;"></div>
                 <strong id="archive-modal-signer-name" style="text-transform: uppercase; font-size: 11px; color: #0f172a; display: block; letter-spacing: 0.5px;">CPDO ADMINISTRATOR</strong>
                 <span style="font-size: 8.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
-                <span style="font-size: 9.5px; color: #334155; font-weight: 600; display: block; margin-top: 1px;">City Planning & Development Office</span>
+                <span style="font-size: 9.5px; color: #334155; font-weight: 600; display: block; margin-top: 1px;">City Planning &amp; Development Office</span>
               </div>
             </div>
 
@@ -2125,13 +2143,16 @@
       </div>
     </div>
 
+    <!-- ======================================================= -->
+    <!-- 🔍 1. CPDO ADMIN: REVIEW & INSPECTION MODAL             -->
+    <!-- ======================================================= -->
     <div id="review-modal" class="modal-overlay hidden">
       <div class="modal-content" style="max-width: 780px; max-height: 90vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
 
         <!-- MODAL HEADER -->
         <div class="modal-header" style="padding: 18px 24px; border-bottom: 2px solid #f1f5f9; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
           <h2 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 800;">
-            Review & Inspect Report <span class="highlight" id="modal-header-id" style="color: #2563eb;">#RPT-0000</span>
+            Review &amp; Inspect Report <span class="highlight" id="modal-header-id" style="color: #2563eb;">#RPT-0000</span>
           </h2>
           <button class="close-modal-btn" onclick="closeReviewModal()" style="font-size: 20px; cursor: pointer; border: none; background: transparent; color: #64748b;">✕</button>
         </div>
@@ -2146,7 +2167,7 @@
               onclick="toggleAdminReviewTimeline()"
               style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
             >
-              <span>⏱️ View Past Revisions & Lifecycle History</span>
+              <span>⏱️ View Past Revisions &amp; Lifecycle History</span>
               <span id="admin-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
             </button>
 
@@ -2188,7 +2209,7 @@
           <div class="report-section" style="margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
               <h3 class="section-title" style="margin: 0; font-size: 15px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Road Inventory Details</h3>
-              <span style="font-size: 11px; color: #64748b; font-style: italic;">* Pre-filled from City Road Inventory</span>
+              <span style="font-size: 11px; color: #64748b; font-style: italic;">Pre-filled from City Road Inventory</span>
             </div>
 
             <div class="report-detail-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px; margin-bottom: 14px;">
@@ -2237,7 +2258,7 @@
               <h3 class="section-title" style="margin: 0; font-size: 15px; font-weight: 800; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
                 <span>📐</span> Technical Damage Measurements
               </h3>
-              <span style="font-size: 11px; color: #b91c1c; font-weight: 700;">* Required for Validation</span>
+              <span style="font-size: 11px; color: #b91c1c; font-weight: 700;">Required for Validation</span>
             </div>
 
             <div style="background: #fff5f5; border: 1.5px solid #fecaca; border-radius: 8px; padding: 14px;">
@@ -2287,12 +2308,26 @@
             </div>
           </div>
 
-          <!-- SECTION 4: DAMAGE EVIDENCE (SUBMITTED BY BARANGAY) -->
+          <!-- SECTION 4: MULTI-ANGLE DAMAGE EVIDENCE -->
           <div class="report-section" style="border-bottom: none; margin-bottom: 10px;">
-            <h3 class="section-title" style="margin: 0 0 12px; font-size: 15px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Damage Evidence</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h3 class="section-title" style="margin: 0; font-size: 15px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">
+                Damage Evidence
+              </h3>
+              <!-- 📷 Active Perspective Indicator -->
+              <span id="modal-active-angle-label" style="font-size: 11px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+            Whole View
+          </span>
+            </div>
 
-            <div class="modal-image-container" style="text-align: center; margin-bottom: 12px;">
-              <img id="modal-damage-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)" style="max-height: 220px; border-radius: 8px; border: 1.5px solid #e2e8f0; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+            <!-- Main Photographic Inspection View -->
+            <div class="modal-image-container" style="text-align: center; margin-bottom: 8px;">
+              <img id="modal-damage-image" src="" alt="Damage Photo" onclick="openFullscreenImage(this)" style="max-height: 230px; border-radius: 8px; border: 1.5px solid #e2e8f0; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+            </div>
+
+            <!-- 📸 Multi-Perspective Thumbnail Strip -->
+            <div id="admin-review-thumbnail-strip" style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding: 4px 2px; justify-content: center;">
+              <!-- Dynamically populated with angle thumbnails by reviewReport() -->
             </div>
 
             <div class="report-description" style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; line-height: 1.5;">
@@ -2307,7 +2342,7 @@
               <span class="icon">❌</span> Reject
             </button>
             <button type="button" class="btn-submit" id="btn-accept-validate" style="background-color: #16a34a; color: #ffffff; border: none; padding: 10px 22px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;">
-              <span class="icon">✅</span> Save Assessment & Validate
+              <span class="icon">✅</span> Save Assessment &amp; Validate
             </button>
           </div>
 
@@ -2325,7 +2360,7 @@
         </div>
       </div>
     </div>
-
+    
     <!-- ========================================== -->
     <!-- LOGOUT CONFIRMATION MODAL -->
     <!-- ========================================== -->
@@ -2346,6 +2381,9 @@
     </div>
     </div>
 
+  <!-- ======================================================= -->
+  <!-- 📊 2. CPDO ADMIN: PROJECT IMPLEMENTATION TRACKING MODAL -->
+  <!-- ======================================================= -->
   <div id="tracking-modal" class="modal-overlay hidden">
     <div class="modal-content">
 
@@ -2364,7 +2402,7 @@
             onclick="toggleTrackTimeline()"
             style="width: 100%; padding: 10px 14px; background: #f8fafc; border: none; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #334155;"
           >
-            <span>⏱️ View Full Lifecycle & Audit History</span>
+            <span>⏱️ View Full Lifecycle &amp; Audit History</span>
             <span id="track-timeline-arrow" style="font-size: 12px; transition: transform 0.2s ease;">▼</span>
           </button>
 
@@ -2378,7 +2416,7 @@
         <!-- SECTION 1: ROAD SPECIFICATIONS -->
         <div class="report-section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Road Details & Specifications</h3>
+            <h3 class="section-title" style="margin-bottom: 0; color: var(--accent-blue); text-transform: uppercase;">Road Details &amp; Specifications</h3>
             <button type="button" class="btn-action" onclick="toggleTrackMap()" style="background-color: #4a4a4a; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12.5px; font-weight: 600;">
               <span class="icon">🗺️</span> Locate on Map
             </button>
@@ -2413,9 +2451,15 @@
           </div>
         </div>
 
-        <!-- SECTION 2: DAMAGE INFORMATION & EVIDENCE -->
+        <!-- SECTION 2: DAMAGE INFORMATION & MULTI-ANGLE EVIDENCE -->
         <div class="report-section">
-          <h3 class="section-title" style="color: var(--accent-blue); text-transform: uppercase;">Damage Information & Evidence</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 class="section-title" style="margin: 0; color: var(--accent-blue); text-transform: uppercase;">Damage Information &amp; Evidence</h3>
+            <!-- 📷 Active Perspective Indicator -->
+            <span id="track-active-angle-label" style="font-size: 11px; background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+            Whole View
+          </span>
+          </div>
 
           <div class="report-detail-grid" style="margin-bottom: 15px; background: #f8fafc; padding: 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
             <div><strong>Damage Type:</strong> <span id="track-modal-damage-type" style="font-weight: 700; color: #0b2545;">Loading...</span></div>
@@ -2427,8 +2471,14 @@
             </div>
           </div>
 
-          <div class="modal-image-container">
-            <img id="track-modal-image" src="" alt="Original Damage" onclick="openFullscreenImage(this)">
+          <!-- Main Photo Preview -->
+          <div class="modal-image-container" style="text-align: center; margin-bottom: 8px;">
+            <img id="track-modal-image" src="" alt="Original Damage" onclick="openFullscreenImage(this)" style="max-height: 230px; border-radius: 8px; border: 1px solid #cbd5e1; cursor: pointer;">
+          </div>
+
+          <!-- 📸 Multi-Angle Thumbnail Strip -->
+          <div id="track-modal-thumbnail-strip" style="display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding: 4px 2px; justify-content: center;">
+            <!-- Dynamically populated with thumbnails by openTrackingModal() -->
           </div>
 
           <div class="report-description" style="margin-top: 15px;">
@@ -2440,7 +2490,7 @@
         <!-- SECTION 3: RESOLUTION & TIMELINE TRACKING -->
         <div id="track-section-resolution" class="report-section" style="background-color: #f8fcf8; padding: 20px; border-radius: 8px; border: 1px solid #c3e6cb;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-            <h3 id="track-resolution-title" class="section-title" style="color: #28a745; margin-bottom: 0; text-transform: uppercase;">Project Resolution & Scheduling</h3>
+            <h3 id="track-resolution-title" class="section-title" style="color: #28a745; margin-bottom: 0; text-transform: uppercase;">Project Resolution &amp; Scheduling</h3>
             <span id="track-modal-target-badge" style="display: none; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px;"></span>
           </div>
 
@@ -2600,7 +2650,7 @@
           </button>
 
           <button type="button" id="btn-approve-project" class="btn-submit" onclick="handleApproveProject()" disabled style="background-color: #ccc; cursor: not-allowed; transition: 0.3s;">
-            <span class="icon">✅</span> <span id="btn-approve-text">Approve & Close Project</span>
+            <span class="icon">✅</span> <span id="btn-approve-text">Approve &amp; Close Project</span>
           </button>
         </div>
 

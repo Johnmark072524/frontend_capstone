@@ -4642,11 +4642,50 @@ let adminReviewMap = null;
 let adminReviewMarker = null;
 let currentReviewReportId = null;
 let currentReviewRoadImportance = "Non-Core"; // Tracks road tier for live calculation
+let isReviewSubmitting = false;
 
-// Ensure it runs when the script loads
+// Multi-Angle Evidence Map for CPDO Review
+let currentAdminReviewAngleMap = {};
+
+// Ensure reports load when the script loads
 if (typeof loadAdminReports === 'function') {
   loadAdminReports();
 }
+
+// ==========================================
+// 📸 MULTI-ANGLE SWITCHER FOR CPDO REVIEW
+// ==========================================
+window.switchAdminReviewAngle = function(angleKey, label) {
+  const targetUrl = currentAdminReviewAngleMap[angleKey];
+  const mainImg = document.getElementById('modal-damage-image');
+  const labelEl = document.getElementById('modal-active-angle-label');
+
+  if (mainImg && targetUrl) {
+    if (typeof loadSecureImage === 'function') {
+      loadSecureImage('modal-damage-image', targetUrl);
+    } else {
+      mainImg.src = targetUrl;
+    }
+    mainImg.style.display = 'block';
+  }
+
+  if (labelEl) {
+    labelEl.textContent = label;
+  }
+
+  // Update active border styles on all review thumbnails
+  document.querySelectorAll('.admin-review-thumb-btn').forEach(btn => {
+    if (btn.getAttribute('data-angle') === angleKey) {
+      btn.style.borderColor = '#2563eb';
+      btn.style.boxShadow = '0 0 0 2px rgba(37, 99, 235, 0.25)';
+      btn.style.backgroundColor = '#eff6ff';
+    } else {
+      btn.style.borderColor = '#cbd5e1';
+      btn.style.boxShadow = 'none';
+      btn.style.backgroundColor = '#ffffff';
+    }
+  });
+};
 
 // 🚀 TOGGLE "OTHER" DAMAGE TYPE FOR CPDO INSPECTION
 window.toggleAdminOtherDamageType = function() {
@@ -4688,7 +4727,7 @@ window.triggerAdminSeverityRecalc = function() {
     return;
   }
 
-  const isCore = String(currentReviewRoadImportance || '').trim().equalsIgnoreCase ? currentReviewRoadImportance.equalsIgnoreCase('Core') : (String(currentReviewRoadImportance || '').trim().toLowerCase() === 'core');
+  const isCore = String(currentReviewRoadImportance || '').trim().toLowerCase() === 'core';
   const typeStr = damageType.toLowerCase();
 
   // OVERRIDE 1: Sinkhole / Washout
@@ -4762,7 +4801,7 @@ function reviewReport(reportId) {
   if (!modal) return;
 
   modal.classList.remove('hidden');
-  resetModalScroll(modal);
+  if (typeof resetModalScroll === 'function') resetModalScroll(modal);
 
   const mapContainer = document.getElementById('admin-review-map-container');
   if (mapContainer) mapContainer.style.display = 'none';
@@ -4797,7 +4836,7 @@ function reviewReport(reportId) {
       document.getElementById('modal-header-id').textContent = formattedId;
       document.getElementById('modal-report-id').textContent = formattedId;
 
-      // 1. OFFICIAL SEVERITY BADGE (Without the AI confidence score)
+      // 1. OFFICIAL SEVERITY BADGE
       const rawSev = String(report.severity || '').trim().toLowerCase();
       const severityBadge = document.getElementById('modal-severity');
 
@@ -4818,14 +4857,14 @@ function reviewReport(reportId) {
         }
       }
 
-      // 2. INITIAL AI SCREENING TRIAGE
+      // 2. INITIAL AI SCREENING TRIAGE & MULTI-ANGLE CONSENSUS
       const aiSeverityEl = document.getElementById('modal-ai-severity');
       if (aiSeverityEl) {
         const rawAiSev = report.aiSeverity || report.cvDamageClassification;
-        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}% consensus)` : '';
         if (rawAiSev && rawAiSev !== 'None') {
           aiSeverityEl.textContent = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
-        } else if (report.damageImage) {
+        } else if (report.damageImage || report.damageImageWhole) {
           aiSeverityEl.textContent = `🤖 Unassessed`;
         } else {
           aiSeverityEl.textContent = `No photo attached (Good Condition)`;
@@ -4925,17 +4964,97 @@ function reviewReport(reportId) {
 
       document.getElementById('modal-description').textContent = report.damageDescription || 'No description provided.';
 
-      const placeholderEl = document.getElementById('modal-damage-image');
-      if (placeholderEl) placeholderEl.style.display = 'none';
-      if (typeof loadSecureImage === 'function') {
-        loadSecureImage('modal-damage-image', report.damageImage);
+      // ========================================================
+      // 📸 MULTI-ANGLE EVIDENCE GALLERY & THUMBNAIL POPULATION
+      // ========================================================
+      currentAdminReviewAngleMap = {
+        whole: report.damageImageWhole || report.damageImage || "",
+        top: report.damageImageTop || "",
+        left: report.damageImageLeft || "",
+        right: report.damageImageRight || "",
+        close: report.damageImageClose || ""
+      };
+
+      const angleDefinitions = [
+        { key: "whole", icon: "🛣️", label: "Whole View" },
+        { key: "top", icon: "📐", label: "Top-Down" },
+        { key: "left", icon: "⬅️", label: "Left Angle" },
+        { key: "right", icon: "➡️", label: "Right Angle" },
+        { key: "close", icon: "🔍", label: "Close-Up" }
+      ];
+
+      // Look for thumbnail container or auto-mount one below modal-damage-image
+      let thumbnailStrip = document.getElementById('admin-review-thumbnail-strip');
+      const mainImg = document.getElementById('modal-damage-image');
+
+      if (!thumbnailStrip && mainImg && mainImg.parentElement) {
+        thumbnailStrip = document.createElement('div');
+        thumbnailStrip.id = 'admin-review-thumbnail-strip';
+        thumbnailStrip.style.cssText = 'display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding: 4px 2px; justify-content: center;';
+        mainImg.parentElement.appendChild(thumbnailStrip);
       }
 
+      if (thumbnailStrip) {
+        thumbnailStrip.innerHTML = '';
+        let firstAvailableAngle = null;
+
+        angleDefinitions.forEach(def => {
+          const url = currentAdminReviewAngleMap[def.key];
+          if (url && url.trim() !== '' && url !== 'no_image.jpg') {
+            if (!firstAvailableAngle) firstAvailableAngle = def.key;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'admin-review-thumb-btn';
+            btn.setAttribute('data-angle', def.key);
+            btn.title = def.label;
+            btn.style.cssText = `
+              width: 58px; height: 58px; border-radius: 6px; padding: 2px;
+              border: 1.5px solid ${firstAvailableAngle === def.key ? '#2563eb' : '#cbd5e1'};
+              background: ${firstAvailableAngle === def.key ? '#eff6ff' : '#ffffff'};
+              cursor: pointer; overflow: hidden; display: flex;
+              flex-direction: column; align-items: center; justify-content: center;
+              transition: all 0.2s; position: relative; flex-shrink: 0;
+            `;
+
+            btn.onclick = () => switchAdminReviewAngle(def.key, def.label);
+
+            btn.innerHTML = `
+              <img src="${url}" alt="${def.label}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+              <span style="position: absolute; bottom: 2px; right: 2px; font-size: 9px; background: rgba(0,0,0,0.65); color: white; padding: 1px 3px; border-radius: 2px; font-weight: 700;">
+                ${def.icon}
+              </span>
+            `;
+            thumbnailStrip.appendChild(btn);
+          }
+        });
+
+        if (firstAvailableAngle) {
+          const initialDef = angleDefinitions.find(d => d.key === firstAvailableAngle);
+          switchAdminReviewAngle(firstAvailableAngle, initialDef ? initialDef.label : "Evidence Photo");
+        } else {
+          if (mainImg) {
+            if (typeof loadSecureImage === 'function') {
+              loadSecureImage('modal-damage-image', report.damageImage);
+            } else {
+              mainImg.src = report.damageImage || "";
+            }
+          }
+        }
+      } else if (mainImg) {
+        if (typeof loadSecureImage === 'function') {
+          loadSecureImage('modal-damage-image', report.damageImage);
+        } else {
+          mainImg.src = report.damageImage || "";
+        }
+      }
+
+      // Load timeline audit trail
       if (typeof loadReportTimeline === 'function') {
         loadReportTimeline(report.id, 'admin-review-timeline');
       }
 
-      resetModalScroll(modal);
+      if (typeof resetModalScroll === 'function') resetModalScroll(modal);
     })
     .catch(error => {
       console.error("Error:", error);
@@ -5082,8 +5201,6 @@ if (btnLocateMap) {
 // ==========================================
 // 🎯 REVIEW MODAL ACTION CONTROLLERS (ACCEPT / REJECT)
 // ==========================================
-
-let isReviewSubmitting = false;
 
 // 1. Show Rejection Form
 const btnShowReject = document.getElementById('btn-show-reject');
@@ -8047,6 +8164,44 @@ let currentTrackLng = 0;
 let trackModalMap = null;
 let trackModalMarker = null;
 
+// 📸 MULTI-ANGLE TRACKING STATE
+let currentTrackAngleMap = {};
+
+// ==========================================
+// 📸 MULTI-ANGLE SWITCHER FOR TRACKING MODAL
+// ==========================================
+window.switchTrackModalAngle = function(angleKey, label) {
+  const targetUrl = currentTrackAngleMap[angleKey];
+  const mainImg = document.getElementById('track-modal-image');
+  const labelEl = document.getElementById('track-active-angle-label');
+
+  if (mainImg && targetUrl) {
+    if (typeof window.loadSecureImage === 'function') {
+      window.loadSecureImage('track-modal-image', targetUrl);
+    } else {
+      mainImg.src = targetUrl;
+    }
+    mainImg.style.display = 'block';
+  }
+
+  if (labelEl) {
+    labelEl.textContent = label;
+  }
+
+  // Update active border styles on all tracking thumbnails
+  document.querySelectorAll('.track-angle-thumb-btn').forEach(btn => {
+    if (btn.getAttribute('data-angle') === angleKey) {
+      btn.style.borderColor = '#0284c7';
+      btn.style.boxShadow = '0 0 0 2px rgba(2, 132, 199, 0.25)';
+      btn.style.backgroundColor = '#f0f9ff';
+    } else {
+      btn.style.borderColor = '#cbd5e1';
+      btn.style.boxShadow = 'none';
+      btn.style.backgroundColor = '#ffffff';
+    }
+  });
+};
+
 // 📜 TRACKING TIMELINE ACCORDION TOGGLE
 window.toggleTrackTimeline = function() {
   const container = document.getElementById('track-modal-timeline-container');
@@ -8160,7 +8315,7 @@ window.openTrackingModal = function(reportId) {
       }
       setText('track-modal-submitter', submitterText);
 
-      // 🧠 1. OFFICIAL ENGINEERING PRIORITY BADGE (Decoupled from AI Confidence)
+      // 🧠 OFFICIAL ENGINEERING PRIORITY BADGE
       const sevBox = document.getElementById('track-modal-severity');
       if (sevBox) {
         const rawSev = String(report.severity || '').trim().toLowerCase();
@@ -8177,21 +8332,21 @@ window.openTrackingModal = function(reportId) {
         }
       }
 
-      // 🤖 2. INITIAL AI SCREENING TRIAGE
+      // 🤖 2. INITIAL AI SCREENING TRIAGE & MULTI-ANGLE CONSENSUS
       const aiSeverityEl = document.getElementById('track-modal-ai-severity');
       if (aiSeverityEl) {
         const rawAiSev = report.aiSeverity || report.cvDamageClassification;
-        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}%)` : '';
+        const confText = report.cvConfidenceScore ? ` (${report.cvConfidenceScore}% consensus)` : '';
         if (rawAiSev && rawAiSev !== 'None') {
           aiSeverityEl.textContent = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
-        } else if (report.damageImage) {
+        } else if (report.damageImage || report.damageImageWhole) {
           aiSeverityEl.textContent = `🤖 Unassessed`;
         } else {
           aiSeverityEl.textContent = `No photo attached (Good Condition)`;
         }
       }
 
-      // 📐 DAMAGE SPECIFICATIONS, DEPTH, AREA & VOLUME MATH (Fixed syntax)
+      // 📐 DAMAGE SPECIFICATIONS, DEPTH, AREA & VOLUME MATH
       const dmgType = report.damageType || 'Not specified';
       const dmgLen = parseFloat(report.damageLength) || 0;
       const dmgWid = parseFloat(report.damageWidth) || 0;
@@ -8207,8 +8362,87 @@ window.openTrackingModal = function(reportId) {
       setText('track-modal-damage-volume', dmgVolume > 0 ? `${dmgVolume.toFixed(3)} cu.m` : '0 cu.m');
       setText('track-modal-desc', report.damageDescription || 'No description provided.');
 
-      if (typeof window.loadSecureImage === 'function') {
-        window.loadSecureImage('track-modal-image', report.damageImage);
+      // ========================================================
+      // 📸 MULTI-ANGLE EVIDENCE GALLERY & THUMBNAIL POPULATION
+      // ========================================================
+      currentTrackAngleMap = {
+        whole: report.damageImageWhole || report.damageImage || "",
+        top: report.damageImageTop || "",
+        left: report.damageImageLeft || "",
+        right: report.damageImageRight || "",
+        close: report.damageImageClose || ""
+      };
+
+      const angleDefinitions = [
+        { key: "whole", icon: "🛣️", label: "Whole View" },
+        { key: "top", icon: "📐", label: "Top-Down" },
+        { key: "left", icon: "⬅️", label: "Left Angle" },
+        { key: "right", icon: "➡️", label: "Right Angle" },
+        { key: "close", icon: "🔍", label: "Close-Up" }
+      ];
+
+      // Auto-detect or inject thumbnail strip container beneath track-modal-image
+      let thumbnailStrip = document.getElementById('track-modal-thumbnail-strip');
+      const mainDamageImg = document.getElementById('track-modal-image');
+
+      if (!thumbnailStrip && mainDamageImg && mainDamageImg.parentElement) {
+        thumbnailStrip = document.createElement('div');
+        thumbnailStrip.id = 'track-modal-thumbnail-strip';
+        thumbnailStrip.style.cssText = 'display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding: 4px 2px; justify-content: center;';
+        mainDamageImg.parentElement.appendChild(thumbnailStrip);
+      }
+
+      if (thumbnailStrip) {
+        thumbnailStrip.innerHTML = '';
+        let firstAvailableAngle = null;
+
+        angleDefinitions.forEach(def => {
+          const url = currentTrackAngleMap[def.key];
+          if (url && url.trim() !== '' && url !== 'no_image.jpg') {
+            if (!firstAvailableAngle) firstAvailableAngle = def.key;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'track-angle-thumb-btn';
+            btn.setAttribute('data-angle', def.key);
+            btn.title = def.label;
+            btn.style.cssText = `
+              width: 58px; height: 58px; border-radius: 6px; padding: 2px;
+              border: 1.5px solid ${firstAvailableAngle === def.key ? '#0284c7' : '#cbd5e1'};
+              background: ${firstAvailableAngle === def.key ? '#f0f9ff' : '#ffffff'};
+              cursor: pointer; overflow: hidden; display: flex;
+              flex-direction: column; align-items: center; justify-content: center;
+              transition: all 0.2s; position: relative; flex-shrink: 0;
+            `;
+
+            btn.onclick = () => switchTrackModalAngle(def.key, def.label);
+
+            btn.innerHTML = `
+              <img src="${url}" alt="${def.label}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
+              <span style="position: absolute; bottom: 2px; right: 2px; font-size: 9px; background: rgba(0,0,0,0.65); color: white; padding: 1px 3px; border-radius: 2px; font-weight: 700;">
+                ${def.icon}
+              </span>
+            `;
+            thumbnailStrip.appendChild(btn);
+          }
+        });
+
+        if (firstAvailableAngle) {
+          const initialDef = angleDefinitions.find(d => d.key === firstAvailableAngle);
+          switchTrackModalAngle(firstAvailableAngle, initialDef ? initialDef.label : "Evidence Photo");
+        } else if (mainDamageImg) {
+          if (typeof window.loadSecureImage === 'function') {
+            window.loadSecureImage('track-modal-image', report.damageImage);
+          } else {
+            mainDamageImg.src = report.damageImage || "";
+          }
+        }
+      } else if (mainDamageImg) {
+        if (typeof window.loadSecureImage === 'function') {
+          window.loadSecureImage('track-modal-image', report.damageImage);
+        } else {
+          mainDamageImg.src = report.damageImage || "";
+        }
       }
 
       // ========================================================
@@ -8264,7 +8498,7 @@ window.openTrackingModal = function(reportId) {
         if (extAlert) extAlert.style.display = 'none';
       }
 
-      // ⏳ LIVE COUNTDOWN & REMINDER CONTROLLER (Fixed arithmetic)
+      // ⏳ LIVE COUNTDOWN & REMINDER CONTROLLER
       const calculateCountdown = () => {
         if (!report.targetCompletionDate) {
           if (targetBadge) targetBadge.style.display = 'none';
@@ -8278,7 +8512,7 @@ window.openTrackingModal = function(reportId) {
 
         const target = new Date(report.targetCompletionDate + 'T23:59:59');
         const now = new Date();
-        const diffMs = target - now;
+        const diffMs = target.getTime() - now.getTime();
         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
         if (targetBadge) {
@@ -8303,7 +8537,7 @@ window.openTrackingModal = function(reportId) {
           }
         }
 
-        // 🔔 REMINDER BUTTON & 12-HOUR DATABASE COOLDOWN LOGIC (Fixed arithmetic)
+        // 🔔 REMINDER BUTTON & 12-HOUR DATABASE COOLDOWN LOGIC
         if (reminderContainer && btnReminder) {
           if (diffDays <= 2) {
             reminderContainer.style.display = 'flex';
@@ -8315,7 +8549,7 @@ window.openTrackingModal = function(reportId) {
               const lastSentTime = new Date(report.lastReminderSent);
               const cooldownHours = 12;
               const cooldownMs = cooldownHours * 60 * 60 * 1000;
-              const timeSinceSent = now - lastSentTime;
+              const timeSinceSent = now.getTime() - lastSentTime.getTime();
 
               if (timeSinceSent < cooldownMs) {
                 inCooldown = true;
@@ -8365,7 +8599,7 @@ window.openTrackingModal = function(reportId) {
         }
       };
 
-      // 🏁 ACTUAL TURNAROUND CALCULATOR (Fixed arithmetic)
+      // 🏁 ACTUAL TURNAROUND CALCULATOR
       const calculateTurnaround = () => {
         const completedTimeStr = report.actualCompletionDate || report.dateArchived;
         if (!completedTimeStr) {
@@ -8381,7 +8615,7 @@ window.openTrackingModal = function(reportId) {
         if (turnaroundBadge) {
           if (report.targetCompletionDate) {
             const targetObj = new Date(report.targetCompletionDate + 'T23:59:59');
-            const diffTime = targetObj - compDateObj;
+            const diffTime = targetObj.getTime() - compDateObj.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDays > 0) {
@@ -8658,7 +8892,6 @@ window.handleReviewExtension = function(decision) {
       if (typeof showToast === 'function') showToast(toastMsg, isApproved ? "success" : "warning");
 
       toggleExtensionRemarksForm(false);
-
       openTrackingModal(currentTrackingReportId);
 
       if (typeof loadTrackingData === 'function') loadTrackingData();
@@ -13118,6 +13351,43 @@ window.toggleArchiveTimeline = function() {
 };
 
 // =======================================================
+// 📸 MULTI-ANGLE ARCHIVE GALLERY STATE & CONTROLLER
+// =======================================================
+let currentArchiveAngleMap = {};
+
+window.switchArchiveModalAngle = function(angleKey, label) {
+  const targetUrl = currentArchiveAngleMap[angleKey];
+  const dmgImg = document.getElementById('archive-modal-damage-image');
+  const labelEl = document.getElementById('archive-active-angle-label');
+
+  if (dmgImg && targetUrl) {
+    if (typeof loadSecureImage === 'function') {
+      loadSecureImage('archive-modal-damage-image', targetUrl);
+    } else {
+      dmgImg.src = targetUrl;
+    }
+    dmgImg.style.display = 'block';
+  }
+
+  if (labelEl) {
+    labelEl.textContent = label;
+  }
+
+  // Update thumbnail active border
+  document.querySelectorAll('.archive-angle-thumb-btn').forEach(btn => {
+    if (btn.getAttribute('data-angle') === angleKey) {
+      btn.style.borderColor = '#0f172a';
+      btn.style.boxShadow = '0 0 0 2px rgba(15, 23, 42, 0.25)';
+      btn.style.backgroundColor = '#f1f5f9';
+    } else {
+      btn.style.borderColor = '#cbd5e1';
+      btn.style.boxShadow = 'none';
+      btn.style.backgroundColor = '#ffffff';
+    }
+  });
+};
+
+// =======================================================
 // 📋 OPEN INDIVIDUAL PROJECT ARCHIVE DETAIL MODAL
 // =======================================================
 window.openArchiveDetailModal = function(reportId) {
@@ -13278,7 +13548,7 @@ window.openArchiveDetailModal = function(reportId) {
         volEl.innerText = `${dVolume > 0 ? dVolume.toFixed(3) : '0.000'} cu.m`;
       }
 
-      // 🧠 3. OFFICIAL ENGINEERING PRIORITY (Clean badge without raw AI confidence)
+      // 🧠 3. OFFICIAL ENGINEERING PRIORITY
       const rawSev = String(report.severity || '').trim().toLowerCase();
       const priorityBadge = document.getElementById('archive-modal-priority-badge');
 
@@ -13299,15 +13569,15 @@ window.openArchiveDetailModal = function(reportId) {
         }
       }
 
-      // 🤖 INITIAL AI SCREENING TRIAGE
+      // 🤖 INITIAL AI SCREENING TRIAGE & CONSENSUS
       const aiSeverityEl = document.getElementById('archive-modal-ai-severity');
       if (aiSeverityEl) {
         const rawAiSev = report.aiSeverity || report.cvDamageClassification;
         const confScore = report.cvConfidenceScore || report.cvconfidenceScore;
-        const confText = confScore ? ` (${confScore}%)` : '';
+        const confText = confScore ? ` (${confScore}% consensus)` : '';
         if (rawAiSev && rawAiSev !== 'None') {
           aiSeverityEl.innerText = `🤖 ${rawAiSev.toUpperCase()}${confText}`;
-        } else if (report.damageImage) {
+        } else if (report.damageImage || report.damageImageWhole) {
           aiSeverityEl.innerText = `🤖 Unassessed`;
         } else {
           aiSeverityEl.innerText = `No photo attached (Good Condition)`;
@@ -13327,19 +13597,99 @@ window.openArchiveDetailModal = function(reportId) {
       document.getElementById('archive-modal-submitter').innerText = submitter;
       document.getElementById('archive-modal-description').innerText = report.damageDescription || 'No description provided.';
 
-      // 4. Photographic Evidence
-      if (report.damageImage && report.damageImage !== 'no_image.jpg' && report.damageImage.trim() !== '') {
-        if (typeof loadSecureImage === 'function') {
-          loadSecureImage('archive-modal-damage-image', report.damageImage);
-        } else {
-          const dmgEl = document.getElementById('archive-modal-damage-image');
-          if (dmgEl) dmgEl.src = `/api/reports/image/${encodeURIComponent(report.damageImage)}`;
-        }
-      } else {
-        const dmgEl = document.getElementById('archive-modal-damage-image');
-        if (dmgEl) dmgEl.src = NO_IMAGE_PLACEHOLDER;
+      // =======================================================
+      // 4. MULTI-PERSPECTIVE AUDIT EVIDENCE GALLERY
+      // =======================================================
+      currentArchiveAngleMap = {
+        whole: report.damageImageWhole || report.damageImage || "",
+        top: report.damageImageTop || "",
+        left: report.damageImageLeft || "",
+        right: report.damageImageRight || "",
+        close: report.damageImageClose || ""
+      };
+
+      const angleDefinitions = [
+        { key: "whole", icon: "🛣️", label: "Whole View" },
+        { key: "top", icon: "📐", label: "Top-Down" },
+        { key: "left", icon: "⬅️", label: "Left Angle" },
+        { key: "right", icon: "➡️", label: "Right Angle" },
+        { key: "close", icon: "🔍", label: "Close-Up" }
+      ];
+
+      // Auto-detect or inject thumbnail strip container beneath archive-modal-damage-image
+      let thumbnailStrip = document.getElementById('archive-modal-thumbnail-strip');
+      const dmgEl = document.getElementById('archive-modal-damage-image');
+
+      if (!thumbnailStrip && dmgEl && dmgEl.parentElement) {
+        thumbnailStrip = document.createElement('div');
+        thumbnailStrip.id = 'archive-modal-thumbnail-strip';
+        thumbnailStrip.className = 'no-print';
+        thumbnailStrip.style.cssText = 'display: flex; gap: 6px; margin-top: 8px; overflow-x: auto; padding: 4px 2px; justify-content: flex-start;';
+        dmgEl.parentElement.appendChild(thumbnailStrip);
       }
 
+      if (thumbnailStrip) {
+        thumbnailStrip.innerHTML = '';
+        let firstAvailableAngle = null;
+
+        angleDefinitions.forEach(def => {
+          const url = currentArchiveAngleMap[def.key];
+          if (url && url.trim() !== '' && url !== 'no_image.jpg') {
+            if (!firstAvailableAngle) firstAvailableAngle = def.key;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'archive-angle-thumb-btn';
+            btn.setAttribute('data-angle', def.key);
+            btn.title = def.label;
+            btn.style.cssText = `
+              width: 52px; height: 52px; border-radius: 5px; padding: 2px;
+              border: 1.5px solid ${firstAvailableAngle === def.key ? '#0f172a' : '#cbd5e1'};
+              background: ${firstAvailableAngle === def.key ? '#f1f5f9' : '#ffffff'};
+              cursor: pointer; overflow: hidden; display: flex;
+              flex-direction: column; align-items: center; justify-content: center;
+              transition: all 0.2s; position: relative; flex-shrink: 0;
+            `;
+
+            btn.onclick = () => switchArchiveModalAngle(def.key, def.label);
+
+            btn.innerHTML = `
+              <img src="${url}" alt="${def.label}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 3px;">
+              <span style="position: absolute; bottom: 2px; right: 2px; font-size: 8px; background: rgba(0,0,0,0.65); color: white; padding: 1px 3px; border-radius: 2px; font-weight: 700;">
+                ${def.icon}
+              </span>
+            `;
+            thumbnailStrip.appendChild(btn);
+          }
+        });
+
+        if (firstAvailableAngle) {
+          const initialDef = angleDefinitions.find(d => d.key === firstAvailableAngle);
+          switchArchiveModalAngle(firstAvailableAngle, initialDef ? initialDef.label : "Evidence Photo");
+        } else {
+          if (report.damageImage && report.damageImage !== 'no_image.jpg' && report.damageImage.trim() !== '') {
+            if (typeof loadSecureImage === 'function') {
+              loadSecureImage('archive-modal-damage-image', report.damageImage);
+            } else {
+              dmgEl.src = `/api/reports/image/${encodeURIComponent(report.damageImage)}`;
+            }
+          } else {
+            dmgEl.src = NO_IMAGE_PLACEHOLDER;
+          }
+        }
+      } else {
+        if (report.damageImage && report.damageImage !== 'no_image.jpg' && report.damageImage.trim() !== '') {
+          if (typeof loadSecureImage === 'function') {
+            loadSecureImage('archive-modal-damage-image', report.damageImage);
+          } else {
+            dmgEl.src = `/api/reports/image/${encodeURIComponent(report.damageImage)}`;
+          }
+        } else {
+          dmgEl.src = NO_IMAGE_PLACEHOLDER;
+        }
+      }
+
+      // CEO Proof of Repair Image
       if (report.proofOfRepairImage && report.proofOfRepairImage !== 'no_image.jpg' && report.proofOfRepairImage.trim() !== '') {
         if (proofContainer) proofContainer.style.display = 'block';
         if (typeof loadSecureImage === 'function') {

@@ -242,254 +242,254 @@
       </div>
 
       <div id="view-reports" class="content-section hidden">
-      <div class="report-card" style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04); overflow: hidden;">
+        <div class="report-card" style="background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04); overflow: hidden;">
 
-        <!-- CARD HEADER -->
-        <div class="report-header" style="padding: 18px 24px; background: #ffffff; border-bottom: 2px solid #f0fdf4; display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; background-color: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 17px;">📝</span>
-            <div>
-              <h2 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 800;">Add New Incident Report</h2>
-              <p style="margin: 2px 0 0; font-size: 12px; color: #64748b;">Submit barangay road damage data for CPDO verification.</p>
+          <!-- CARD HEADER -->
+          <div class="report-header" style="padding: 18px 24px; background: #ffffff; border-bottom: 2px solid #f0fdf4; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; background-color: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 17px;">📝</span>
+              <div>
+                <h2 style="margin: 0; font-size: 18px; color: #0f172a; font-weight: 800;">Add New Incident Report</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #64748b;">Submit barangay road damage data for CPDO verification.</p>
+              </div>
+            </div>
+            <div class="header-icons" style="display: flex; gap: 8px; color: #16a34a;">
+              <span class="icon" style="background: #f0fdf4; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; border: 1px solid #dcfce7;">🌿 Barangay Portal</span>
             </div>
           </div>
-          <div class="header-icons" style="display: flex; gap: 8px; color: #16a34a;">
-            <span class="icon" style="background: #f0fdf4; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; border: 1px solid #dcfce7;">🌿 Barangay Portal</span>
-          </div>
-        </div>
 
-        <form id="addReportForm" class="report-body" onsubmit="event.preventDefault();" style="padding: 24px;">
+          <form id="addReportForm" class="report-body" onsubmit="event.preventDefault();" style="padding: 24px;">
 
-          <!-- SECTION 1: ROAD DETAILS -->
-          <div class="form-section" style="margin-bottom: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;">
-            <h3 class="section-title" style="margin: 0 0 16px; font-size: 14px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #dcfce7; padding-bottom: 8px;">
-              <span>🛣️</span> Road Details & Dimensions
-            </h3>
+            <!-- SECTION 1: ROAD DETAILS -->
+            <div class="form-section" style="margin-bottom: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;">
+              <h3 class="section-title" style="margin: 0 0 16px; font-size: 14px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #dcfce7; padding-bottom: 8px;">
+                <span>🛣️</span> Road Details & Dimensions
+              </h3>
 
-            <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+              <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
 
-              <!-- Column 1 -->
-              <div class="form-column" style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="form-group">
-                  <label for="cityRoadName" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">City Road Name <span style="color: #dc2626;">*</span></label>
-                  <select id="cityRoadName" name="cityRoadName" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none; transition: 0.2s;">
-                    <option value="" disabled selected>Select road name</option>
-                  </select>
-                </div>
+                <!-- Column 1 -->
+                <div class="form-column" style="display: flex; flex-direction: column; gap: 12px;">
+                  <div class="form-group">
+                    <label for="cityRoadName" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">City Road Name <span style="color: #dc2626;">*</span></label>
+                    <select id="cityRoadName" name="cityRoadName" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 13px; outline: none; transition: 0.2s;">
+                      <option value="" disabled selected>Select road name</option>
+                    </select>
+                  </div>
 
-                <div class="form-group">
-                  <label for="roadImportance" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Importance</label>
-                  <select id="roadImportance" name="roadImportance" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
-                    <option value="">Auto-filled</option>
-                  </select>
-                </div>
+                  <div class="form-group">
+                    <label for="roadImportance" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Importance</label>
+                    <select id="roadImportance" name="roadImportance" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
+                      <option value="">Auto-filled</option>
+                    </select>
+                  </div>
 
-                <div class="form-group">
-                  <label for="roadType" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Type</label>
-                  <select id="roadType" name="roadType" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
-                    <option value="">Auto-filled</option>
-                  </select>
-                </div>
+                  <div class="form-group">
+                    <label for="roadType" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Type</label>
+                    <select id="roadType" name="roadType" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
+                      <option value="">Auto-filled</option>
+                    </select>
+                  </div>
 
-                <div class="form-group">
-                  <label for="width" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Width (m)</label>
-                  <input type="number" id="width" name="width" readonly placeholder="Auto-filled" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
-                </div>
+                  <div class="form-group">
+                    <label for="width" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Width (m)</label>
+                    <input type="number" id="width" name="width" readonly placeholder="Auto-filled" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
+                  </div>
 
-                <div class="form-group">
-                  <label for="numberOfBridges" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Number of Bridges</label>
-                  <input type="number" id="numberOfBridges" name="numberOfBridges" readonly placeholder="Auto-filled" min="0" step="1" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
-                </div>
-              </div>
-
-              <!-- Column 2 -->
-              <div class="form-column" style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="form-group">
-                  <label for="cityRoadId" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">City Road ID</label>
-                  <input type="text" id="cityRoadId" name="cityRoadId" readonly style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #475569; font-family: monospace; font-size: 13px; font-weight: 700; cursor: not-allowed;" placeholder="Auto-filled">
-                </div>
-
-                <div class="form-group">
-                  <label for="terrainType" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Terrain Type</label>
-                  <select id="terrainType" name="terrainType" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
-                    <option value="">Auto-filled</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="lengthOfCulverts" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Length of Culverts (m)</label>
-                  <input type="number" id="lengthOfCulverts" name="lengthOfCulverts" readonly placeholder="Auto-filled" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
-                </div>
-
-                <div class="form-group">
-                  <label for="length" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Length (km)</label>
-                  <input type="number" id="length" name="length" readonly placeholder="Auto-filled" min="0" step="0.001" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
-                </div>
-
-                <div class="form-group">
-                  <label style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Initial Severity Tier</label>
-                  <div style="background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; font-weight: 800; font-size: 12px; border-radius: 6px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.3px;">
-                    <span>UNASSESSED</span>
-                    <span style="font-size: 11px; font-weight: 600; color: #059669; opacity: 0.9;">🤖 Awaiting Analysis</span>
+                  <div class="form-group">
+                    <label for="numberOfBridges" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Number of Bridges</label>
+                    <input type="number" id="numberOfBridges" name="numberOfBridges" readonly placeholder="Auto-filled" min="0" step="1" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
                   </div>
                 </div>
+
+                <!-- Column 2 -->
+                <div class="form-column" style="display: flex; flex-direction: column; gap: 12px;">
+                  <div class="form-group">
+                    <label for="cityRoadId" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">City Road ID</label>
+                    <input type="text" id="cityRoadId" name="cityRoadId" readonly style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #475569; font-family: monospace; font-size: 13px; font-weight: 700; cursor: not-allowed;" placeholder="Auto-filled">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="terrainType" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Terrain Type</label>
+                    <select id="terrainType" name="terrainType" disabled style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed;">
+                      <option value="">Auto-filled</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="lengthOfCulverts" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Length of Culverts (m)</label>
+                    <input type="number" id="lengthOfCulverts" name="lengthOfCulverts" readonly placeholder="Auto-filled" min="0" step="0.01" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="length" style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Road Length (km)</label>
+                    <input type="number" id="length" name="length" readonly placeholder="Auto-filled" min="0" step="0.001" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background-color: #f8fafc; color: #64748b; font-size: 13px; cursor: not-allowed; outline: none;">
+                  </div>
+
+                  <div class="form-group">
+                    <label style="font-weight: 600; font-size: 12px; color: #64748b; display: block; margin-bottom: 5px;">Initial Severity Tier</label>
+                    <div style="background-color: #ecfdf5; color: #047857; border: 1.5px solid #34d399; font-weight: 800; font-size: 12px; border-radius: 6px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; letter-spacing: 0.3px;">
+                      <span>UNASSESSED</span>
+                      <span style="font-size: 11px; font-weight: 600; color: #059669; opacity: 0.9;">🤖 Awaiting Analysis</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- SECTION 2: DAMAGE INFORMATION & MULTI-ANGLE CAPTURE -->
+            <div class="form-section" style="margin-bottom: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;">
+              <h3 class="section-title" style="margin: 0 0 16px; font-size: 14px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #dcfce7; padding-bottom: 8px;">
+                <span>⚠️</span> Damage Information & Scope
+              </h3>
+
+              <div class="form-group-vertical" style="margin-bottom: 16px;">
+                <label for="damageDescription" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Description / Additional Survey Notes</label>
+                <textarea id="damageDescription" name="damageDescription" rows="3" placeholder="Provide accurate reference markers, landmarks, or specifics regarding the road condition..." style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 13px; outline: none;"></textarea>
               </div>
 
-            </div>
-          </div>
-
-          <!-- SECTION 2: DAMAGE INFORMATION & MULTI-ANGLE CAPTURE -->
-          <div class="form-section" style="margin-bottom: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;">
-            <h3 class="section-title" style="margin: 0 0 16px; font-size: 14px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid #dcfce7; padding-bottom: 8px;">
-              <span>⚠️</span> Damage Information & Scope
-            </h3>
-
-            <div class="form-group-vertical" style="margin-bottom: 16px;">
-              <label for="damageDescription" style="font-weight: 700; font-size: 12.5px; color: #334155; display: block; margin-bottom: 5px;">Damage Description / Additional Survey Notes</label>
-              <textarea id="damageDescription" name="damageDescription" rows="3" placeholder="Provide accurate reference markers, landmarks, or specifics regarding the road condition..." style="width: 100%; padding: 10px 12px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-family: inherit; font-size: 13px; outline: none;"></textarea>
-            </div>
-
-            <!-- 📸 5-CARD GUIDED MULTI-PERSPECTIVE PHOTO CONTAINER -->
-            <div style="margin-bottom: 20px; border: 1.5px solid #bbf7d0; background-color: #f0fdf4; border-radius: 10px; padding: 18px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                <div>
-                  <span style="display: block; font-weight: 800; font-size: 13.5px; color: #166534;">📸 Multi-Perspective Photographic Evidence</span>
-                  <span style="font-size: 11.5px; color: #15803d;">Take guided photos of the pavement distress. Slots 1 &amp; 2 are mandatory.</span>
-                </div>
-                <span style="font-size: 11px; background: #dcfce7; color: #166534; font-weight: 700; padding: 4px 8px; border-radius: 4px; border: 1px solid #86efac;">
+              <!-- 📸 5-CARD GUIDED MULTI-PERSPECTIVE PHOTO CONTAINER -->
+              <div style="margin-bottom: 20px; border: 1.5px solid #bbf7d0; background-color: #f0fdf4; border-radius: 10px; padding: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <span style="display: block; font-weight: 800; font-size: 13.5px; color: #166534;">📸 Multi-Perspective Photographic Evidence</span>
+                    <span style="font-size: 11.5px; color: #15803d;">Take guided photos of the pavement distress. Slots 1 &amp; 2 are mandatory.</span>
+                  </div>
+                  <span style="font-size: 11px; background: #dcfce7; color: #166534; font-weight: 700; padding: 4px 8px; border-radius: 4px; border: 1px solid #86efac;">
               Multi-View AI Guided
             </span>
+                </div>
+
+                <!-- Official Advisory Notice -->
+                <div style="margin-bottom: 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; font-size: 11.5px; color: #92400e; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
+                  <span style="font-size: 14px; flex-shrink: 0;">ℹ️</span>
+                  <div>
+                    <strong>Survey Guideline:</strong> Slots 1 &amp; 2 are required to run computer vision inference. Slots 3 to 5 are optional for deep cavities or complex cracking to assist CPDO and CEO engineers.
+                  </div>
+                </div>
+
+                <!-- 5-Slot Responsive Card Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+
+                  <!-- CARD 1: WHOLE VIEW (MANDATORY) -->
+                  <div id="card-whole" style="background: white; border: 2px dashed #86efac; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <span style="font-size: 11px; font-weight: 800; color: #166534;">1. Whole View</span>
+                      <span style="font-size: 9.5px; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 2px 5px; border-radius: 3px;">Req *</span>
+                    </div>
+                    <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">Road context &amp; lane-view</p>
+
+                    <div id="preview-box-whole" onclick="document.getElementById('file-whole').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
+                      <span style="font-size: 26px;">🛣️</span>
+                      <span style="font-size: 10.5px; font-weight: 700; color: #16a34a; margin-top: 4px;">Upload Context</span>
+                      <img id="img-whole" src="" alt="Whole View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="file-whole" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'whole')">
+                    <button type="button" id="remove-whole" onclick="clearSpecificAngleSlot('whole')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
+                  </div>
+
+                  <!-- CARD 2: TOP-DOWN VIEW (MANDATORY) -->
+                  <div id="card-top" style="background: white; border: 2px dashed #86efac; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <span style="font-size: 11px; font-weight: 800; color: #166534;">2. Top-Down</span>
+                      <span style="font-size: 9.5px; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 2px 5px; border-radius: 3px;">Req *</span>
+                    </div>
+                    <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">Perpendicular 90° overhead</p>
+
+                    <div id="preview-box-top" onclick="document.getElementById('file-top').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
+                      <span style="font-size: 26px;">📐</span>
+                      <span style="font-size: 10.5px; font-weight: 700; color: #16a34a; margin-top: 4px;">Upload Top-Down</span>
+                      <img id="img-top" src="" alt="Top-Down View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="file-top" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'top')">
+                    <button type="button" id="remove-top" onclick="clearSpecificAngleSlot('top')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
+                  </div>
+
+                  <!-- CARD 3: LEFT ANGLE (OPTIONAL) -->
+                  <div id="card-left" style="background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <span style="font-size: 11px; font-weight: 700; color: #334155;">3. Left Angle</span>
+                      <span style="font-size: 9.5px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 5px; border-radius: 3px;">Optional</span>
+                    </div>
+                    <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">45° oblique side angle</p>
+
+                    <div id="preview-box-left" onclick="document.getElementById('file-left').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
+                      <span style="font-size: 26px;">⬅️</span>
+                      <span style="font-size: 10.5px; font-weight: 600; color: #64748b; margin-top: 4px;">Upload Left</span>
+                      <img id="img-left" src="" alt="Left View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="file-left" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'left')">
+                    <button type="button" id="remove-left" onclick="clearSpecificAngleSlot('left')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
+                  </div>
+
+                  <!-- CARD 4: RIGHT ANGLE (OPTIONAL) -->
+                  <div id="card-right" style="background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <span style="font-size: 11px; font-weight: 700; color: #334155;">4. Right Angle</span>
+                      <span style="font-size: 9.5px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 5px; border-radius: 3px;">Optional</span>
+                    </div>
+                    <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">45° oblique side angle</p>
+
+                    <div id="preview-box-right" onclick="document.getElementById('file-right').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
+                      <span style="font-size: 26px;">➡️</span>
+                      <span style="font-size: 10.5px; font-weight: 600; color: #64748b; margin-top: 4px;">Upload Right</span>
+                      <img id="img-right" src="" alt="Right View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="file-right" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'right')">
+                    <button type="button" id="remove-right" onclick="clearSpecificAngleSlot('right')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
+                  </div>
+
+                  <!-- CARD 5: CLOSE-UP VIEW (OPTIONAL) -->
+                  <div id="card-close" style="background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <span style="font-size: 11px; font-weight: 700; color: #334155;">5. Close-Up</span>
+                      <span style="font-size: 9.5px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 5px; border-radius: 3px;">Optional</span>
+                    </div>
+                    <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">Cavity depth or fracture base</p>
+
+                    <div id="preview-box-close" onclick="document.getElementById('file-close').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
+                      <span style="font-size: 26px;">🔍</span>
+                      <span style="font-size: 10.5px; font-weight: 600; color: #64748b; margin-top: 4px;">Upload Depth</span>
+                      <img id="img-close" src="" alt="Close-up View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <input type="file" id="file-close" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'close')">
+                    <button type="button" id="remove-close" onclick="clearSpecificAngleSlot('close')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
+                  </div>
+
+                </div>
+                <!-- Upload Status Caption -->
+                <p id="multi-angle-status-text" style="font-size: 11.5px; color: #166534; font-weight: 600; margin: 12px 0 0 2px; text-align: left;">
+                  No photos selected yet.
+                </p>
               </div>
 
-              <!-- Official Advisory Notice -->
-              <div style="margin-bottom: 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; font-size: 11.5px; color: #92400e; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;">
-                <span style="font-size: 14px; flex-shrink: 0;">ℹ️</span>
-                <div>
-                  <strong>Survey Guideline:</strong> Slots 1 &amp; 2 are required to run computer vision inference. Slots 3 to 5 are optional for deep cavities or complex cracking to assist CPDO and CEO engineers.
+              <!-- GPS MAP DEFINER -->
+              <div class="form-group-inline" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-weight: 700; font-size: 13px; color: #334155;">GPS Location Coordinates <span style="color: #dc2626;">*</span>:</span>
+                  <span id="coords-display" style="font-size: 12.5px; background: #ecfdf5; color: #047857; border: 1px solid #34d399; padding: 3px 10px; border-radius: 20px; font-weight: 800; font-family: monospace;">Not Selected</span>
                 </div>
+
+                <button type="button" id="btn-define-map" style="background-color: #16a34a; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25); transition: 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">
+                  <span class="icon">📍</span> Define on Map
+                </button>
+
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
               </div>
-
-              <!-- 5-Slot Responsive Card Grid -->
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-
-                <!-- CARD 1: WHOLE VIEW (MANDATORY) -->
-                <div id="card-whole" style="background: white; border: 2px dashed #86efac; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 11px; font-weight: 800; color: #166534;">1. Whole View</span>
-                    <span style="font-size: 9.5px; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 2px 5px; border-radius: 3px;">Req *</span>
-                  </div>
-                  <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">Road context &amp; lane lane-view</p>
-
-                  <div id="preview-box-whole" onclick="document.getElementById('file-whole').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
-                    <span style="font-size: 26px;">🛣️</span>
-                    <span style="font-size: 10.5px; font-weight: 700; color: #16a34a; margin-top: 4px;">Upload Context</span>
-                    <img id="img-whole" src="" alt="Whole View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <input type="file" id="file-whole" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'whole')">
-                  <button type="button" id="remove-whole" onclick="clearSpecificAngleSlot('whole')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
-                </div>
-
-                <!-- CARD 2: TOP-DOWN VIEW (MANDATORY) -->
-                <div id="card-top" style="background: white; border: 2px dashed #86efac; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 11px; font-weight: 800; color: #166534;">2. Top-Down</span>
-                    <span style="font-size: 9.5px; font-weight: 700; background: #fee2e2; color: #dc2626; padding: 2px 5px; border-radius: 3px;">Req *</span>
-                  </div>
-                  <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">Perpendicular 90° overhead</p>
-
-                  <div id="preview-box-top" onclick="document.getElementById('file-top').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
-                    <span style="font-size: 26px;">📐</span>
-                    <span style="font-size: 10.5px; font-weight: 700; color: #16a34a; margin-top: 4px;">Upload Top-Down</span>
-                    <img id="img-top" src="" alt="Top-Down View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <input type="file" id="file-top" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'top')">
-                  <button type="button" id="remove-top" onclick="clearSpecificAngleSlot('top')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
-                </div>
-
-                <!-- CARD 3: LEFT ANGLE (OPTIONAL) -->
-                <div id="card-left" style="background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #334155;">3. Left Angle</span>
-                    <span style="font-size: 9.5px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 5px; border-radius: 3px;">Optional</span>
-                  </div>
-                  <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">45° oblique side angle</p>
-
-                  <div id="preview-box-left" onclick="document.getElementById('file-left').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
-                    <span style="font-size: 26px;">⬅️</span>
-                    <span style="font-size: 10.5px; font-weight: 600; color: #64748b; margin-top: 4px;">Upload Left</span>
-                    <img id="img-left" src="" alt="Left View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <input type="file" id="file-left" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'left')">
-                  <button type="button" id="remove-left" onclick="clearSpecificAngleSlot('left')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
-                </div>
-
-                <!-- CARD 4: RIGHT ANGLE (OPTIONAL) -->
-                <div id="card-right" style="background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #334155;">4. Right Angle</span>
-                    <span style="font-size: 9.5px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 5px; border-radius: 3px;">Optional</span>
-                  </div>
-                  <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">45° oblique side angle</p>
-
-                  <div id="preview-box-right" onclick="document.getElementById('file-right').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
-                    <span style="font-size: 26px;">➡️</span>
-                    <span style="font-size: 10.5px; font-weight: 600; color: #64748b; margin-top: 4px;">Upload Right</span>
-                    <img id="img-right" src="" alt="Right View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <input type="file" id="file-right" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'right')">
-                  <button type="button" id="remove-right" onclick="clearSpecificAngleSlot('right')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
-                </div>
-
-                <!-- CARD 5: CLOSE-UP VIEW (OPTIONAL) -->
-                <div id="card-close" style="background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; position: relative; transition: all 0.2s;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #334155;">5. Close-Up</span>
-                    <span style="font-size: 9.5px; font-weight: 600; background: #f1f5f9; color: #64748b; padding: 2px 5px; border-radius: 3px;">Optional</span>
-                  </div>
-                  <p style="margin: 0 0 8px; font-size: 10px; color: #64748b; line-height: 1.2;">Cavity depth or fracture base</p>
-
-                  <div id="preview-box-close" onclick="document.getElementById('file-close').click()" style="width: 100%; height: 110px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; position: relative;">
-                    <span style="font-size: 26px;">🔍</span>
-                    <span style="font-size: 10.5px; font-weight: 600; color: #64748b; margin-top: 4px;">Upload Depth</span>
-                    <img id="img-close" src="" alt="Close-up View" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                  </div>
-                  <input type="file" id="file-close" accept="image/*" style="display: none;" onchange="handleAngleImageSelected(this, 'close')">
-                  <button type="button" id="remove-close" onclick="clearSpecificAngleSlot('close')" style="display: none; margin-top: 6px; width: 100%; padding: 3px; font-size: 10.5px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700; cursor: pointer;">✕ Remove</button>
-                </div>
-
-              </div>
-              <!-- Upload Status Caption -->
-              <p id="multi-angle-status-text" style="font-size: 11.5px; color: #166534; font-weight: 600; margin: 12px 0 0 2px; text-align: left;">
-                No photos selected yet.
-              </p>
             </div>
 
-            <!-- GPS MAP DEFINER -->
-            <div class="form-group-inline" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-weight: 700; font-size: 13px; color: #334155;">GPS Location Coordinates <span style="color: #dc2626;">*</span>:</span>
-                <span id="coords-display" style="font-size: 12.5px; background: #ecfdf5; color: #047857; border: 1px solid #34d399; padding: 3px 10px; border-radius: 20px; font-weight: 800; font-family: monospace;">Not Selected</span>
-              </div>
-
-              <button type="button" id="btn-define-map" style="background-color: #16a34a; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25); transition: 0.2s;" onmouseover="this.style.backgroundColor='#15803d'" onmouseout="this.style.backgroundColor='#16a34a'">
-                <span class="icon">📍</span> Define on Map
+            <!-- FORM ACTIONS -->
+            <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+              <button type="button" id="submit-report-btn" class="btn-submit" onclick="submitRoadReport()" style="background-color: #166534; color: #ffffff; border: 1px solid #14532d; padding: 10px 24px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); transition: background-color 0.2s ease; display: inline-flex; align-items: center; gap: 8px;" onmouseover="this.style.backgroundColor='#14532d'" onmouseout="this.style.backgroundColor='#166534'">
+                Submit Report
               </button>
-
-              <input type="hidden" id="latitude" name="latitude">
-              <input type="hidden" id="longitude" name="longitude">
             </div>
-          </div>
 
-          <!-- FORM ACTIONS -->
-          <div class="form-actions" style="margin-top: 16px; display: flex; justify-content: flex-end;">
-            <button type="button" id="submit-report-btn" class="btn-submit" onclick="submitRoadReport()" style="background-color: #166534; color: #ffffff; border: 1px solid #14532d; padding: 10px 24px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); transition: background-color 0.2s ease; display: inline-flex; align-items: center; gap: 8px;" onmouseover="this.style.backgroundColor='#14532d'" onmouseout="this.style.backgroundColor='#166534'">
-              Submit Report
-            </button>
-          </div>
-
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
 
       <!-- ========================================== -->
       <!-- ⚙️ SETTINGS VIEW (BARANGAY GREEN THEME)     -->

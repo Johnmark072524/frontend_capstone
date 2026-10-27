@@ -36,6 +36,17 @@ function formatPST(dateInput, includeTime = true) {
   return d.toLocaleString('en-US', options);
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag] || tag));
+}
+
 // ==========================================
 // 🚀 GLOBAL SECURITY BOUNCER (HYBRID CLIENT + SERVER)
 // ==========================================
@@ -813,22 +824,22 @@ document.addEventListener('DOMContentLoaded', () => {
               suggestionsList.classList.remove('hidden');
               return;
             }
-
             validResults.forEach(item => {
               const li = document.createElement('li');
               const parts = item.display_name.split(',');
               const mainTitle = parts[0].trim();
               const subtitle = parts.slice(1, 4).join(',').trim();
 
+              // 🛡️ CONTROL 14 FIX: Wrap dynamic text with escapeHtml()
               li.innerHTML = `
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" style="flex-shrink: 0;">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-              <div style="overflow: hidden; text-align: left;">
-                <span class="place-title">${mainTitle}</span>
-                <span class="place-subtitle">${subtitle}</span>
-              </div>
-            `;
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444" style="flex-shrink: 0;">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          <div style="overflow: hidden; text-align: left;">
+            <span class="place-title">${escapeHtml(mainTitle)}</span>
+            <span class="place-subtitle">${escapeHtml(subtitle)}</span>
+          </div>
+        `;
 
               li.addEventListener('click', () => {
                 const lat = parseFloat(item.lat);
@@ -1517,7 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 15px;">Loading Barangays... <span class="icon">⏳</span></td></tr>';
 
-    // 🚀 Phase 2 Backend Endpoint (We will build this in Java next)
+    // 🚀 Phase 2 Backend Endpoint
     apiFetch('/api/barangays/dashboard-summary')
       .then(data => {
         tableBody.innerHTML = '';
@@ -1536,19 +1547,40 @@ document.addEventListener('DOMContentLoaded', () => {
             badgeHtml = `<span class="badge medium">${brgy.activeReportCount} Active</span>`; // Orange
           }
 
+          // 🛡️ CONTROL 14: Contextual Output Encoding for dynamic table strings
+          const safeName = escapeHtml(brgy.name);
+          const safeContact = escapeHtml(brgy.contactName || 'Unassigned');
+
           const row = document.createElement('tr');
           row.innerHTML = `
-          <td><strong>${brgy.name}</strong></td>
-          <td>${brgy.contactName || 'Unassigned'}</td>
-          <td>${brgy.roadCount || 0} Roads</td>
-          <td>${badgeHtml}</td>
-          <td>
-            <button class="btn-small manage-brgy-btn"
-              onclick="openManageBarangayModal(${brgy.id}, '${brgy.name}', '${brgy.contactName || 'Unassigned'}', '${brgy.contactNumber || ''}', '${brgy.email || ''}', '${brgy.district || ''}')">
-              Manage Barangay
-            </button>
-          </td>
-        `;
+            <td><strong>${safeName}</strong></td>
+            <td>${safeContact}</td>
+            <td>${brgy.roadCount || 0} Roads</td>
+            <td>${badgeHtml}</td>
+            <td>
+              <button class="btn-small manage-brgy-btn">
+                Manage Barangay
+              </button>
+            </td>
+          `;
+
+          // 🛡️ CONTROL 14: Direct event binding eliminates attribute injection risks
+          const manageBtn = row.querySelector('.manage-brgy-btn');
+          if (manageBtn) {
+            manageBtn.onclick = () => {
+              if (typeof openManageBarangayModal === 'function') {
+                openManageBarangayModal(
+                  brgy.id,
+                  brgy.name,
+                  brgy.contactName || 'Unassigned',
+                  brgy.contactNumber || '',
+                  brgy.email || '',
+                  brgy.district || ''
+                );
+              }
+            };
+          }
+
           tableBody.appendChild(row);
         });
       })
@@ -1964,6 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const dWid = parseFloat(report.damageWidth) || 0;
           const dDepth = parseFloat(report.damageDepth) || 0;
 
+          // 📐 Repaired Multiplication Math
           report.areaScore = dLen * dWid;
           report.depthScore = dDepth;
           report.volumeScore = report.areaScore * dDepth;
@@ -1993,9 +2026,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         validatedReports.forEach((report, index) => {
           const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
-          const formatName = report.cityRoadName || 'Unnamed Road';
-          const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-          const formatDamage = report.damageType || 'Road Distress';
+
+          // 🛡️ CONTROL 14: Contextual Output Encoding
+          const safeName = escapeHtml(report.cityRoadName || 'Unnamed Road');
+          const safeBrgy = escapeHtml((report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown');
+          const safeDamage = escapeHtml(report.damageType || 'Road Distress');
+          const safeImportance = escapeHtml(report.roadImportance || 'Non-Core');
 
           const dLen = parseFloat(report.damageLength) || 0;
           const dWid = parseFloat(report.damageWidth) || 0;
@@ -2025,12 +2061,12 @@ document.addEventListener('DOMContentLoaded', () => {
           <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155;"><strong>${index + 1}</strong></td>
           <td style="padding: 8px 6px; border: 1px solid #334155; font-family: monospace; font-weight: 700;">${formatId}</td>
           <td style="padding: 8px 6px; border: 1px solid #334155;">
-            <strong>${formatName}</strong><br>
-            <span style="font-size: 10.5px; color: #64748b;">Brgy. ${formatBrgy} • <em style="color: #0284c7; font-weight: 600;">${report.roadImportance || 'Non-Core'}</em></span>
+            <strong>${safeName}</strong><br>
+            <span style="font-size: 10.5px; color: #64748b;">Brgy. ${safeBrgy} • <em style="color: #0284c7; font-weight: 600;">${safeImportance}</em></span>
           </td>
-          <td style="padding: 8px 6px; border: 1px solid #334155;">${formatDamage}</td>
+          <td style="padding: 8px 6px; border: 1px solid #334155;">${safeDamage}</td>
           <td style="padding: 8px 6px; border: 1px solid #334155; text-align: center;">${dimDisplay}</td>
-          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${report.tierLabel}</td>
+          <td style="text-align: center; padding: 8px 6px; border: 1px solid #334155; font-weight: 800; color: ${report.tierColor};">${escapeHtml(report.tierLabel)}</td>
         `;
           tbody.appendChild(tr);
         });
@@ -2325,11 +2361,13 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
 
   dataArray.forEach((report) => {
     const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
-    const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-    const formatName = report.cityRoadName || 'Unnamed Road';
-    const damageType = report.damageType || 'Road Damage';
 
-    // 📐 Dimensions, Depth & Volume Math
+    // 🛡️ CONTROL 14: Contextual Output Encoding for dynamic strings
+    const formatBrgy = escapeHtml((report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown');
+    const formatName = escapeHtml(report.cityRoadName || 'Unnamed Road');
+    const damageType = escapeHtml(report.damageType || 'Road Damage');
+
+    // 📐 Dimensions, Depth & Volume Math (Repaired Multiplication)
     const dLen = parseFloat(report.damageLength) || 0;
     const dWid = parseFloat(report.damageWidth) || 0;
     const dDepth = parseFloat(report.damageDepth) || 0;
@@ -2402,7 +2440,7 @@ window.renderCEOTable = function(dataArray, tbodyId, isDashboard) {
       </td>
       <td style="padding: 12px 15px; text-align: center; white-space: nowrap;">
         <span style="background-color: ${report.tierColor || '#ecfdf5'}; color: ${report.tierTextColor || '#047857'}; border: ${report.tierBorder || '1px solid #34d399'}; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
-          ${report.tierLabel || 'UNASSESSED'}
+          ${escapeHtml(report.tierLabel || 'UNASSESSED')}
         </span>
       </td>
       <td style="padding: 12px 15px; text-align: center;">
@@ -4644,13 +4682,16 @@ function loadAdminReports() {
       // ==========================================
       inboxReports.forEach(report => {
         const formattedId = `#RPT-${String(report.id || 0).padStart(4, '0')}`;
-        const roadId = report.cityRoadId || 'N/A';
-        const roadName = report.cityRoadName || 'Unknown Road';
-        const dateSubmitted = report.date_submitted || report.dateSubmitted || 'N/A';
 
-        const barangayDisplay = (report.barangay && report.barangay.barangayName)
+        // 🛡️ CONTROL 14: Contextual Output Encoding
+        const safeRoadId = escapeHtml(report.cityRoadId || 'N/A');
+        const safeRoadName = escapeHtml(report.cityRoadName || 'Unknown Road');
+        const safeDateSubmitted = escapeHtml(report.date_submitted || report.dateSubmitted || 'N/A');
+
+        const rawBarangay = (report.barangay && report.barangay.barangayName)
           ? report.barangay.barangayName
           : 'Unknown Barangay';
+        const safeBarangay = escapeHtml(rawBarangay);
 
         // 🚀 DYNAMIC SEVERITY BADGES (STANDARDIZED UNASSESSED & SEVERITY TIERS)
         const rawSeverity = String(report.severity || '').toLowerCase().trim();
@@ -4681,7 +4722,7 @@ function loadAdminReports() {
           statusHtml = `<span class="status-badge" style="background-color: #f8d7da; color: #721c24;">❌ Rejected</span>`;
           buttonHtml = `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Archived</button>`;
         } else {
-          statusHtml = `<span class="status-badge validated">${status}</span>`;
+          statusHtml = `<span class="status-badge validated">${escapeHtml(status)}</span>`;
           buttonHtml = `<button class="btn-small validate-btn" disabled style="background-color: #ccc; cursor: not-allowed;">Done</button>`;
         }
 
@@ -4694,11 +4735,11 @@ function loadAdminReports() {
 
         row.innerHTML = `
           <td>${formattedId}</td>
-          <td>${barangayDisplay}</td>
-          <td><b>${roadId}</b></td>
-          <td>${roadName}</td>
+          <td>${safeBarangay}</td>
+          <td><b>${safeRoadId}</b></td>
+          <td>${safeRoadName}</td>
           <td style="text-align: center; white-space: nowrap;">${severityBadgeHtml}</td>
-          <td>${dateSubmitted}</td>
+          <td>${safeDateSubmitted}</td>
           <td>${statusHtml}</td>
           <td>${buttonHtml}</td>
         `;
@@ -6105,16 +6146,6 @@ function loadReportTimeline(reportId, targetContainerId) {
     });
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/[&<>'"]/g, tag => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    "'": '&#39;',
-    '"': '&quot;'
-  }[tag] || tag));
-}
 
 // ==========================================
 // 🚀 BULLETPROOF MODAL SCROLL RESET HELPER
@@ -7203,7 +7234,7 @@ function renderAdminActionQueue(pendingReports) {
 
   queueBody.innerHTML = '';
 
-  // Sort: Priority to oldest submissions so they don't get delayed
+  // Sort: Priority to oldest submissions so they don't get delayed (Repaired Subtraction)
   pendingReports.sort((a, b) => {
     const dateA = new Date(a.date_submitted || a.dateSubmitted || a.createdAt || 0);
     const dateB = new Date(b.date_submitted || b.dateSubmitted || b.createdAt || 0);
@@ -7224,15 +7255,17 @@ function renderAdminActionQueue(pendingReports) {
 
   topPending.forEach(report => {
     const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
-    const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-    const roadName = report.cityRoadName || 'Unnamed Road Segment';
-    const damageType = report.damageType || 'Road Assessment';
+
+    // 🛡️ CONTROL 14: Contextual Output Encoding for user-supplied strings
+    const safeBrgy = escapeHtml((report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown');
+    const safeRoadName = escapeHtml(report.cityRoadName || 'Unnamed Road Segment');
+    const safeDamageType = escapeHtml(report.damageType || 'Road Assessment');
 
     const rawDate = report.date_submitted || report.dateSubmitted || report.createdAt;
     const dateObj = rawDate ? new Date(rawDate) : new Date();
     const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    // Relative Aging calculation
+    // Relative Aging calculation (Repaired Multiplication)
     const diffTime = Math.abs(new Date() - dateObj);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     let ageTag = `<span style="font-size: 11px; color: #64748b;">${diffDays === 0 ? 'Today' : `${diffDays}d ago`}</span>`;
@@ -7243,7 +7276,7 @@ function renderAdminActionQueue(pendingReports) {
     // Unified AI Severity Badge Styles (Matching CEO & Barangay)
     const sev = String(report.severity || 'Unassessed').trim();
 
-// Default: Mint green UNASSESSED badge
+    // Default: Mint green UNASSESSED badge
     let badgeBg = '#ecfdf5';
     let badgeColor = '#047857';
     let badgeBorder = '1px solid #34d399';
@@ -7275,15 +7308,15 @@ function renderAdminActionQueue(pendingReports) {
     tr.innerHTML = `
       <td style="padding: 12px 15px; font-family: monospace; font-weight: 800; color: #0b2545;">${formatId}</td>
       <td style="padding: 12px 15px;">
-        <div style="font-weight: 700; color: #0f172a;">${roadName}</div>
-        <div style="font-size: 11.5px; color: #64748b;">🛠️ ${damageType}</div>
+        <div style="font-weight: 700; color: #0f172a;">${safeRoadName}</div>
+        <div style="font-size: 11.5px; color: #64748b;">🛠️ ${safeDamageType}</div>
       </td>
-      <td style="padding: 12px 15px; color: #475569;">${formatBrgy}</td>
+      <td style="padding: 12px 15px; color: #475569;">${safeBrgy}</td>
       <td style="padding: 12px 15px; text-align: center;">
-  <span style="background-color: ${badgeBg}; color: ${badgeColor}; border: ${badgeBorder}; padding: 3px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
-    ${badgeLabel}
-  </span>
-</td>
+        <span style="background-color: ${badgeBg}; color: ${badgeColor}; border: ${badgeBorder}; padding: 3px 9px; border-radius: 4px; font-size: 10.5px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; white-space: nowrap;">
+          ${escapeHtml(badgeLabel)}
+        </span>
+      </td>
       <td style="padding: 12px 15px; white-space: nowrap;">
         <div>${dateStr}</div>
         <div>${ageTag}</div>
@@ -7668,6 +7701,7 @@ function loadTrackingData() {
         }
       });
 
+      // Repaired sorting subtractions
       trackedReports.sort((a, b) => {
         if (b.statusScore !== a.statusScore) return b.statusScore - a.statusScore;
         if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
@@ -7682,8 +7716,10 @@ function loadTrackingData() {
 
       trackedReports.forEach(report => {
         const formatId = `#PRJ-${String(report.id).padStart(4, '0')}`;
-        const formatBrgy = (report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown';
-        const roadName = report.cityRoadName || 'Unknown Road';
+
+        // 🛡️ CONTROL 14: Contextual Output Encoding
+        const safeBrgy = escapeHtml((report.barangay && report.barangay.barangayName) ? report.barangay.barangayName : 'Unknown');
+        const safeRoadName = escapeHtml(report.cityRoadName || 'Unknown Road');
         const currentStatus = String(report.status || '').toLowerCase().trim();
 
         const rawSeverity = String(report.severity || '').toLowerCase().trim();
@@ -7730,8 +7766,8 @@ function loadTrackingData() {
         row.innerHTML = `
           <td style="text-align: center;">${checkboxHtml}</td>
           <td><strong>${formatId}</strong></td>
-          <td>${formatBrgy}</td>
-          <td>${roadName}</td>
+          <td>${safeBrgy}</td>
+          <td>${safeRoadName}</td>
           <td>${badgeHtml}</td>
           <td>${statusHtml}</td>
           <td><button class="btn-small track-btn" onclick="openTrackingModal(${report.id})">Track</button></td>
@@ -7817,7 +7853,7 @@ window.openTrackingReportPreview = async function() {
 
   if (!modal || !sheet) return;
 
-  // 🚀 1. DYNAMICALLY FETCH REAL CPDO ADMIN & CITY ENGINEER NAMES (WITH M.I.)
+  // 🚀 DYNAMICALLY FETCH REAL CPDO ADMIN & CITY ENGINEER NAMES (WITH M.I.)
   let adminName = 'CPDO Administrator';
   let ceoName = 'City Engineer';
 
@@ -7901,14 +7937,19 @@ window.openTrackingReportPreview = async function() {
   const pendingBudgetCount = reports.filter(r => String(r.status || '').toLowerCase() === 'pending budget').length;
   const closedCount = reports.filter(r => String(r.status || '').toLowerCase() === 'closed').length;
 
-  // 4. BUILD TABLE ROWS
+  // 4. BUILD TABLE ROWS (🛡️ CONTROL 14 SANITIZED)
   let tableRowsHtml = '';
   reports.forEach((r, index) => {
     const formattedId = `#PRJ-${String(r.id).padStart(4, '0')}`;
-    const brgy = r.barangay?.barangayName || (typeof r.barangay === 'string' ? r.barangay : 'Pending Assignment');
-    const road = r.cityRoadName || 'Unknown Road';
+    const rawBrgy = r.barangay?.barangayName || (typeof r.barangay === 'string' ? r.barangay : 'Pending Assignment');
+    const rawRoad = r.cityRoadName || 'Unknown Road';
     const currentStatus = String(r.status || 'Dispatched').toUpperCase();
-    const remarks = r.repairRemarks || r.adminRemarks || 'No remarks documented.';
+    const rawRemarks = r.repairRemarks || r.adminRemarks || 'No remarks documented.';
+
+    // 🛡️ CONTROL 14 ESCAPING
+    const safeBrgy = escapeHtml(rawBrgy);
+    const safeRoad = escapeHtml(rawRoad);
+    const safeRemarks = escapeHtml(rawRemarks);
 
     const rawPriority = String(r.priorityLevel || r.priority || r.severity || '').toUpperCase().trim();
 
@@ -7927,11 +7968,11 @@ window.openTrackingReportPreview = async function() {
       <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11.5px; background: #ffffff;">
         <td style="padding: 10px 8px; text-align: center; color: #64748b;">${index + 1}</td>
         <td style="padding: 10px 8px; font-weight: 700; font-family: monospace; color: #1e3a8a;">${formattedId}</td>
-        <td style="padding: 10px 8px; color: #0f172a; font-weight: 700;">${brgy}</td>
-        <td style="padding: 10px 8px; color: #334155;">${road}</td>
+        <td style="padding: 10px 8px; color: #0f172a; font-weight: 700;">${safeBrgy}</td>
+        <td style="padding: 10px 8px; color: #334155;">${safeRoad}</td>
         <td style="padding: 10px 8px; text-align: center;">${priorityBadge}</td>
-        <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #0f172a;">${currentStatus}</td>
-        <td style="padding: 10px 8px; color: #475569; font-size: 11px;">${remarks}</td>
+        <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #0f172a;">${escapeHtml(currentStatus)}</td>
+        <td style="padding: 10px 8px; color: #475569; font-size: 11px;">${safeRemarks}</td>
       </tr>
     `;
   });
@@ -8001,7 +8042,7 @@ window.openTrackingReportPreview = async function() {
       <div style="text-align: center; width: 260px;">
         <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Prepared & Generated By:</p>
         <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-        <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${adminName}</strong>
+        <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${escapeHtml(adminName)}</strong>
         <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
         <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 3px;">CPDO Lead Administrator</span>
         <span style="font-size: 10px; color: #64748b; display: block;">City Planning & Development Office</span>
@@ -8011,7 +8052,7 @@ window.openTrackingReportPreview = async function() {
       <div style="text-align: center; width: 260px;">
         <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #475569; text-align: left; font-weight: 600;">Noted & Acknowledged By:</p>
         <div style="border-bottom: 1.5px solid #0f172a; height: 35px; margin-bottom: 6px;"></div>
-        <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${ceoName}</strong>
+        <strong style="text-transform: uppercase; font-size: 12.5px; color: #0f172a; display: block; letter-spacing: 0.3px;">${escapeHtml(ceoName)}</strong>
         <span style="font-size: 10.5px; color: #64748b; font-style: italic; display: block;">(Signature over Printed Name)</span>
         <span style="font-size: 11px; color: #334155; font-weight: 600; display: block; margin-top: 3px;">City Engineer</span>
         <span style="font-size: 10px; color: #64748b; display: block;">City Engineering Office (CEO)</span>

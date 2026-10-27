@@ -1,25 +1,60 @@
 /**
  * RoadWise SJDM - Production Session Guard
- * Implements 15-minute idle sliding expiration, 2-minute countdown modal,
- * and 8-hour absolute maximum shift cap.
+ * Implements:
+ * 1. Zero-Flicker Protected Route Cloaking (Anti-FOUC)
+ * 2. 15-minute idle sliding expiration
+ * 3. 2-minute countdown modal (triggers at minute 13)
+ * 4. 8-hour absolute maximum shift cap
+ * 5. Active server-side heartbeat synchronization (/verify-session)
  */
 (function initSessionGuard() {
-  const IDLE_LIMIT_MS = 15 * 60 * 1000;      // 15 Minutes
-  const WARNING_LIMIT_MS = 13 * 60 * 1000;   // 13 Minutes (Triggers 2-min warning)
-  const ABSOLUTE_LIMIT_MS = 8 * 60 * 60 * 1000; // 8 Hours
+  const currentUserId = sessionStorage.getItem("userId");
+  const currentUserRole = sessionStorage.getItem("userRole");
+
+  const currentPath = window.location.pathname.toLowerCase();
+  const isLoginPage = currentPath.endsWith("login.html") || currentPath.endsWith("/") || currentPath === "";
+
+  // 🛡️ 1. IMMEDIATE SECURITY INTERCEPTION
+  if (!isLoginPage) {
+    if (!currentUserId || !currentUserRole) {
+      // Keep DOM completely hidden & redirect instantly
+      document.documentElement.style.display = "none";
+      window.location.replace("login.html?reason=unauthorized");
+      return;
+    }
+  }
+
+  // 🔓 2. UNCLOAK DOM (User is authenticated, reveal page cleanly)
+  function revealDOM() {
+    const cloak = document.getElementById("rw-auth-cloak");
+    if (cloak) {
+      cloak.remove();
+    }
+    document.documentElement.style.display = "";
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", revealDOM);
+  } else {
+    revealDOM();
+  }
+
+  // 🕒 3. LIFECYCLE CONSTANTS (In Milliseconds)
+  const IDLE_LIMIT_MS = 15 * 60 * 1000;         // 15 Minutes Idle Sliding Limit
+  const WARNING_LIMIT_MS = 13 * 60 * 1000;      // 13 Minutes (Triggers 2-min warning modal)
+  const ABSOLUTE_LIMIT_MS = 8 * 60 * 60 * 1000; // 8 Hours Absolute Municipal Shift Cap
 
   let lastActivity = Date.now();
   let warningActive = false;
   let countdownTimer = null;
 
-  // Retrieve or initialize login timestamp
   let loginTime = parseInt(sessionStorage.getItem("rw_login_time"), 10);
   if (!loginTime) {
     loginTime = Date.now();
     sessionStorage.setItem("rw_login_time", loginTime.toString());
   }
 
-  // 1. Inject Styles for Warning Modal
+  // 4. Inject Styles for Warning Modal
   const style = document.createElement("style");
   style.innerHTML = `
     .rw-timeout-backdrop {
@@ -56,39 +91,42 @@
   `;
   document.head.appendChild(style);
 
-  // 2. Inject Modal Elements into Document Body
-  const modalMarkup = document.createElement("div");
-  modalMarkup.className = "rw-timeout-backdrop";
-  modalMarkup.id = "rwTimeoutModal";
-  modalMarkup.innerHTML = `
-    <div class="rw-timeout-modal">
-      <div class="rw-timeout-icon">⏱</div>
-      <div class="rw-timeout-title">Session Inactivity Warning</div>
-      <div class="rw-timeout-desc">
-        You have been inactive for several minutes. For municipal data security, your session will automatically terminate.
+  // 5. Inject Modal Elements into Document Body
+  function mountModal() {
+    if (document.getElementById("rwTimeoutModal")) return;
+    const modalMarkup = document.createElement("div");
+    modalMarkup.className = "rw-timeout-backdrop";
+    modalMarkup.id = "rwTimeoutModal";
+    modalMarkup.innerHTML = `
+      <div class="rw-timeout-modal">
+        <div class="rw-timeout-icon">⏱</div>
+        <div class="rw-timeout-title">Session Inactivity Warning</div>
+        <div class="rw-timeout-desc">
+          You have been inactive for several minutes. For municipal data security, your session will automatically terminate.
+        </div>
+        <div class="rw-timeout-clock" id="rwTimeoutTimer">02:00</div>
+        <div class="rw-timeout-actions">
+          <button class="rw-timeout-btn-stay" id="rwTimeoutStayBtn">Stay Logged In</button>
+          <button class="rw-timeout-btn-exit" id="rwTimeoutExitBtn">Log Out</button>
+        </div>
       </div>
-      <div class="rw-timeout-clock" id="rwTimeoutTimer">02:00</div>
-      <div class="rw-timeout-actions">
-        <button class="rw-timeout-btn-stay" id="rwTimeoutStayBtn">Stay Logged In</button>
-        <button class="rw-timeout-btn-exit" id="rwTimeoutExitBtn">Log Out</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modalMarkup);
+    `;
+    document.body.appendChild(modalMarkup);
 
-  const backdrop = document.getElementById("rwTimeoutModal");
-  const clockText = document.getElementById("rwTimeoutTimer");
-  const stayBtn = document.getElementById("rwTimeoutStayBtn");
-  const exitBtn = document.getElementById("rwTimeoutExitBtn");
+    document.getElementById("rwTimeoutStayBtn").addEventListener("click", () => extendSession());
+    document.getElementById("rwTimeoutExitBtn").addEventListener("click", () => terminateSession("manual"));
+  }
 
-  stayBtn.addEventListener("click", () => extendSession());
-  exitBtn.addEventListener("click", () => terminateSession("manual"));
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountModal);
+  } else {
+    mountModal();
+  }
 
-  // 3. User Interaction Activity Listener (Debounced)
+  // 6. User Activity Tracking (Debounced to 2 Seconds)
   let lastEventRecord = 0;
   function registerActivity() {
     const now = Date.now();
-    // Throttle checks to once every 2 seconds to keep browser operations lightweight
     if (now - lastEventRecord > 2000) {
       lastEventRecord = now;
       if (!warningActive) {
@@ -101,7 +139,7 @@
     window.addEventListener(evt, registerActivity, { passive: true });
   });
 
-  // 4. Timer Interval Worker (Checks every second)
+  // 7. Timer Interval Worker (Checks every second)
   setInterval(() => {
     const now = Date.now();
     const idleDuration = now - lastActivity;
@@ -127,7 +165,9 @@
 
   function triggerWarning() {
     warningActive = true;
-    backdrop.classList.add("active");
+    const backdrop = document.getElementById("rwTimeoutModal");
+    const clockText = document.getElementById("rwTimeoutTimer");
+    if (backdrop) backdrop.classList.add("active");
 
     countdownTimer = setInterval(() => {
       const remainingMs = Math.max(0, IDLE_LIMIT_MS - (Date.now() - lastActivity));
@@ -135,7 +175,7 @@
       const min = String(Math.floor(totalSec / 60)).padStart(2, "0");
       const sec = String(totalSec % 60).padStart(2, "0");
 
-      clockText.textContent = `${min}:${sec}`;
+      if (clockText) clockText.textContent = `${min}:${sec}`;
 
       if (remainingMs <= 0) {
         clearInterval(countdownTimer);
@@ -144,31 +184,38 @@
     }, 1000);
   }
 
-  function extendSession() {
+  window.extendSession = function() {
     warningActive = false;
     clearInterval(countdownTimer);
-    backdrop.classList.remove("active");
+    const backdrop = document.getElementById("rwTimeoutModal");
+    if (backdrop) backdrop.classList.remove("active");
     lastActivity = Date.now();
 
-    // Ping backend /verify-session to advance server-side activity clock
+    // 🔄 PING BACKEND: Advance sliding clock and verify live database account status
     const userId = sessionStorage.getItem("userId");
     const role = sessionStorage.getItem("userRole");
     const baseUrl = typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "";
 
-    if (userId && role && baseUrl) {
+    if (userId && role) {
       fetch(`${baseUrl}/api/auth/verify-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: userId, role: role })
-      }).catch(err => console.warn("Session ping error:", err));
+      })
+        .then(async res => {
+          if (!res.ok) {
+            terminateSession("revoked");
+          }
+        })
+        .catch(err => console.warn("Session ping error:", err));
     }
-  }
+  };
 
   function terminateSession(reason) {
     const userId = sessionStorage.getItem("userId");
     const baseUrl = typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "";
 
-    if (userId && baseUrl) {
+    if (userId) {
       fetch(`${baseUrl}/api/auth/logout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -180,6 +227,8 @@
     localStorage.removeItem("user");
     localStorage.removeItem("currentUser");
 
+    // Hide DOM completely while leaving page
+    document.documentElement.style.display = "none";
     window.location.replace(`login.html?reason=${reason}`);
   }
 })();

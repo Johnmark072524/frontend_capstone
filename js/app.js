@@ -3871,7 +3871,7 @@ function compressImage(file, maxDimension = 1024, quality = 0.82) {
 }
 
 // =========================================================
-// 📸 MULTI-ANGLE CARD HANDLERS & PREVIEWS
+// 📸 MULTI-ANGLE CARD HANDLERS & PREVIEWS (CONTROL 15 HARDENED)
 // =========================================================
 window.handleAngleImageSelected = function (inputEl, angleKey) {
   if (!inputEl.files || inputEl.files.length === 0) return;
@@ -3879,9 +3879,18 @@ window.handleAngleImageSelected = function (inputEl, angleKey) {
   const file = inputEl.files[0];
   const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
+  // 1. Format allow-list check
   if (!validTypes.includes(file.type.toLowerCase())) {
     clearSpecificAngleSlot(angleKey);
     if (typeof showToast === 'function') showToast("Invalid format! Please upload JPG, PNG, or WebP.", "error");
+    return;
+  }
+
+  // 2. 🛡️ CONTROL 15: 5MB File size threshold check
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  if (file.size > MAX_SIZE) {
+    clearSpecificAngleSlot(angleKey);
+    if (typeof showToast === 'function') showToast("File is too large! Maximum allowed size is 5MB.", "error");
     return;
   }
 
@@ -6467,8 +6476,17 @@ window.handleEditAngleSelected = function(inputEl, angleKey) {
   const file = inputEl.files[0];
   const validImageTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
+  // 1. Format allow-list check
   if (!validImageTypes.includes(file.type.toLowerCase())) {
     if (typeof showToast === 'function') showToast("Invalid format! Please upload a JPG, PNG, or WebP photo.", "error");
+    inputEl.value = "";
+    return;
+  }
+
+  // 2. 🛡️ CONTROL 15: 5MB File size threshold check
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  if (file.size > MAX_SIZE) {
+    if (typeof showToast === 'function') showToast("File is too large! Maximum allowed size is 5MB.", "error");
     inputEl.value = "";
     return;
   }

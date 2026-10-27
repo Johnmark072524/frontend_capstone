@@ -211,6 +211,17 @@
     }
   };
 
+  // 🛡️ CONTROL 10: Kill bfcache (Back-Forward Cache) restoration on shared terminals
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2)) {
+      const activeUser = sessionStorage.getItem("userId");
+      if (!activeUser) {
+        document.documentElement.style.display = "none";
+        window.location.replace("login.html?reason=session_ended");
+      }
+    }
+  });
+
   function terminateSession(reason) {
     const userId = sessionStorage.getItem("userId");
     const baseUrl = typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "";

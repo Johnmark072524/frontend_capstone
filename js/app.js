@@ -1762,7 +1762,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-// --- SECURE LOGOUT LOGIC (WITH CONFIRMATION MODAL) ---
+// --- SECURE LOGOUT LOGIC (WITH CONFIRMATION MODAL & SERVER DE-REGISTRATION) ---
   const logoutBtn = document.querySelector('.logout-btn');
   const logoutConfirmModal = document.getElementById('logout-confirm-modal');
   const btnConfirmLogout = document.getElementById('btn-confirm-logout');
@@ -1776,7 +1776,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnConfirmLogout) {
     btnConfirmLogout.addEventListener('click', () => {
+      const userId = sessionStorage.getItem("userId");
+      const baseUrl = typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "";
+
+      // 1. 🛡️ Notify Spring Boot to clear activeSessionTracker and write audit log
+      if (userId) {
+        fetch(`${baseUrl}/api/auth/logout`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: userId })
+        }).catch(() => {});
+      }
+
+      // 2. 🛡️ Clear all local tokens and session data
       sessionStorage.clear();
+      localStorage.removeItem("user");
+      localStorage.removeItem("currentUser");
+
+      // 3. 🛡️ CONTROL 10: Replace history entry so browser Back-button cannot return
       window.location.replace('login.html');
     });
   }

@@ -13023,7 +13023,10 @@ window.executeAnnualRollover = function() {
     btn.style.opacity = "0.7";
   }
 
-  apiFetch("/api/reports/rollover-annual-cycle", {
+  // 🚀 PASS CURRENT ADMIN USER ID FOR BACKEND RBAC (CONTROL 6)
+  const currentAdminId = sessionStorage.getItem("userId") || "";
+
+  apiFetch(`/api/reports/rollover-annual-cycle?userId=${encodeURIComponent(currentAdminId)}`, {
     method: "POST"
   })
     .then(res => {
@@ -13049,6 +13052,8 @@ window.executeAnnualRollover = function() {
     .finally(() => {
       if (btn) {
         btn.innerHTML = "Execute Rollover";
+        btn.style.pointerEvents = "auto";
+        btn.style.opacity = "1";
       }
     });
 };

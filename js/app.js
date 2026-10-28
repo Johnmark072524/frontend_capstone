@@ -3626,6 +3626,7 @@ window.executeBatchDeferral = function() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       repairRemarks: reason,
+      userId: currentUserId,
       reportIds: selectedIds
     })
   })

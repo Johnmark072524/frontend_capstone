@@ -11245,13 +11245,32 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Emergency Password Reset Handler
-  const btnConfirmReset = document.getElementById('btn-confirm-reset');
+  // ==========================================
+  // 🚨 EMERGENCY PASSWORD RESET HANDLER
+  // ==========================================
+  const btnEmergencyReset = document.getElementById('btn-emergency-reset');
   const resetConfirmModal = document.getElementById('reset-confirm-modal');
+  const btnConfirmReset = document.getElementById('btn-confirm-reset');
 
+  // 1. OPEN the confirm popup when clicking "Reset Password"
+  if (btnEmergencyReset && resetConfirmModal) {
+    btnEmergencyReset.onclick = function(e) {
+      e.preventDefault();
+      resetConfirmModal.classList.remove('hidden');
+      resetConfirmModal.style.display = 'flex';
+    };
+  }
+
+  // 2. EXECUTE the reset when clicking "Yes, Reset Password" inside the popup
   if (btnConfirmReset) {
-    btnConfirmReset.addEventListener('click', () => {
-      const userId = document.getElementById('manage-user-id').value;
+    btnConfirmReset.onclick = function(e) {
+      e.preventDefault();
+
+      const userId = document.getElementById('manage-user-id')?.value;
+      if (!userId) {
+        if (typeof showToast === 'function') showToast("Could not determine user ID.", "error");
+        return;
+      }
 
       btnConfirmReset.innerHTML = "⏳ Resetting...";
       btnConfirmReset.disabled = true;
@@ -11266,7 +11285,9 @@ document.addEventListener("DOMContentLoaded", () => {
             resetConfirmModal.classList.add('hidden');
             resetConfirmModal.style.display = 'none';
           }
-          if (typeof showToast === 'function') showToast("Password successfully reset to default (RoadWise2026!)", "success");
+          if (typeof showToast === 'function') {
+            showToast("Password successfully reset to default (RoadWise2026!)", "success");
+          }
         })
         .catch(err => {
           console.error("Error resetting password:", err);
@@ -11274,15 +11295,15 @@ document.addEventListener("DOMContentLoaded", () => {
             resetConfirmModal.classList.add('hidden');
             resetConfirmModal.style.display = 'none';
           }
-          if (typeof showToast === 'function') showToast("Failed to reset password.", "error");
+          const msg = (err && err.message) ? err.message : "Failed to reset password.";
+          if (typeof showToast === 'function') showToast(msg, "error");
         })
         .finally(() => {
           btnConfirmReset.innerHTML = "Yes, Reset Password";
           btnConfirmReset.disabled = false;
         });
-    });
+    };
   }
-});
 
 // ==========================================
 // 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE (WITH ROAD SEARCH)

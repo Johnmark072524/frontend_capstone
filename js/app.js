@@ -13062,18 +13062,22 @@ window.loadMaintenanceStatus = function() {
 
 // 6. Toggle Maintenance Mode
 window.toggleMaintenanceMode = function(isLocked) {
-  apiFetch(`/api/settings/toggle-maintenance?status=${isLocked}`, { method: "POST" })
+  const currentAdminId = sessionStorage.getItem("userId") || "";
+
+  apiFetch(`/api/settings/toggle-maintenance?status=${isLocked}&userId=${encodeURIComponent(currentAdminId)}`, {
+    method: "POST"
+  })
     .then(settings => {
       const slider = document.getElementById("maintenance-slider");
       const knob = document.getElementById("maintenance-knob");
 
       if (settings.maintenanceMode) {
-        slider.style.backgroundColor = "#dc2626";
-        knob.style.transform = "translateX(24px)";
+        if (slider) slider.style.backgroundColor = "#dc2626";
+        if (knob) knob.style.transform = "translateX(24px)";
         if (typeof showToast === "function") showToast("System Locked. Non-admins cannot log in.", "warning");
       } else {
-        slider.style.backgroundColor = "#cbd5e1";
-        knob.style.transform = "translateX(0)";
+        if (slider) slider.style.backgroundColor = "#cbd5e1";
+        if (knob) knob.style.transform = "translateX(0)";
         if (typeof showToast === "function") showToast("System Unlocked. Normal logins restored.", "success");
       }
     })
@@ -13085,7 +13089,8 @@ window.toggleMaintenanceMode = function(isLocked) {
         alert("Failed to toggle maintenance mode.");
       }
       // Revert the toggle visually if it failed
-      document.getElementById("toggle-maintenance").checked = !isLocked;
+      const toggle = document.getElementById("toggle-maintenance");
+      if (toggle) toggle.checked = !isLocked;
     });
 };
 
@@ -14965,7 +14970,8 @@ function getCategoryBadge(cat) {
   if (c === 'PROJECT') return `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">PROJECT</span>`;
   if (c === 'QA') return `<span style="background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">QA & REVIEW</span>`;
   if (c === 'EXPORT') return `<span style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">EXPORT</span>`;
-  if (c === 'AUTH') return `<span style="background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">SECURITY</span>`;
+  // 🚀 CHECKS BOTH 'AUTH' AND 'SECURITY' SO IT ALWAYS SHOWS THE PURPLE BADGE
+  if (c === 'AUTH' || c === 'SECURITY') return `<span style="background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">SECURITY</span>`;
   if (c === 'USER') return `<span style="background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">USER MGMT</span>`;
   return `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">SYSTEM</span>`;
 }
@@ -14977,15 +14983,6 @@ function getStatusBadge(status) {
   return `<span style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 10px;">SUCCESS</span>`;
 }
 
-function escapeHtml(text) {
-  if (!text) return "";
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 // ==========================================
 // 🛡️ SESSION EXPIRED / LOGOUT MODAL HANDLER

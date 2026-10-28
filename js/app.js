@@ -4444,7 +4444,14 @@ function handleVerifyMfa() {
         }
       }
 
-      // 3. Reset the VERIFY button (not loginBtn)
+      // 🛡️ CONTROL A3: If 3 attempts exceeded, server returns HTTP 429 and invalidates session -> Kick back to Step 1
+      if (error.message.includes("Maximum verification attempts exceeded") || error.message.includes("Please log in again")) {
+        setTimeout(() => {
+          backToLogin();
+        }, 1500);
+      }
+
+      // 3. Reset the VERIFY button
       if (verifyBtn) {
         verifyBtn.innerHTML = originalBtnText;
         verifyBtn.disabled = false;
@@ -4591,6 +4598,49 @@ function handlePasswordReset() {
 
       btn.innerHTML = "Confirm & Reset ➔";
       btn.disabled = false;
+    });
+}
+
+// ==========================================
+// 🛡️ CONTROL A3: RESEND CODE (60-SECOND THROTTLED)
+// ==========================================
+function handleResendMfa() {
+  const tempUserId = sessionStorage.getItem("tempUserId");
+  if (!tempUserId) {
+    if (typeof showToast === "function") showToast("Session expired. Please log in again.", "error");
+    backToLogin();
+    return;
+  }
+
+  const resendBtn = document.getElementById("resend-mfa-btn");
+  if (resendBtn) {
+    resendBtn.innerText = "Dispatching... ⏳";
+    resendBtn.style.pointerEvents = "none";
+  }
+
+  fetch(`${API_BASE_URL}/api/auth/resend-mfa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: tempUserId })
+  })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to resend code.");
+      }
+      return data;
+    })
+    .then(data => {
+      if (typeof showToast === "function") showToast(data.message || "A new code has been sent!", "success");
+    })
+    .catch(error => {
+      if (typeof showToast === "function") showToast(error.message, "warning");
+    })
+    .finally(() => {
+      if (resendBtn) {
+        resendBtn.innerText = "Resend Code";
+        resendBtn.style.pointerEvents = "auto";
+      }
     });
 }
 

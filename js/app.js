@@ -11304,6 +11304,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
   }
+});
 
 // ==========================================
 // 8. BARANGAY MANAGEMENT: LOAD MAIN TABLE (WITH ROAD SEARCH)

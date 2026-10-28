@@ -7674,22 +7674,29 @@ window.submitCEOCompletion = function() {
   btnCompleteRepair.innerHTML = `<span class="icon">⏳</span> Uploading Proof...`;
   btnCompleteRepair.disabled = true;
 
+  // 🚀 PASS CURRENT USER ID FOR BACKEND RBAC (CONTROL 6)
+  const currentUserId = sessionStorage.getItem("userId") || "";
+
   // Build the Form Data
   const formData = new FormData();
   formData.append("proofImage", imageInput.files[0]);
   formData.append("repairRemarks", remarksInput.value || "");
+  formData.append("userId", currentUserId); // 👈 Fixes the 403 Forbidden error
 
   // Send to Backend
   fetch(`${API_BASE_URL}/api/reports/${currentCEOProjectID}/complete`, {
     method: 'POST',
     body: formData
   })
-    .then(res => {
-      if (!res.ok) throw new Error("Upload failed");
-      return res.json();
+    .then(async res => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+      return data;
     })
     .then(data => {
-      showToast("Project marked as Completed!", "success");
+      showToast(data.message || "Project marked as Completed!", "success");
 
       // Close modal and refresh data
       document.getElementById('manage-modal').classList.add('hidden');
@@ -7699,7 +7706,7 @@ window.submitCEOCompletion = function() {
     })
     .catch(err => {
       console.error("Completion Error:", err);
-      showToast("Failed to complete. Check console.", "error");
+      showToast(err.message || "Failed to complete.", "error");
     })
     .finally(() => {
       // Restore button state

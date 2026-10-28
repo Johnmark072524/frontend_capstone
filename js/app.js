@@ -4029,6 +4029,8 @@ async function executeFinalSubmission() {
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.style.opacity = "0.7";
+    submitBtn.style.pointerEvents = "none";
+    submitBtn.innerHTML = "Processing... ⏳";
   }
 
   const attachedCount = Object.values(anglePhotoFiles).filter((f) => f !== null).length;
@@ -4159,6 +4161,7 @@ async function executeFinalSubmission() {
     if (submitBtn) {
       submitBtn.innerHTML = "Submit Report";
       submitBtn.disabled = false;
+      submitBtn.style.pointerEvents = "auto";
       submitBtn.style.opacity = "1";
     }
   }

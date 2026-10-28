@@ -3663,7 +3663,7 @@ window.executeBatchDeferral = function() {
     });
 };
 
-// ==========================================
+// =========================================
 // 🏗️ UI LISTENER: TOGGLE ACTION BAR ON CHECK
 // ==========================================
 window.toggleBatchActionBar = function() {

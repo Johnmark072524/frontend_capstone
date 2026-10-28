@@ -11436,19 +11436,16 @@ window.openManageBarangayModal = function(id) {
       roads.forEach(road => {
         const row = document.createElement('tr');
         row.innerHTML = `
-  <td style="padding: 10px; font-size: 12px;">${road.roadId || 'N/A'}</td>
-  <td style="padding: 10px; font-size: 12px;"><strong>${road.roadName || 'Unnamed Road'}</strong></td>
-  <td style="padding: 10px; font-size: 12px;">${road.roadImportance || 'Unknown'}</td>
-  <td style="padding: 10px; text-align: right;">
-
-    <!-- 🚀 THE ENHANCED EDIT BUTTON -->
-    <button class="btn-edit-road" onclick="openEditRoadModal(${road.id})"
-            style="background-color: #f8fafc; color: #3b82f6; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-      <span style="font-size: 14px;">✏️</span> Edit
-    </button>
-
-  </td>
-`;
+          <td style="padding: 10px; font-size: 12px;">${road.roadId || 'N/A'}</td>
+          <td style="padding: 10px; font-size: 12px;"><strong>${road.roadName || 'Unnamed Road'}</strong></td>
+          <td style="padding: 10px; font-size: 12px;">${road.roadImportance || 'Unknown'}</td>
+          <td style="padding: 10px; text-align: right;">
+            <button class="btn-edit-road" onclick="openEditRoadModal(${road.id})"
+                    style="background-color: #f8fafc; color: #3b82f6; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <span style="font-size: 14px;">✏️</span> Edit
+            </button>
+          </td>
+        `;
         roadsBody.appendChild(row);
       });
     })
@@ -11465,7 +11462,6 @@ window.openManageBarangayModal = function(id) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
 
-  // 🚀 THE FIX: Tell the table to load its data automatically when the page opens!
   if (document.getElementById('barangay-table-body')) {
     loadBarangayManagement();
   }
@@ -11500,7 +11496,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-
 // ==========================================
 // BARANGAY MANAGEMENT: ADD NEW BARANGAY
 // ==========================================
@@ -11516,19 +11511,19 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.innerHTML = "⏳ Saving...";
       submitBtn.disabled = true;
 
-      // Build the JSON payload matching your Barangay.java model
       const payload = {
         barangayName: document.getElementById('add-brgy-name').value.trim()
       };
 
-      // Send to the Java backend
-      fetch(`${API_BASE_URL}/api/barangays`, {
+      // 🚀 PASS CALLING ADMIN ID FOR AUDIT LOGGING & RBAC
+      const currentAdminId = sessionStorage.getItem("userId") || "";
+
+      fetch(`${API_BASE_URL}/api/barangays?userId=${encodeURIComponent(currentAdminId)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
         .then(async res => {
-          // 🚀 NEW: If the backend throws our 400 Bad Request error, catch the text!
           if (!res.ok) {
             const errText = await res.text();
             throw new Error(errText || "Failed to save Barangay");
@@ -11538,18 +11533,15 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(() => {
           showToast("Barangay successfully registered!", "success");
 
-          // Hide modal and clear form
           document.getElementById('add-brgy-modal').classList.add('hidden');
           formAddBarangay.reset();
 
-          // 🚀 INSTANT REFRESH: Reload the main table so the new Barangay appears!
           if (typeof loadBarangayManagement === 'function') {
             loadBarangayManagement();
           }
         })
         .catch(err => {
           console.error(err);
-          // 🚀 NEW: Show the EXACT error message from Java in the Toast!
           showToast(err.message, "error");
         })
         .finally(() => {
@@ -11570,7 +11562,6 @@ document.addEventListener('DOMContentLoaded', () => {
     formAddCityRoad.addEventListener('submit', function (e) {
       e.preventDefault();
 
-      // Ensure we have an active Barangay ID from the Manage Modal
       if (!currentManageBarangayId) {
         showToast("Error: No Barangay selected.", "error");
         return;
@@ -11581,7 +11572,6 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.innerHTML = "⏳ Saving...";
       submitBtn.disabled = true;
 
-      // 🚀 We DO NOT send the Road ID. The Backend handles it!
       const payload = {
         roadName: document.getElementById('add-road-name').value.trim(),
         roadImportance: document.getElementById('add-road-importance').value,
@@ -11590,7 +11580,10 @@ document.addEventListener('DOMContentLoaded', () => {
         barangay: { id: currentManageBarangayId }
       };
 
-      fetch(`${API_BASE_URL}/api/roads`, {
+      // 🚀 PASS CALLING ADMIN ID FOR AUDIT LOGGING & RBAC
+      const currentAdminId = sessionStorage.getItem("userId") || "";
+
+      fetch(`${API_BASE_URL}/api/roads?userId=${encodeURIComponent(currentAdminId)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -11605,11 +11598,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(() => {
           showToast("City Road successfully registered!", "success");
 
-          // Hide modal and reset form
           document.getElementById('add-road-modal').classList.add('hidden');
           formAddCityRoad.reset();
 
-          // 🚀 Refresh the open Barangay Modal to show the new road!
           openManageBarangayModal(currentManageBarangayId);
         })
         .catch(err => {
@@ -11624,19 +11615,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-
 // ==========================================
 // ✏️ EDIT CITY ROAD LOGIC
 // ==========================================
 
-// 1. FUNCTION TO OPEN AND POPULATE THE MODAL
 window.openEditRoadModal = function(roadId) {
   apiFetch(`/api/roads/${roadId}`)
     .then(road => {
-      // Store the database ID
       document.getElementById('edit-db-id').value = road.id;
 
-      // Populate the visible fields
       document.getElementById('edit-road-sequence-id').value = road.roadId || 'N/A';
       document.getElementById('edit-road-name').value = road.roadName || '';
       document.getElementById('edit-road-importance').value = road.roadImportance || 'Secondary';
@@ -11644,15 +11631,11 @@ window.openEditRoadModal = function(roadId) {
       document.getElementById('edit-road-terrain').value = road.terrainType || 'Flat';
 
       const modal = document.getElementById('edit-road-modal');
-
-      // 1. Move to document body so it escapes the Manage Modal's stacking container
       document.body.appendChild(modal);
 
-      // 2. Override CSS !important rules to guarantee it sits on top
       modal.style.setProperty('position', 'fixed', 'important');
       modal.style.setProperty('z-index', '999999', 'important');
 
-      // 3. Show the modal
       modal.classList.remove('hidden');
     })
     .catch(err => {
@@ -11663,7 +11646,6 @@ window.openEditRoadModal = function(roadId) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // 2. CLOSE MODAL BUTTONS
   document.querySelectorAll('.close-edit-road-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const modal = document.getElementById('edit-road-modal');
@@ -11673,7 +11655,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3. SUBMIT UPDATED DATA
   const formEditRoad = document.getElementById('form-edit-city-road');
   if (formEditRoad) {
     formEditRoad.addEventListener('submit', function(e) {
@@ -11696,7 +11677,10 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.disabled = true;
       }
 
-      fetch(`${API_BASE_URL}/api/roads/${dbId}`, {
+      // 🚀 PASS CALLING ADMIN ID FOR AUDIT LOGGING & RBAC
+      const currentAdminId = sessionStorage.getItem("userId") || "";
+
+      fetch(`${API_BASE_URL}/api/roads/${dbId}?userId=${encodeURIComponent(currentAdminId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -11711,11 +11695,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(() => {
           showToast("City Road successfully updated!", "success");
 
-          // Hide modal and reset form
           document.getElementById('edit-road-modal').classList.add('hidden');
           formEditRoad.reset();
 
-          // Refresh the Manage Barangay table
           if (typeof openManageBarangayModal === 'function') {
             openManageBarangayModal(currentManageBarangayId);
           }
@@ -11739,11 +11721,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 
 window.openRenameBarangayModal = function() {
-  // Grab the current name from the header and put it in the input box
   const currentName = document.getElementById('manage-brgy-name').textContent;
   document.getElementById('rename-brgy-input').value = currentName;
 
-  // Teleport trick to avoid CSS traps
   const modal = document.getElementById('rename-brgy-modal');
   document.body.appendChild(modal);
   modal.classList.remove('hidden');
@@ -11765,8 +11745,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const payload = { barangayName: newName };
 
-      // currentManageBarangayId is the global variable tracking which Manage modal is open
-      fetch(`${API_BASE_URL}/api/barangays/${currentManageBarangayId}`, {
+      // 🚀 PASS CALLING ADMIN ID FOR AUDIT LOGGING & RBAC
+      const currentAdminId = sessionStorage.getItem("userId") || "";
+
+      fetch(`${API_BASE_URL}/api/barangays/${currentManageBarangayId}?userId=${encodeURIComponent(currentAdminId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -11781,13 +11763,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(() => {
           showToast("Barangay successfully renamed!", "success");
 
-          // 1. Close the tiny rename modal
           document.getElementById('rename-brgy-modal').classList.add('hidden');
-
-          // 2. Instantly update the text on the Manage Modal header
           document.getElementById('manage-brgy-name').textContent = newName;
 
-          // 3. Refresh the main background table so it reflects there too
           if (typeof window.loadBarangayManagement === 'function') {
             window.loadBarangayManagement();
           }

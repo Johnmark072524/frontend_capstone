@@ -4223,16 +4223,31 @@ function resetAddReportForm() {
 }
 
 // ==========================================
-// ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN
+// ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN / VERIFY
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
   ['username', 'password'].forEach(id => {
     document.getElementById(id)?.addEventListener('keypress', function (e) {
       if (e.key === 'Enter') {
-        e.preventDefault(); // Prevent form from refreshing the page
+        e.preventDefault();
         handleLogin();
       }
     });
+  });
+
+  // 🚀 Fast testing: Press Enter in the OTP field to submit
+  document.getElementById('mfa-code')?.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleVerifyMfa();
+    }
+  });
+
+  document.getElementById('confirm-new-password')?.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePasswordReset();
+    }
   });
 });
 
@@ -4268,43 +4283,56 @@ function handleLogin() {
     body: JSON.stringify({ username: username, password: password })
   })
     .then(async response => {
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Invalid credentials');
+        // 🛡️ TEST SAFEGUARD: If 60s cooldown is active but user already verified credentials, allow them into Step 2 with debugOtp
+        if (data.mfaRequired && data.userId) {
+          return data;
+        }
+        throw new Error(data.error || 'Invalid credentials');
       }
-      return response.json();
+      return data;
     })
     .then(data => {
-    // 🚀 MFA TRIGGER: Move to Step 2
-    if (data.mfaRequired) {
-      sessionStorage.setItem("tempUserId", data.userId);
+      // 🚀 MFA TRIGGER: Move to Step 2
+      if (data.mfaRequired) {
+        sessionStorage.setItem("tempUserId", data.userId);
 
-      const step1 = document.getElementById("login-step-1");
-      const step2 = document.getElementById("login-step-2");
+        const step1 = document.getElementById("login-step-1");
+        const step2 = document.getElementById("login-step-2");
 
-      if (step1) step1.style.display = "none";
-      if (step2) step2.style.display = "block";
+        if (step1) step1.style.display = "none";
+        if (step2) step2.style.display = "block";
 
-      const toastMsg = data.message || "A 6-digit verification code has been sent to your email.";
-      if (typeof showToast === "function") {
-        showToast(toastMsg, "success");
+        const toastMsg = data.message || "A 6-digit verification code has been sent to your email.";
+        if (typeof showToast === "function") {
+          showToast(toastMsg, "success");
+        }
+
+        const otpField = document.getElementById("mfa-code");
+        if (otpField) {
+          // 🚀 AUTO-FILL MFA FOR GROUP TESTING / DEMO
+          if (data.debugOtp) {
+            otpField.value = data.debugOtp;
+            if (typeof showToast === "function") {
+              setTimeout(() => {
+                showToast(`Test Mode: Code auto-filled (${data.debugOtp})`, "info");
+              }, 400);
+            }
+          } else {
+            otpField.value = "";
+          }
+          otpField.focus();
+        }
+
+        if (loginBtn) {
+          loginBtn.innerHTML = "Log in ➔";
+          loginBtn.disabled = false;
+          loginBtn.style.opacity = "1";
+        }
       }
-
-      const otpField = document.getElementById("mfa-code");
-      if (otpField) {
-        otpField.value = "";
-        otpField.focus();
-      }
-
-      if (loginBtn) {
-        loginBtn.innerHTML = "Log in ➔";
-        loginBtn.disabled = false;
-        loginBtn.style.opacity = "1";
-      }
-    }
-  })
+    })
     .catch(error => {
-      // Clear password field on failed attempt
       if (passwordInput) passwordInput.value = "";
 
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
@@ -4324,6 +4352,7 @@ function handleLogin() {
       }
     });
 }
+
 // ==========================================
 // 🚀 STEP 2: VERIFY 6-DIGIT CODE & GRANT ACCESS
 // ==========================================
@@ -4361,15 +4390,12 @@ function handleVerifyMfa() {
       return response.json();
     })
     .then(data => {
-      // 1. Cleanup temp MFA state
       sessionStorage.removeItem("tempUserId");
 
-      // 2. Clean middle name (prevent storing "null" string)
       const cleanMiddleName = (data.middleName && String(data.middleName).toLowerCase() !== "null" && String(data.middleName).toLowerCase() !== "undefined")
         ? String(data.middleName).trim()
         : "";
 
-      // 3. Save individual sessionStorage keys
       sessionStorage.setItem("userId", data.userId);
       sessionStorage.setItem("username", data.username || "N/A");
       sessionStorage.setItem("userRole", data.role || "");
@@ -4387,7 +4413,6 @@ function handleVerifyMfa() {
       }
       sessionStorage.setItem("barangayName", data.barangayName || "City Hall Central");
 
-      // 4. Save synced user object in localStorage for cross-component compatibility
       const userPayload = {
         id: data.userId,
         username: data.username,
@@ -4401,7 +4426,6 @@ function handleVerifyMfa() {
       localStorage.setItem("user", JSON.stringify(userPayload));
       localStorage.setItem("currentUser", JSON.stringify(userPayload));
 
-      // 5. Remember Me Logic
       const rememberCheckbox = document.getElementById("remember-me");
       const usernameInput = document.getElementById("username")?.value.trim();
 
@@ -4415,7 +4439,6 @@ function handleVerifyMfa() {
         showToast("Access Granted!", "success");
       }
 
-      // 6. Dynamic Routing by Role
       setTimeout(() => {
         const userRole = String(data.role).toLowerCase();
         if (userRole.includes("admin") || userRole.includes("cpdo")) {
@@ -4428,13 +4451,11 @@ function handleVerifyMfa() {
       }, 1000);
     })
     .catch(error => {
-      // 1. Clear the invalid OTP input and refocus
       if (otpField) {
         otpField.value = "";
         otpField.focus();
       }
 
-      // 2. Display proper error toast
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         if (typeof showToast === "function") {
           showToast("System is currently offline or unreachable. Please try again later.", "error");
@@ -4445,14 +4466,12 @@ function handleVerifyMfa() {
         }
       }
 
-      // 🛡️ CONTROL A3: If 3 attempts exceeded, server returns HTTP 429 and invalidates session -> Kick back to Step 1
       if (error.message.includes("Maximum verification attempts exceeded") || error.message.includes("Please log in again")) {
         setTimeout(() => {
           backToLogin();
         }, 1500);
       }
 
-      // 3. Reset the VERIFY button
       if (verifyBtn) {
         verifyBtn.innerHTML = originalBtnText;
         verifyBtn.disabled = false;
@@ -4462,19 +4481,56 @@ function handleVerifyMfa() {
 }
 
 // ==========================================
-// 🚀 INITIALIZE: AUTO-POPULATE REMEMBERED USERNAME
+// 🛡️ RESEND CODE (WITH AUTO-FILL SUPPORT)
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  const rememberedUsername = localStorage.getItem("roadwise_remembered_username");
-  const usernameInput = document.getElementById("username");
-  const rememberCheckbox = document.getElementById("remember-me");
-
-  if (rememberedUsername && usernameInput) {
-    usernameInput.value = rememberedUsername;
-    if (rememberCheckbox) rememberCheckbox.checked = true;
+function handleResendMfa() {
+  const tempUserId = sessionStorage.getItem("tempUserId");
+  if (!tempUserId) {
+    if (typeof showToast === "function") showToast("Session expired. Please log in again.", "error");
+    backToLogin();
+    return;
   }
-});
 
+  const resendBtn = document.getElementById("resend-mfa-btn");
+  if (resendBtn) {
+    resendBtn.innerText = "Dispatching... ⏳";
+    resendBtn.style.pointerEvents = "none";
+  }
+
+  fetch(`${API_BASE_URL}/api/auth/resend-mfa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: tempUserId })
+  })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to resend code.");
+      }
+      return data;
+    })
+    .then(data => {
+      if (typeof showToast === "function") showToast(data.message || "A new code has been sent!", "success");
+
+      // 🚀 AUTO-FILL RESENT CODE
+      if (data.debugOtp) {
+        const otpField = document.getElementById("mfa-code");
+        if (otpField) {
+          otpField.value = data.debugOtp;
+          if (typeof showToast === "function") showToast(`Test Mode: New code auto-filled (${data.debugOtp})`, "info");
+        }
+      }
+    })
+    .catch(error => {
+      if (typeof showToast === "function") showToast(error.message, "warning");
+    })
+    .finally(() => {
+      if (resendBtn) {
+        resendBtn.innerText = "Resend Code";
+        resendBtn.style.pointerEvents = "auto";
+      }
+    });
+}
 
 // ==========================================
 // FORGOT PASSWORD: SHOW SCREEN
@@ -4486,7 +4542,7 @@ function showForgotPassword() {
 }
 
 // ==========================================
-// FORGOT PASSWORD: SEND OTP TO EMAIL
+// FORGOT PASSWORD: SEND OTP (WITH AUTO-FILL SUPPORT)
 // ==========================================
 function handleForgotPasswordRequest() {
   const email = document.getElementById("reset-email").value.trim();
@@ -4519,11 +4575,17 @@ function handleForgotPasswordRequest() {
       document.getElementById("forgot-step-1").style.display = "none";
       document.getElementById("forgot-step-2").style.display = "block";
 
+      // 🚀 AUTO-FILL RECOVERY CODE
+      if (data.debugOtp) {
+        const resetCodeField = document.getElementById("reset-code");
+        if (resetCodeField) resetCodeField.value = data.debugOtp;
+        showToast(`Test Mode: Recovery code auto-filled (${data.debugOtp})`, "info");
+      }
+
       btn.innerHTML = "Send Code ➔";
       btn.disabled = false;
     })
     .catch(error => {
-      // 🚀 SMART CHECK: User-friendly Network Error
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         showToast("System is currently offline or unreachable. Please try again later.", "error");
       } else {
@@ -4554,14 +4616,12 @@ function handlePasswordReset() {
     return;
   }
 
-  // 🚀 NEW: STRICT ENTERPRISE PASSWORD REGEX
   const strictPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
   if (!strictPasswordRegex.test(newPassword)) {
     showToast("Password must be 8+ characters, with 1 uppercase letter, 1 number, and 1 special character.", "error");
     return;
   }
 
-  // PASSWORD MATCH VALIDATION
   if (newPassword !== confirmPassword) {
     showToast("Passwords do not match!", "error");
     return;
@@ -4590,7 +4650,6 @@ function handlePasswordReset() {
       btn.disabled = false;
     })
     .catch(error => {
-      // 🚀 SMART CHECK: User-friendly Network Error
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
         showToast("System is currently offline or unreachable. Please try again later.", "error");
       } else {
@@ -4603,68 +4662,21 @@ function handlePasswordReset() {
 }
 
 // ==========================================
-// 🛡️ CONTROL A3: RESEND CODE (60-SECOND THROTTLED)
-// ==========================================
-function handleResendMfa() {
-  const tempUserId = sessionStorage.getItem("tempUserId");
-  if (!tempUserId) {
-    if (typeof showToast === "function") showToast("Session expired. Please log in again.", "error");
-    backToLogin();
-    return;
-  }
-
-  const resendBtn = document.getElementById("resend-mfa-btn");
-  if (resendBtn) {
-    resendBtn.innerText = "Dispatching... ⏳";
-    resendBtn.style.pointerEvents = "none";
-  }
-
-  fetch(`${API_BASE_URL}/api/auth/resend-mfa`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: tempUserId })
-  })
-    .then(async response => {
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to resend code.");
-      }
-      return data;
-    })
-    .then(data => {
-      if (typeof showToast === "function") showToast(data.message || "A new code has been sent!", "success");
-    })
-    .catch(error => {
-      if (typeof showToast === "function") showToast(error.message, "warning");
-    })
-    .finally(() => {
-      if (resendBtn) {
-        resendBtn.innerText = "Resend Code";
-        resendBtn.style.pointerEvents = "auto";
-      }
-    });
-}
-
-// ==========================================
 // UI HELPER: GO BACK TO LOGIN SCREEN
 // ==========================================
 function backToLogin() {
-  // Hide all secondary steps
   document.getElementById("login-step-2").style.display = "none";
   document.getElementById("forgot-step-1").style.display = "none";
   document.getElementById("forgot-step-2").style.display = "none";
 
-  // Show primary login
   document.getElementById("login-step-1").style.display = "block";
 
-  // Wipe inputs clean for security
   if (document.getElementById("mfa-code")) document.getElementById("mfa-code").value = "";
   if (document.getElementById("reset-email")) document.getElementById("reset-email").value = "";
   if (document.getElementById("reset-code")) document.getElementById("reset-code").value = "";
   if (document.getElementById("new-password")) document.getElementById("new-password").value = "";
   if (document.getElementById("confirm-new-password")) document.getElementById("confirm-new-password").value = "";
 
-  // Wipe temporary memory
   sessionStorage.removeItem("tempUserId");
   sessionStorage.removeItem("resetUserId");
 }
@@ -4679,7 +4691,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (savedUsername && usernameInput && rememberCheckbox) {
     usernameInput.value = savedUsername;
-    rememberCheckbox.checked = true; // Keep the box checked if we remembered them
+    rememberCheckbox.checked = true;
   }
 });
 

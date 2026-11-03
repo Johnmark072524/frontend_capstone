@@ -4463,6 +4463,9 @@ function handleVerifyMfa() {
       }
       sessionStorage.setItem("barangayName", data.barangayName || "City Hall Central");
 
+      // 🛡️ CONTROL 5: Mandatory First-Login Password Change Flag
+      sessionStorage.setItem("mustChangePassword", data.mustChangePassword ? "true" : "false");
+
       const userPayload = {
         id: data.userId,
         username: data.username,
@@ -10266,21 +10269,19 @@ const mainAvatar = document.getElementById('main-profile-avatar');
 window.updateAvatarDisplay = function(imageName) {
   if (!mainAvatar) return;
 
-  // Ensure we apply the correct fallback gradient based on role
   const applyFallbackTheme = () => {
     mainAvatar.innerHTML = '🏛️';
     const role = String(sessionStorage.getItem('userRole')).toLowerCase();
 
     if (role.includes('admin') || role.includes('cpdo')) {
-      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #1e40af, #3b82f6)'; // Admin Blue
+      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #1e40af, #3b82f6)';
     } else if (role.includes('ceo') || role.includes('engineer')) {
-      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #ea580c, #f97316)'; // CEO Orange
+      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #ea580c, #f97316)';
     } else {
-      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #15803d, #22c55e)'; // Barangay Green
+      mainAvatar.style.backgroundImage = 'linear-gradient(135deg, #15803d, #22c55e)';
     }
   };
 
-  // 🚀 THE FIX 1: Strict check for bad database data ("null", "undefined", or empty)
   if (!imageName ||
     imageName === 'no_image.jpg' ||
     String(imageName).trim().toLowerCase() === 'null' ||
@@ -10292,7 +10293,6 @@ window.updateAvatarDisplay = function(imageName) {
 
   const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
 
-  // 🚀 THE FIX 2: Check if the file ACTUALLY exists on the server
   fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
     .then(res => {
       if (!res.ok) throw new Error("Image not found on server");
@@ -10300,16 +10300,16 @@ window.updateAvatarDisplay = function(imageName) {
     })
     .then(blob => {
       const objectURL = URL.createObjectURL(blob);
-      mainAvatar.innerHTML = ''; // Hide the emoji
+      mainAvatar.innerHTML = '';
       mainAvatar.style.backgroundImage = `url(${objectURL})`;
       mainAvatar.style.backgroundSize = 'cover';
       mainAvatar.style.backgroundPosition = 'center';
     })
     .catch(err => {
       console.error("Failed to load avatar, falling back to default:", err);
-      applyFallbackTheme(); // Revert to colored circle if the file is missing
+      applyFallbackTheme();
     });
-}
+};
 
 // 2. The Upload Logic (Triggered when they pick a photo)
 if (profilePicUpload) {
@@ -10317,7 +10317,7 @@ if (profilePicUpload) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Strict 5MB file size limit to protect your server
+    // ✅ Clean 5MB file size limit
     if (file.size > 5 * 1024 * 1024) {
       showToast("Please choose an image smaller than 5MB", "error");
       this.value = '';
@@ -10332,7 +10332,6 @@ if (profilePicUpload) {
 
     showToast("Uploading new profile picture... ⏳", "info");
 
-    // Send to the new Spring Boot endpoint
     fetch(`${API_BASE_URL}/api/users/${userId}/profile-picture`, {
       method: 'POST',
       body: formData
@@ -10343,7 +10342,6 @@ if (profilePicUpload) {
       })
       .then(data => {
         showToast("Profile picture updated successfully!", "success");
-        // Save the new filename to browser memory and instantly update the UI
         sessionStorage.setItem('profilePicture', data.profilePicture);
         updateAvatarDisplay(data.profilePicture);
       })
@@ -10354,11 +10352,10 @@ if (profilePicUpload) {
   });
 }
 
-// 3. The View Button Logic (Wire this to the 'View' button in your HTML)
+// 3. The View Button Logic
 window.openProfilePicViewer = function() {
   const imageName = sessionStorage.getItem('profilePicture');
 
-  // 🚀 THE FIX 3: Stop the modal from opening if data is bad!
   if (!imageName ||
     imageName === 'no_image.jpg' ||
     String(imageName).trim().toLowerCase() === 'null' ||
@@ -10375,7 +10372,6 @@ window.openProfilePicViewer = function() {
 
   const url = String(imageName).startsWith("http") ? imageName : `${API_BASE_URL}/uploads/${imageName}`;
 
-  // 🚀 THE FIX 4: Only open the modal if the fetch is 100% successful
   fetch(url, { headers: { 'ngrok-skip-browser-warning': 'true' } })
     .then(res => {
       if (!res.ok) throw new Error("Image file missing from server");
@@ -10389,19 +10385,16 @@ window.openProfilePicViewer = function() {
       console.error("Failed to load full size profile picture:", err);
       showToast("Image file is missing or corrupted on the server.", "error");
 
-      // Wipe the bad ghost data so it defaults back to the colored circle
       sessionStorage.setItem('profilePicture', 'no_image.jpg');
       updateAvatarDisplay('no_image.jpg');
     });
-}
+};
 
-// Ensure the "View" button calls the function
 const viewPicBtn = document.querySelector('button[onclick*="View Picture"]');
 if (viewPicBtn) {
   viewPicBtn.setAttribute('onclick', 'openProfilePicViewer()');
 }
 
-// Ensure the avatar updates every time the profile modal is opened
 updateAvatarDisplay(sessionStorage.getItem('profilePicture'));
 
 
@@ -10409,17 +10402,16 @@ updateAvatarDisplay(sessionStorage.getItem('profilePicture'));
 // 12. SECURITY & PASSWORD LOGIC (ENHANCED)
 // ==========================================
 
-// 🚀 Helper: Interactive Password Field Eye Toggle
 window.togglePasswordVisibility = function(inputId, iconElement) {
   const input = document.getElementById(inputId);
   if (!input) return;
 
   if (input.type === "password") {
     input.type = "text";
-    iconElement.textContent = "🙈"; // Change icon to blind monkey / hidden state
+    iconElement.textContent = "🙈";
   } else {
     input.type = "password";
-    iconElement.textContent = "👁️"; // Back to eye
+    iconElement.textContent = "👁️";
   }
 };
 
@@ -10434,14 +10426,11 @@ if (formChangePassword) {
     const confirmPass = document.getElementById('sec-confirm-pass').value;
     const submitBtn = document.getElementById('btn-submit-password');
 
-    // 1. Check if passwords match
     if (newPass !== confirmPass) {
       showToast("New passwords do not match!", "error");
       return;
     }
 
-    // 2. Strict Enterprise Complexity Regex:
-    // Min 8 chars, 1 Uppercase, 1 Number, 1 Special Character (@$!%*?&#)
     const strictPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
     if (!strictPasswordRegex.test(newPass)) {
@@ -10455,12 +10444,10 @@ if (formChangePassword) {
       return;
     }
 
-    // Button Loading State
     const originalText = submitBtn.innerHTML;
     submitBtn.innerHTML = "Verifying & Saving... ⏳";
     submitBtn.disabled = true;
 
-    // 3. Send Request to Spring Boot Backend
     fetch(`${API_BASE_URL}/api/users/${userId}/password`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -10478,16 +10465,24 @@ if (formChangePassword) {
       })
       .then(data => {
         showToast("Password successfully updated! 🔒", "success");
-        formChangePassword.reset(); // Reset form fields
+        formChangePassword.reset();
 
-        // Revert all password input types back to hidden 'password'
         ['sec-current-pass', 'sec-new-pass', 'sec-confirm-pass'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.type = 'password';
         });
-        // Revert icons back to eye
         document.querySelectorAll('#form-change-password span').forEach(span => {
           span.textContent = '👁️';
+        });
+
+        // 🛡️ CONTROL 5: Lift First-Login Lockout & Restore Navigation
+        sessionStorage.removeItem("mustChangePassword");
+        const backToDashBtn = document.getElementById('btn-back-dashboard');
+        if (backToDashBtn) backToDashBtn.style.display = '';
+
+        document.querySelectorAll('.nav-menu li').forEach(li => {
+          li.style.pointerEvents = 'auto';
+          li.style.opacity = '1';
         });
       })
       .catch(error => {
@@ -10505,7 +10500,6 @@ if (formChangePassword) {
 // 13. CPDO ADMIN & CEO OFFICE TURNOVER PROTOCOL
 // ==========================================
 
-// Helper: Attach Real-Time Numeric & 11-Digit Length Mask
 function attachPhoneInputMask(inputId) {
   const el = document.getElementById(inputId);
   if (el) {
@@ -10521,8 +10515,6 @@ function attachPhoneInputMask(inputId) {
 // ------------------------------------------
 // A. CPDO ADMIN TURNOVER
 // ------------------------------------------
-
-// 1. Navigation Tab Switching
 const profileNavMenu = document.getElementById('profile-nav-menu');
 if (profileNavMenu) {
   profileNavMenu.addEventListener('click', (e) => {
@@ -10546,7 +10538,6 @@ if (profileNavMenu) {
   });
 }
 
-// 2. Modal Open / Close Controllers
 window.openAdminHandoverModal = function () {
   const modal = document.getElementById('admin-handover-modal');
   const form = document.getElementById('form-admin-handover');
@@ -10566,7 +10557,6 @@ window.closeAdminHandoverModal = function () {
   }
 };
 
-// 3. Admin Form Submission Handler
 window.submitAdminHandover = function () {
   const currentAdminId = sessionStorage.getItem('userId');
   if (!currentAdminId) {
@@ -10583,7 +10573,6 @@ window.submitAdminHandover = function () {
   const username = document.getElementById('succ-username')?.value.trim();
   const memoNumber = document.getElementById('succ-memo')?.value.trim();
 
-  // Strict Validation Checks
   if (!firstName || !lastName || !email || !username) {
     showToast("Please complete all required successor details.", "error");
     return;
@@ -10679,8 +10668,6 @@ window.terminateHandoverSession = function () {
 // ------------------------------------------
 // B. CEO TURNOVER
 // ------------------------------------------
-
-// 1. Navigation Tab Switching (CEO)
 const ceoProfileNavMenu = document.getElementById('profile-nav-menu');
 if (ceoProfileNavMenu) {
   ceoProfileNavMenu.addEventListener('click', (e) => {
@@ -10704,7 +10691,6 @@ if (ceoProfileNavMenu) {
   });
 }
 
-// 2. Modal Open / Close Controllers (CEO)
 window.openCeoHandoverModal = function () {
   const modal = document.getElementById('ceo-handover-modal');
   const form = document.getElementById('form-ceo-handover');
@@ -10724,7 +10710,6 @@ window.closeCeoHandoverModal = function () {
   }
 };
 
-// 3. CEO Form Submission Handler
 window.submitCeoHandover = function () {
   const currentCeoId = sessionStorage.getItem('userId');
   if (!currentCeoId) {
@@ -10741,7 +10726,6 @@ window.submitCeoHandover = function () {
   const username = document.getElementById('ceo-succ-user')?.value.trim();
   const memoNumber = document.getElementById('ceo-succ-memo')?.value.trim();
 
-  // Strict Validation Checks
   if (!firstName || !lastName || !email || !username) {
     showToast("Please complete all required successor details.", "error");
     return;
@@ -10834,10 +10818,45 @@ window.terminateCeoHandoverSession = function () {
   window.location.replace('login.html');
 };
 
-// Auto-bind input listeners once DOM finishes loading
+// ==========================================
+// 🛡️ CONTROL 5: MANDATORY FIRST-LOGIN ENFORCEMENT
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   attachPhoneInputMask('succ-phone');
   attachPhoneInputMask('ceo-succ-phone');
+
+  const mustChange = sessionStorage.getItem("mustChangePassword");
+  const currentPath = window.location.pathname.toLowerCase();
+
+  if (mustChange === "true" && currentPath.includes("dashboard")) {
+    setTimeout(() => {
+      // 1. Force route to the profile view
+      if (typeof switchView === "function") {
+        switchView('view-profile');
+      } else {
+        const viewProf = document.getElementById('view-profile');
+        if (viewProf) viewProf.classList.remove('hidden');
+      }
+
+      // 2. Click the Security tab
+      const secTab = document.querySelector('#profile-nav-menu li[data-target="tab-security"]');
+      if (secTab) secTab.click();
+
+      // 3. Lock navigation: Hide the Back to Dashboard button and disable sidebar clicks
+      const backToDashBtn = document.getElementById('btn-back-dashboard');
+      if (backToDashBtn) backToDashBtn.style.display = 'none';
+
+      document.querySelectorAll('.nav-menu li').forEach(li => {
+        li.style.pointerEvents = 'none';
+        li.style.opacity = '0.5';
+      });
+
+      // 4. Alert user
+      if (typeof showToast === "function") {
+        showToast("First-Login Requirement: You must change your default temporary password before accessing the system.", "warning", 8000);
+      }
+    }, 400);
+  }
 });
 
 // ==========================================

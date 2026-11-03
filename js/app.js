@@ -3771,6 +3771,7 @@ window.toggleAllCheckboxes = function(masterCheckbox) {
   checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
   toggleBatchActionBar();
 };
+
 // ==========================================
 // 🛡️ SUBMISSION GUARDS & IN-MEMORY PHOTO STORE
 // ==========================================
@@ -3799,7 +3800,8 @@ function startAiScanner(totalAngles = 2) {
     const stepEl = document.getElementById(`scan-step-${i}`);
     if (stepEl) {
       stepEl.className = "scan-step";
-      stepEl.querySelector(".step-icon").textContent = "⏳";
+      const icon = stepEl.querySelector(".step-icon");
+      if (icon) icon.textContent = "⏳";
     }
   }
 
@@ -3810,7 +3812,8 @@ function startAiScanner(totalAngles = 2) {
       step4.style.display = "none";
     } else {
       step4.style.display = "flex";
-      step4.querySelector(".step-desc").textContent = `Scanning ${totalAngles - 2} auxiliary angle(s) for cavity & depth`;
+      const desc = step4.querySelector(".step-desc");
+      if (desc) desc.textContent = `Scanning ${totalAngles - 2} auxiliary angle(s) for cavity & depth`;
     }
   }
 
@@ -3824,26 +3827,21 @@ function startAiScanner(totalAngles = 2) {
     secondsElapsed++;
 
     if (secondsElapsed <= 4) {
-      // 0-4s: Compressing & Network Dispatch
       progress = Math.min(22, progress + 4);
       updateScannerUi(1, progress, "Transmitting multi-angle frames...");
     } else if (secondsElapsed <= 15) {
-      // 5-15s: AI Gatekeeper & Slot 1
       markStepComplete(1);
       progress = Math.min(45, progress + 2);
       updateScannerUi(2, progress, "Inspecting Road Context (Slot 1: Whole View)...");
     } else if (secondsElapsed <= 28) {
-      // 16-28s: Slot 2 Top-Down
       markStepComplete(2);
       progress = Math.min(68, progress + 2);
       updateScannerUi(3, progress, "Analyzing Pavement Distress (Slot 2: Top-Down)...");
     } else if (secondsElapsed <= 45 && totalAngles > 2) {
-      // 29-45s: Oblique auxiliary angles
       markStepComplete(3);
       progress = Math.min(86, progress + 1);
       updateScannerUi(4, progress, "Evaluating Oblique Cavity & Shadow Angles...");
     } else {
-      // 45s+: Ensemble Consensus & Cloud Storing
       if (totalAngles > 2) markStepComplete(4);
       else markStepComplete(3);
 
@@ -3865,7 +3863,8 @@ function updateScannerUi(currentStepNum, percent, statusText) {
   const currentStep = document.getElementById(`scan-step-${currentStepNum}`);
   if (currentStep && !currentStep.classList.contains("completed")) {
     currentStep.className = "scan-step active";
-    currentStep.querySelector(".step-icon").textContent = "🔄";
+    const icon = currentStep.querySelector(".step-icon");
+    if (icon) icon.textContent = "🔄";
   }
 }
 
@@ -3873,7 +3872,8 @@ function markStepComplete(stepNum) {
   const step = document.getElementById(`scan-step-${stepNum}`);
   if (step) {
     step.className = "scan-step completed";
-    step.querySelector(".step-icon").textContent = "✅";
+    const icon = step.querySelector(".step-icon");
+    if (icon) icon.textContent = "✅";
   }
 }
 
@@ -3908,7 +3908,7 @@ function closeAiScanner() {
 }
 
 // =========================================================
-// ⚡ HTML5 CANVAS COMPRESSOR (Syntax Repaired)
+// ⚡ HTML5 CANVAS COMPRESSOR (REPAIRED)
 // =========================================================
 function compressImage(file, maxDimension = 1024, quality = 0.82) {
   return new Promise((resolve) => {
@@ -3974,7 +3974,7 @@ window.handleAngleImageSelected = function (inputEl, angleKey) {
     return;
   }
 
-  // 2. 🛡️ CONTROL 15: 5MB File size threshold check
+  // 2. 🛡️ CONTROL 15: 5MB File size threshold check (Fixed)
   const MAX_SIZE = 5 * 1024 * 1024; // 5MB
   if (file.size > MAX_SIZE) {
     clearSpecificAngleSlot(angleKey);
@@ -4066,7 +4066,7 @@ function updateMultiAngleSummaryStatus() {
 }
 
 // =========================================================
-// 🚀 REPORT SUBMISSION
+// 🚀 REPORT SUBMISSION (STRICT MANDATORY ANGLES)
 // =========================================================
 function submitRoadReport() {
   if (isSubmittingReport) return;
@@ -4084,12 +4084,12 @@ function submitRoadReport() {
     return;
   }
 
-  const attachedCount = Object.values(anglePhotoFiles).filter((f) => f !== null).length;
-  if (attachedCount > 0) {
-    if (!anglePhotoFiles.whole || !anglePhotoFiles.top) {
-      if (typeof showToast === 'function') showToast("Both Whole View (Slot 1) and Top-Down View (Slot 2) are required.", "warning");
-      return;
+  // 🛡️ CONTROL 12: MANDATORY PERSPECTIVES (Slots 1 & 2 are strictly required)
+  if (!anglePhotoFiles.whole || !anglePhotoFiles.top) {
+    if (typeof showToast === 'function') {
+      showToast("Submission Blocked: Both Whole View (Slot 1) and Top-Down View (Slot 2) are required.", "warning");
     }
+    return;
   }
 
   const modal = document.getElementById("confirm-modal");
@@ -4122,12 +4122,9 @@ async function executeFinalSubmission() {
   }
 
   const attachedCount = Object.values(anglePhotoFiles).filter((f) => f !== null).length;
-  const hasPhotos = anglePhotoFiles.whole !== null && anglePhotoFiles.top !== null;
 
-  // 🚀 Launch live scanner overlay
-  if (hasPhotos) {
-    startAiScanner(attachedCount);
-  }
+  // 🚀 Start live scanner overlay
+  startAiScanner(attachedCount);
 
   try {
     const formData = new FormData();
@@ -4174,21 +4171,21 @@ async function executeFinalSubmission() {
     formData.append("longitude", parseFloat(getVal("longitude")) || 0.0);
     formData.append("inventoryYear", new Date().getFullYear());
 
-    // 5. Compress & Attach Multi-Perspective Photos
-    if (hasPhotos) {
-      const [cWhole, cTop, cLeft, cRight, cClose] = await Promise.all([
-        compressImage(anglePhotoFiles.whole),
-        compressImage(anglePhotoFiles.top),
-        compressImage(anglePhotoFiles.left),
-        compressImage(anglePhotoFiles.right),
-        compressImage(anglePhotoFiles.close)
-      ]);
-
-      formData.append("imageWhole", cWhole);
-      formData.append("imageTop", cTop);
-      if (cLeft) formData.append("imageLeft", cLeft);
-      if (cRight) formData.append("imageRight", cRight);
-      if (cClose) formData.append("imageClose", cClose);
+    // 5. Compress & Attach Mandatory & Auxiliary Photos
+    if (anglePhotoFiles.whole) {
+      formData.append("imageWhole", await compressImage(anglePhotoFiles.whole));
+    }
+    if (anglePhotoFiles.top) {
+      formData.append("imageTop", await compressImage(anglePhotoFiles.top));
+    }
+    if (anglePhotoFiles.left) {
+      formData.append("imageLeft", await compressImage(anglePhotoFiles.left));
+    }
+    if (anglePhotoFiles.right) {
+      formData.append("imageRight", await compressImage(anglePhotoFiles.right));
+    }
+    if (anglePhotoFiles.close) {
+      formData.append("imageClose", await compressImage(anglePhotoFiles.close));
     }
 
     // 6. Send payload to Spring Boot Backend
@@ -4199,7 +4196,7 @@ async function executeFinalSubmission() {
 
     const data = await response.json().catch(() => ({}));
 
-    // 🚫 INTERCEPT SPRING BOOT REJECTION (HTTP 400)
+    // 🚫 Intercept Spring Boot Rejection (HTTP 400 Bad Request)
     if (!response.ok) {
       closeAiScanner();
       if (data.error === "PHOTO_REJECTED" || data.error === "PHOTO REJECTED") {
@@ -4209,13 +4206,10 @@ async function executeFinalSubmission() {
       throw new Error(data.message || data.error || "Server rejected report submission.");
     }
 
-    // Finish Scanner with final consensus verdict
     const rawSev = String(data.severity || "").trim().toUpperCase();
     const aiConfidence = data.cvConfidenceScore ? data.cvConfidenceScore : 0;
 
-    if (hasPhotos) {
-      completeAiScanner(`Consensus: ${rawSev} (${aiConfidence}%)`);
-    }
+    completeAiScanner(`Consensus: ${rawSev} (${aiConfidence}%)`);
 
     if (typeof showToast === 'function') {
       if (rawSev === "HIGH") {
@@ -4229,7 +4223,11 @@ async function executeFinalSubmission() {
       }
     }
 
-    resetAddReportForm();
+    if (typeof resetAddReportForm === 'function') {
+      resetAddReportForm();
+    } else {
+      clearAllPhotoSlots();
+    }
 
     if (typeof loadBarangayReports === "function") {
       const brgyId = sessionStorage.getItem("barangayId");
@@ -5038,20 +5036,50 @@ window.toggleAdminOtherDamageType = function() {
   }
 };
 
-// 📐 CLIENT-SIDE MULTI-CRITERIA SEVERITY PREVIEW CALCULATOR
+// 📐 CLIENT-SIDE MULTI-CRITERIA SEVERITY PREVIEW CALCULATOR (WITH NEGATIVE BLOCKER)
 window.triggerAdminSeverityRecalc = function() {
   const previewBadge = document.getElementById('admin-projected-severity-badge');
   if (!previewBadge) return;
+
+  const depthEl = document.getElementById('admin-input-damage-depth');
+  const lengthEl = document.getElementById('admin-input-damage-length');
+  const widthEl = document.getElementById('admin-input-damage-width');
+
+  const depth = parseFloat(depthEl?.value) || 0;
+  const length = parseFloat(lengthEl?.value) || 0;
+  const width = parseFloat(widthEl?.value) || 0;
+
+  // 🛡️ CONTROL 12: Intercept negative values immediately in real time
+  if (depth < 0 || length < 0 || width < 0) {
+    previewBadge.textContent = '⛔ INVALID (Negative Dimensions)';
+    previewBadge.style.cssText = 'background: #fee2e2; color: #dc2626; border: 1.5px solid #ef4444; padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 800;';
+
+    [depthEl, lengthEl, widthEl].forEach(el => {
+      if (el && parseFloat(el.value) < 0) {
+        el.style.borderColor = '#dc2626';
+        el.style.backgroundColor = '#fef2f2';
+      } else if (el) {
+        el.style.borderColor = '#cbd5e1';
+        el.style.backgroundColor = '#ffffff';
+      }
+    });
+    return;
+  }
+
+  // Restore input border styling when values are valid
+  [depthEl, lengthEl, widthEl].forEach(el => {
+    if (el) {
+      el.style.borderColor = '#cbd5e1';
+      el.style.backgroundColor = '#ffffff';
+    }
+  });
+
+  const area = length * width;
 
   let damageType = document.getElementById('admin-input-damage-type')?.value || 'None';
   if (damageType === 'Other') {
     damageType = document.getElementById('admin-input-damage-other')?.value.trim() || 'Other';
   }
-
-  const depth = parseFloat(document.getElementById('admin-input-damage-depth')?.value) || 0;
-  const length = parseFloat(document.getElementById('admin-input-damage-length')?.value) || 0;
-  const width = parseFloat(document.getElementById('admin-input-damage-width')?.value) || 0;
-  const area = length * width;
 
   if (damageType === 'None') {
     previewBadge.textContent = 'NONE';
@@ -5269,6 +5297,32 @@ function reviewReport(reportId) {
       if (inputDamageLength) inputDamageLength.value = (report.damageLength && report.damageLength > 0) ? report.damageLength : '';
       if (inputDamageWidth) inputDamageWidth.value = (report.damageWidth && report.damageWidth > 0) ? report.damageWidth : '';
 
+      // 🛡️ CONTROL 12: Attach client-side input event restrictions to block negative entries
+      const numericInputList = [
+        inputWidth, inputLength, inputCulverts, inputBridges,
+        inputDamageDepth, inputDamageLength, inputDamageWidth
+      ];
+
+      numericInputList.forEach(inputEl => {
+        if (inputEl) {
+          inputEl.setAttribute('min', '0');
+          inputEl.addEventListener('keydown', (e) => {
+            if (e.key === '-' || e.key === 'Subtract') {
+              e.preventDefault();
+              if (typeof showToast === 'function') {
+                showToast("Negative values are not permitted.", "warning");
+              }
+            }
+          });
+          inputEl.addEventListener('input', () => {
+            if (parseFloat(inputEl.value) < 0) {
+              inputEl.value = '0';
+            }
+            triggerAdminSeverityRecalc();
+          });
+        }
+      });
+
       // ⚡ Run initial calculation preview
       triggerAdminSeverityRecalc();
 
@@ -5315,7 +5369,6 @@ function reviewReport(reportId) {
         { key: "close", icon: "🔍", label: "Close-Up" }
       ];
 
-      // Look for thumbnail container or auto-mount one below modal-damage-image
       let thumbnailStrip = document.getElementById('admin-review-thumbnail-strip');
       const mainImg = document.getElementById('modal-damage-image');
 
@@ -5634,7 +5687,7 @@ if (btnConfirmReject) {
   };
 }
 
-// 4. Save Assessment & Validate Report (CPDO Technical Survey)
+// 4. Save Assessment & Validate Report (CPDO Technical Survey - CONTROL 12 ENFORCED)
 const btnAcceptValidate = document.getElementById('btn-accept-validate');
 if (btnAcceptValidate) {
   btnAcceptValidate.onclick = function(e) {
@@ -5645,6 +5698,35 @@ if (btnAcceptValidate) {
     }
 
     if (!currentReviewReportId || isReviewSubmitting) return;
+
+    // 🛡️ CONTROL 12 CLIENT-SIDE VALIDATION: Check for negative values across all numerical dimensions
+    const measurementCheckList = [
+      { id: 'admin-input-width', name: 'Road Width' },
+      { id: 'admin-input-length', name: 'Road Length' },
+      { id: 'admin-input-culverts', name: 'Length of Culverts' },
+      { id: 'admin-input-bridges', name: 'Number of Bridges' },
+      { id: 'admin-input-damage-depth', name: 'Damage Depth' },
+      { id: 'admin-input-damage-length', name: 'Damage Length' },
+      { id: 'admin-input-damage-width', name: 'Damage Width' }
+    ];
+
+    for (const field of measurementCheckList) {
+      const fieldEl = document.getElementById(field.id);
+      if (fieldEl && fieldEl.value.trim() !== '') {
+        const parsedVal = parseFloat(fieldEl.value);
+        if (parsedVal < 0 || isNaN(parsedVal)) {
+          if (typeof showToast === 'function') {
+            showToast(`Validation Error: ${field.name} cannot be negative.`, 'error');
+          } else {
+            alert(`Validation Error: ${field.name} cannot be negative.`);
+          }
+          fieldEl.focus();
+          fieldEl.style.borderColor = '#dc2626';
+          fieldEl.style.backgroundColor = '#fef2f2';
+          return; // 🛑 Halt submission immediately on the client side
+        }
+      }
+    }
 
     const widthVal = document.getElementById('admin-input-width')?.value;
     if (!widthVal || parseFloat(widthVal) <= 0) {
@@ -5677,9 +5759,9 @@ if (btnAcceptValidate) {
     if (damageType !== 'None') {
       if (!dmgLengthVal || parseFloat(dmgLengthVal) <= 0 || !dmgWidthVal || parseFloat(dmgWidthVal) <= 0) {
         if (typeof showToast === 'function') {
-          showToast("Please enter valid Damage Length and Width measurements.", "warning");
+          showToast("Please enter valid Damage Length and Width measurements (greater than 0).", "warning");
         } else {
-          alert("Please enter valid Damage Length and Width measurements.");
+          alert("Please enter valid Damage Length and Width measurements (greater than 0).");
         }
         document.getElementById('admin-input-damage-length')?.focus();
         return;
@@ -5717,8 +5799,11 @@ if (btnAcceptValidate) {
       },
       body: JSON.stringify(payload)
     })
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to validate report");
+      .then(async res => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || errData.message || "Failed to validate report");
+        }
         return res.text();
       })
       .then(() => {
@@ -5732,7 +5817,7 @@ if (btnAcceptValidate) {
       })
       .catch(err => {
         console.error(err);
-        if (typeof showToast === 'function') showToast("Error validating report.", "error");
+        if (typeof showToast === 'function') showToast(err.message || "Error validating report.", "error");
       })
       .finally(() => {
         isReviewSubmitting = false;

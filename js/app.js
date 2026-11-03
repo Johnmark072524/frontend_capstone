@@ -4327,11 +4327,12 @@ function resetAddReportForm() {
 }
 
 // ==========================================
-// ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO LOGIN / VERIFY
+// ⌨️ KEYBOARD SUPPORT: PRESS 'ENTER' TO SUBMIT / VERIFY
 // ==========================================
 document.addEventListener("DOMContentLoaded", () => {
+  // 1. Login Step 1: Username & Password
   ['username', 'password'].forEach(id => {
-    document.getElementById(id)?.addEventListener('keypress', function (e) {
+    document.getElementById(id)?.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleLogin();
@@ -4339,19 +4340,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 🚀 Fast testing: Press Enter in the OTP field to submit
-  document.getElementById('mfa-code')?.addEventListener('keypress', function (e) {
+  // 2. Login Step 2: 6-Digit MFA Verification
+  document.getElementById('mfa-code')?.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleVerifyMfa();
     }
   });
 
-  document.getElementById('confirm-new-password')?.addEventListener('keypress', function (e) {
+  // 3. Password Reset Step 1: Email Input
+  document.getElementById('reset-email')?.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handlePasswordReset();
+      handleForgotPasswordRequest();
     }
+  });
+
+  // 4. Password Reset Step 2: OTP & New Passwords
+  ['reset-code', 'new-password', 'confirm-new-password'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handlePasswordReset();
+      }
+    });
   });
 });
 
@@ -4389,8 +4401,9 @@ function handleLogin() {
     .then(async response => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        // 🛡️ TEST SAFEGUARD: If 60s cooldown is active but user already verified credentials, allow them into Step 2 with debugOtp
+        // If 60s cooldown is active but user already verified credentials, allow them into Step 2 with warning
         if (data.mfaRequired && data.userId) {
+          data.isCooldownActive = true;
           return data;
         }
         throw new Error(data.error || 'Invalid credentials');
@@ -4408,24 +4421,22 @@ function handleLogin() {
         if (step1) step1.style.display = "none";
         if (step2) step2.style.display = "block";
 
-        const toastMsg = data.message || "A 6-digit verification code has been sent to your email.";
-        if (typeof showToast === "function") {
-          showToast(toastMsg, "success");
+        if (data.isCooldownActive) {
+          if (typeof showToast === "function") {
+            showToast(data.error || "A code was recently dispatched. Please check your inbox.", "warning");
+          }
+          startResendCooldownTimer(data.retryAfterSeconds || 60);
+        } else {
+          const toastMsg = data.message || "A 6-digit verification code has been sent to your email.";
+          if (typeof showToast === "function") {
+            showToast(toastMsg, "success");
+          }
+          startResendCooldownTimer(60);
         }
 
         const otpField = document.getElementById("mfa-code");
         if (otpField) {
-          // 🚀 AUTO-FILL MFA FOR GROUP TESTING / DEMO
-          if (data.debugOtp) {
-            otpField.value = data.debugOtp;
-            if (typeof showToast === "function") {
-              setTimeout(() => {
-                showToast(`Test Mode: Code auto-filled (${data.debugOtp})`, "info");
-              }, 400);
-            }
-          } else {
-            otpField.value = "";
-          }
+          otpField.value = "";
           otpField.focus();
         }
 
@@ -4588,8 +4599,33 @@ function handleVerifyMfa() {
 }
 
 // ==========================================
-// 🛡️ RESEND CODE (WITH AUTO-FILL SUPPORT)
+// 🛡️ RESEND CODE & 60-SECOND COOLDOWN (CONTROL A3)
 // ==========================================
+let resendTimerInterval = null;
+
+function startResendCooldownTimer(seconds = 60) {
+  const resendBtn = document.getElementById("resend-mfa-btn");
+  if (!resendBtn) return;
+
+  clearInterval(resendTimerInterval);
+  let remaining = seconds;
+  resendBtn.style.pointerEvents = "none";
+  resendBtn.style.opacity = "0.6";
+  resendBtn.innerText = `Resend in ${remaining}s`;
+
+  resendTimerInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(resendTimerInterval);
+      resendBtn.innerText = "Resend Code";
+      resendBtn.style.pointerEvents = "auto";
+      resendBtn.style.opacity = "1";
+    } else {
+      resendBtn.innerText = `Resend in ${remaining}s`;
+    }
+  }, 1000);
+}
+
 function handleResendMfa() {
   const tempUserId = sessionStorage.getItem("tempUserId");
   if (!tempUserId) {
@@ -4612,30 +4648,26 @@ function handleResendMfa() {
     .then(async response => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (data.retryAfterSeconds) {
+          startResendCooldownTimer(data.retryAfterSeconds);
+        }
         throw new Error(data.error || "Failed to resend code.");
       }
       return data;
     })
     .then(data => {
-      if (typeof showToast === "function") showToast(data.message || "A new code has been sent!", "success");
-
-      // 🚀 AUTO-FILL RESENT CODE
-      if (data.debugOtp) {
-        const otpField = document.getElementById("mfa-code");
-        if (otpField) {
-          otpField.value = data.debugOtp;
-          if (typeof showToast === "function") showToast(`Test Mode: New code auto-filled (${data.debugOtp})`, "info");
-        }
+      if (typeof showToast === "function") {
+        showToast(data.message || "A new code has been sent to your email!", "success");
+      }
+      startResendCooldownTimer(60);
+      const otpField = document.getElementById("mfa-code");
+      if (otpField) {
+        otpField.value = "";
+        otpField.focus();
       }
     })
     .catch(error => {
       if (typeof showToast === "function") showToast(error.message, "warning");
-    })
-    .finally(() => {
-      if (resendBtn) {
-        resendBtn.innerText = "Resend Code";
-        resendBtn.style.pointerEvents = "auto";
-      }
     });
 }
 
@@ -4649,19 +4681,23 @@ function showForgotPassword() {
 }
 
 // ==========================================
-// FORGOT PASSWORD: SEND OTP (WITH AUTO-FILL SUPPORT)
+// FORGOT PASSWORD: SEND OTP
 // ==========================================
 function handleForgotPasswordRequest() {
   const email = document.getElementById("reset-email").value.trim();
 
   if (!email) {
-    showToast("Please enter your registered email address.", "error");
+    if (typeof showToast === "function") {
+      showToast("Please enter your registered email address.", "error");
+    }
     return;
   }
 
   const btn = document.getElementById("request-reset-btn");
-  btn.innerHTML = "Sending... ⏳";
-  btn.disabled = true;
+  if (btn) {
+    btn.innerHTML = "Sending... ⏳";
+    btn.disabled = true;
+  }
 
   fetch(`${API_BASE_URL}/api/auth/forgot-password/request`, {
     method: 'POST',
@@ -4677,30 +4713,39 @@ function handleForgotPasswordRequest() {
     })
     .then(data => {
       sessionStorage.setItem("resetUserId", data.userId);
-      showToast(data.message, "success");
+      if (typeof showToast === "function") {
+        showToast(data.message || "A recovery code has been sent to your email.", "success");
+      }
 
       document.getElementById("forgot-step-1").style.display = "none";
       document.getElementById("forgot-step-2").style.display = "block";
 
-      // 🚀 AUTO-FILL RECOVERY CODE
-      if (data.debugOtp) {
-        const resetCodeField = document.getElementById("reset-code");
-        if (resetCodeField) resetCodeField.value = data.debugOtp;
-        showToast(`Test Mode: Recovery code auto-filled (${data.debugOtp})`, "info");
+      const resetCodeField = document.getElementById("reset-code");
+      if (resetCodeField) {
+        resetCodeField.value = "";
+        resetCodeField.focus();
       }
 
-      btn.innerHTML = "Send Code ➔";
-      btn.disabled = false;
+      if (btn) {
+        btn.innerHTML = "Send Code ➔";
+        btn.disabled = false;
+      }
     })
     .catch(error => {
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-        showToast("System is currently offline or unreachable. Please try again later.", "error");
+        if (typeof showToast === "function") {
+          showToast("System is currently offline or unreachable. Please try again later.", "error");
+        }
       } else {
-        showToast(error.message, "error");
+        if (typeof showToast === "function") {
+          showToast(error.message, "error");
+        }
       }
 
-      btn.innerHTML = "Send Code ➔";
-      btn.disabled = false;
+      if (btn) {
+        btn.innerHTML = "Send Code ➔";
+        btn.disabled = false;
+      }
     });
 }
 
@@ -4708,35 +4753,45 @@ function handleForgotPasswordRequest() {
 // FORGOT PASSWORD: VERIFY OTP & SAVE PASSWORD
 // ==========================================
 function handlePasswordReset() {
-  const otp = document.getElementById("reset-code").value.trim();
-  const newPassword = document.getElementById("new-password").value.trim();
-  const confirmPassword = document.getElementById("confirm-new-password").value.trim();
+  const otp = document.getElementById("reset-code")?.value.trim();
+  const newPassword = document.getElementById("new-password")?.value.trim();
+  const confirmPassword = document.getElementById("confirm-new-password")?.value.trim();
   const userId = sessionStorage.getItem("resetUserId");
 
   if (!otp || otp.length !== 6) {
-    showToast("Please enter the 6-digit code.", "error");
+    if (typeof showToast === "function") {
+      showToast("Please enter the 6-digit code.", "error");
+    }
     return;
   }
 
   if (!newPassword || !confirmPassword) {
-    showToast("Please enter and confirm your new password.", "error");
+    if (typeof showToast === "function") {
+      showToast("Please enter and confirm your new password.", "error");
+    }
     return;
   }
 
   const strictPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
   if (!strictPasswordRegex.test(newPassword)) {
-    showToast("Password must be 8+ characters, with 1 uppercase letter, 1 number, and 1 special character.", "error");
+    if (typeof showToast === "function") {
+      showToast("Password must be 8+ characters, with 1 uppercase letter, 1 number, and 1 special character.", "error");
+    }
     return;
   }
 
   if (newPassword !== confirmPassword) {
-    showToast("Passwords do not match!", "error");
+    if (typeof showToast === "function") {
+      showToast("Passwords do not match!", "error");
+    }
     return;
   }
 
   const btn = document.getElementById("submit-reset-btn");
-  btn.innerHTML = "Resetting... ⏳";
-  btn.disabled = true;
+  if (btn) {
+    btn.innerHTML = "Resetting... ⏳";
+    btn.disabled = true;
+  }
 
   fetch(`${API_BASE_URL}/api/auth/forgot-password/reset`, {
     method: 'POST',
@@ -4751,20 +4806,30 @@ function handlePasswordReset() {
       return response.json();
     })
     .then(data => {
-      showToast(data.message, "success");
+      if (typeof showToast === "function") {
+        showToast(data.message || "Password successfully reset! You can now log in.", "success");
+      }
       backToLogin();
-      btn.innerHTML = "Confirm & Reset ➔";
-      btn.disabled = false;
+      if (btn) {
+        btn.innerHTML = "Confirm & Reset ➔";
+        btn.disabled = false;
+      }
     })
     .catch(error => {
       if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-        showToast("System is currently offline or unreachable. Please try again later.", "error");
+        if (typeof showToast === "function") {
+          showToast("System is currently offline or unreachable. Please try again later.", "error");
+        }
       } else {
-        showToast(error.message, "error");
+        if (typeof showToast === "function") {
+          showToast(error.message, "error");
+        }
       }
 
-      btn.innerHTML = "Confirm & Reset ➔";
-      btn.disabled = false;
+      if (btn) {
+        btn.innerHTML = "Confirm & Reset ➔";
+        btn.disabled = false;
+      }
     });
 }
 

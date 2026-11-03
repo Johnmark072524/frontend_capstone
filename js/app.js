@@ -55,11 +55,13 @@ function escapeHtml(str) {
 
   const storedRole = sessionStorage.getItem("userRole");
   const storedUserId = sessionStorage.getItem("userId");
-  const isLoggedIn = storedRole && storedUserId;
+  const isLoggedIn = Boolean(storedRole && storedUserId);
 
   // 1. FAST CLIENT PASS: Immediate redirect if logged out
   if (!isLoggedIn && currentPath.includes("dashboard")) {
-    window.location.replace("login.html");
+    sessionStorage.clear();
+    localStorage.removeItem("user");
+    window.location.replace("login.html?reason=unauthorized");
     return;
   }
 
@@ -67,6 +69,36 @@ function escapeHtml(str) {
   if (isLoggedIn && currentPath.includes("login.html")) {
     redirectByRole(storedRole);
     return;
+  }
+
+  // 🛡️ 2.5. STRICT CLIENT ROLE-TO-ROUTE GUARD (CONTROL 6A)
+  // Verifies that the user's role matches the dashboard they are trying to open
+  if (isLoggedIn && currentPath.includes("dashboard")) {
+    const role = String(storedRole).toLowerCase();
+    const isAdmin = role.includes("admin") || role.includes("cpdo");
+    const isCeo = role.includes("ceo") || role.includes("engineer");
+    const isBrgy = !isAdmin && !isCeo;
+
+    const onAdminPage = currentPath.includes("admin_dashboard");
+    const onCeoPage = currentPath.includes("ceo_dashboard");
+    const onBrgyPage = currentPath.includes("barangay_dashboard");
+
+    let isAuthorized = true;
+
+    if (onAdminPage && !isAdmin) {
+      isAuthorized = false;
+    } else if (onCeoPage && !isCeo) {
+      isAuthorized = false;
+    } else if (onBrgyPage && !isBrgyUser(role)) {
+      // If an Admin or CEO accidentally opens barangay_dashboard, send them to their own
+      isAuthorized = false;
+    }
+
+    if (!isAuthorized) {
+      // 🚨 Mismatch: Immediately redirect to their correct assigned dashboard
+      redirectByRole(storedRole);
+      return;
+    }
   }
 
   // 3. SERVER-SIDE AUDIT: If on a dashboard, verify identity with Spring Boot
@@ -89,8 +121,13 @@ function escapeHtml(str) {
         // 🛑 Server rejected or account suspended: wipe storage and kick to login
         sessionStorage.clear();
         localStorage.removeItem("user");
-        window.location.replace("login.html");
+        window.location.replace("login.html?reason=revoked");
       });
+  }
+
+  function isBrgyUser(role) {
+    const r = String(role || '').toLowerCase();
+    return !r.includes("admin") && !r.includes("cpdo") && !r.includes("ceo") && !r.includes("engineer");
   }
 
   function redirectByRole(role) {

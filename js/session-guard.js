@@ -243,3 +243,99 @@
     window.location.replace(`login.html?reason=${reason}`);
   }
 })();
+
+
+// ==========================================
+// 🚀 GLOBAL SECURITY BOUNCER (HYBRID CLIENT + SERVER)
+// ==========================================
+(function enforceSecurity() {
+  const currentPath = window.location.pathname.toLowerCase();
+
+  const storedRole = sessionStorage.getItem("userRole");
+  const storedUserId = sessionStorage.getItem("userId");
+  const isLoggedIn = Boolean(storedRole && storedUserId);
+
+  // 1. FAST CLIENT PASS: Immediate redirect if logged out
+  if (!isLoggedIn && currentPath.includes("dashboard")) {
+    sessionStorage.clear();
+    localStorage.removeItem("user");
+    window.location.replace("login.html?reason=unauthorized");
+    return;
+  }
+
+  // 2. FAST CLIENT PASS: Forward away from login if already logged in
+  if (isLoggedIn && currentPath.includes("login.html")) {
+    redirectByRole(storedRole);
+    return;
+  }
+
+  // 🛡️ 2.5. STRICT CLIENT ROLE-TO-ROUTE GUARD (CONTROL 6A)
+  // Verifies that the user's role matches the dashboard they are trying to open
+  if (isLoggedIn && currentPath.includes("dashboard")) {
+    const role = String(storedRole).toLowerCase();
+    const isAdmin = role.includes("admin") || role.includes("cpdo");
+    const isCeo = role.includes("ceo") || role.includes("engineer");
+    const isBrgy = !isAdmin && !isCeo;
+
+    const onAdminPage = currentPath.includes("admin_dashboard");
+    const onCeoPage = currentPath.includes("ceo_dashboard");
+    const onBrgyPage = currentPath.includes("barangay_dashboard");
+
+    let isAuthorized = true;
+
+    if (onAdminPage && !isAdmin) {
+      isAuthorized = false;
+    } else if (onCeoPage && !isCeo) {
+      isAuthorized = false;
+    } else if (onBrgyPage && !isBrgyUser(role)) {
+      // If an Admin or CEO accidentally opens barangay_dashboard, send them to their own
+      isAuthorized = false;
+    }
+
+    if (!isAuthorized) {
+      // 🚨 Mismatch: Immediately redirect to their correct assigned dashboard
+      redirectByRole(storedRole);
+      return;
+    }
+  }
+
+  // 3. SERVER-SIDE AUDIT: If on a dashboard, verify identity with Spring Boot
+  if (isLoggedIn && currentPath.includes("dashboard")) {
+    fetch(`${API_BASE_URL}/api/auth/verify-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: storedUserId, role: storedRole })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Session invalid on server");
+        return res.json();
+      })
+      .then(data => {
+        if (!data.valid) {
+          throw new Error("Invalid session state");
+        }
+      })
+      .catch(() => {
+        // 🛑 Server rejected or account suspended: wipe storage and kick to login
+        sessionStorage.clear();
+        localStorage.removeItem("user");
+        window.location.replace("login.html?reason=revoked");
+      });
+  }
+
+  function isBrgyUser(role) {
+    const r = String(role || '').toLowerCase();
+    return !r.includes("admin") && !r.includes("cpdo") && !r.includes("ceo") && !r.includes("engineer");
+  }
+
+  function redirectByRole(role) {
+    const r = String(role || '').toLowerCase();
+    if (r.includes("admin") || r.includes("cpdo")) {
+      window.location.replace("admin_dashboard.html");
+    } else if (r.includes("ceo") || r.includes("engineer")) {
+      window.location.replace("ceo_dashboard.html");
+    } else {
+      window.location.replace("barangay_dashboard.html");
+    }
+  }
+})();

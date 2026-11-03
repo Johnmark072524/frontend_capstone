@@ -447,12 +447,62 @@ async function apiFetch(endpoint, options = {}) {
     }
   });
 
+  // 🚨 CONTROL 2B & CONTROL 9: Real-time eviction on any API call
+  if (response.status === 403 || response.status === 401) {
+    const errorData = await response.clone().json().catch(() => ({}));
+    const errText = errorData.error || errorData.message || "";
+
+    if (errText.includes("Suspended") || errText.includes("Deactivated") || errText.includes("revoked") || errText.includes("SESSION_EVICTED")) {
+      sessionStorage.clear();
+      localStorage.removeItem("user");
+      localStorage.removeItem("currentUser");
+      window.location.replace("login.html?reason=revoked");
+      return;
+    }
+  }
+
   if (!response.ok) {
     throw new Error(`API request failed with status: ${response.status}`);
   }
 
   return response.json();
 }
+
+// ==========================================
+// 🛡️ CONTROL 2B: REAL-TIME SUSPENSION HEARTBEAT
+// ==========================================
+(function initLiveAccountEviction() {
+  const currentPath = window.location.pathname.toLowerCase();
+  if (!currentPath.includes("dashboard")) return;
+
+  function verifyLiveAccountStatus() {
+    const userId = sessionStorage.getItem("userId");
+    const role = sessionStorage.getItem("userRole");
+    if (!userId || !role) return;
+
+    fetch(`${API_BASE_URL}/api/auth/verify-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: userId, role: role })
+    })
+      .then(async res => {
+        if (res.status === 403 || res.status === 401) {
+          sessionStorage.clear();
+          localStorage.removeItem("user");
+          localStorage.removeItem("currentUser");
+          window.location.replace("login.html?reason=revoked");
+        }
+      })
+      .catch(() => {});
+  }
+
+  // 1. Silent pulse every 10 seconds in the background
+  setInterval(verifyLiveAccountStatus, 10000);
+
+  // 2. Instant trigger the millisecond you click back onto the official's window
+  window.addEventListener("focus", verifyLiveAccountStatus);
+})();
+
 // ==========================================
 // 🚀 SECURE IMAGE FETCHER (SUPABASE + LOCAL COMPATIBLE)
 // ==========================================
@@ -15130,3 +15180,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const cleanUrl = window.location.origin + window.location.pathname;
   window.history.replaceState({}, document.title, cleanUrl);
 });
+
+
+

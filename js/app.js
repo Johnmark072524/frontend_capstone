@@ -1882,38 +1882,57 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 // --- SECURE LOGOUT LOGIC (WITH CONFIRMATION MODAL & SERVER DE-REGISTRATION) ---
-  const logoutBtn = document.querySelector('.logout-btn');
+  const logoutBtns = document.querySelectorAll('.logout-btn');
   const logoutConfirmModal = document.getElementById('logout-confirm-modal');
   const btnConfirmLogout = document.getElementById('btn-confirm-logout');
+  const cancelLogoutBtns = document.querySelectorAll('#logout-confirm-modal button:not(#btn-confirm-logout), #logout-confirm-modal .close-modal');
 
-  if (logoutBtn && logoutConfirmModal) {
-    logoutBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      logoutConfirmModal.classList.remove('hidden');
+// 1. Open confirmation modal for all logout triggers (sidebar, profile, etc.)
+  if (logoutBtns.length > 0 && logoutConfirmModal) {
+    logoutBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        logoutConfirmModal.classList.remove('hidden');
+        logoutConfirmModal.style.display = 'flex';
+      });
     });
   }
 
+// 2. Wire cancel/close buttons to safely dismiss the confirmation modal
+  if (cancelLogoutBtns.length > 0 && logoutConfirmModal) {
+    cancelLogoutBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        logoutConfirmModal.classList.add('hidden');
+        logoutConfirmModal.style.display = 'none';
+      });
+    });
+  }
+
+// 3. Authoritative Logout Execution
   if (btnConfirmLogout) {
     btnConfirmLogout.addEventListener('click', () => {
       const userId = sessionStorage.getItem("userId");
       const baseUrl = typeof API_BASE_URL !== "undefined" ? API_BASE_URL : "";
 
-      // 1. 🛡️ Notify Spring Boot to clear activeSessionTracker and write audit log
+      // 🛡️ CONTROL 10 & 11: keepalive guarantees network dispatch completes
+      // even as the browser tears down the current page during redirect
       if (userId) {
         fetch(`${baseUrl}/api/auth/logout`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: userId })
+          body: JSON.stringify({ userId: userId }),
+          keepalive: true
         }).catch(() => {});
       }
 
-      // 2. 🛡️ Clear all local tokens and session data
+      // 🛡️ Clear all session tokens and user state
       sessionStorage.clear();
       localStorage.removeItem("user");
       localStorage.removeItem("currentUser");
 
-      // 3. 🛡️ CONTROL 10: Replace history entry so browser Back-button cannot return
-      window.location.replace('login.html');
+      // 🛡️ Replace history entry so browser "Back" button cannot reload authenticated pages
+      window.location.replace('login.html?reason=session_ended');
     });
   }
 
